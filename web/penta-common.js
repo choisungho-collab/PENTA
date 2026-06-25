@@ -152,6 +152,25 @@
     return null;
   }
 
+  // ─────────────── 그룹(게임) 단위 좋아요/조회 ───────────────
+  async function likeGroup(mid, delta) { return sbRpc('like_group', { mid: mid, delta: delta }); }
+  async function viewGroup(mid) { return sbRpc('view_group', { mid: mid }); }
+  async function statsAll() {
+    try {
+      var rows = await sbSelect('group_stats', 'select=*&limit=2000');
+      var m = {};
+      (rows || []).forEach(function (r) { m[String(r.match_id)] = { likes: r.likes || 0, views: r.views || 0 }; });
+      return m;
+    } catch (e) { return {}; }
+  }
+  async function statsOne(mid) {
+    try {
+      var rows = await sbSelect('group_stats', 'select=*&match_id=eq.' + encodeURIComponent(mid));
+      var r = (rows || [])[0];
+      return r ? { likes: r.likes || 0, views: r.views || 0 } : { likes: 0, views: 0 };
+    } catch (e) { return { likes: 0, views: 0 }; }
+  }
+
   global.PENTA = {
     SB_URL: SB_URL, SB_ANON: SB_ANON,
     sbSelect: sbSelect, sbInsert: sbInsert, sbRpc: sbRpc,
@@ -161,6 +180,7 @@
     posKo: posKo, posRank: posRank,
     queueName: queueName, mmss: mmss, kdaRatio: kdaRatio, compact: compact, ago: ago,
     groupKeyOf: groupKeyOf, clusterByMatch: clusterByMatch, pickPrimary: pickPrimary,
-    saverCard: saverCard, heroCard: heroCard, bestMulti: bestMulti
+    saverCard: saverCard, heroCard: heroCard, bestMulti: bestMulti,
+    likeGroup: likeGroup, viewGroup: viewGroup, statsAll: statsAll, statsOne: statsOne
   };
 })(typeof window !== 'undefined' ? window : globalThis);

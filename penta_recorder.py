@@ -2152,7 +2152,9 @@ def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr"):
     if dur and dur > 100000: dur = dur / 1000.0    # 과거 게임은 길이가 ms일 수 있어 보정
     if dur and dur < CFG.get("min_game_sec", 300):
         return _discard(video_path, f"게임이 너무 짧음({int(dur)}초)")
-    gid = mid; safe = gid.replace("/", "_")
+    gid = mid
+    row_id = gid + "__" + (puuid or "x").replace("/", "_")   # 시점별 고유 행 id(멀티 POV 충돌 방지)
+    safe = row_id.replace("/", "_")
     size = os.path.getsize(video_path)
     base = os.path.join(UPLOAD_DIR, safe); os.makedirs(base, exist_ok=True)
     try:
@@ -2169,7 +2171,7 @@ def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr"):
         won = (me or {}).get("win")
         saver = (me or {}).get("name") or riot_id.split("#")[0]
         sb_insert_match({
-            "id": gid, "uploader": saver,
+            "id": row_id, "match_id": gid, "uploader": saver,
             "uploaded": datetime.datetime.now().isoformat(timespec="seconds"),
             "video": video_url, "thumb": thumb_url, "replay": None,
             "video_size": size or 0,

@@ -1,12 +1,12 @@
 {
   "mode": "all",
   "league_process": "League of Legends.exe",
-  "proxy_url": "https://여기에-네틀리파이-주소.netlify.app",
+  "proxy_url": "https://mypenta.netlify.app",
   "platform": "kr",
   "supabase": {
-    "url": "https://여기.supabase.co",
-    "anon_key": "여기에 anon key",
-    "service_key": "여기에 service key (이 PC에만 보관)",
+    "url": "https://bsrvmesrygbfeqicquvq.supabase.co",
+    "anon_key": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzcnZtZXNyeWdiZmVxaWNxdXZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzNjA2NjQsImV4cCI6MjA5NzkzNjY2NH0.PBnGgLxvMDOK_yUQxTH11EwizEz5oJ1OWp-9I5nG8Ug",
+    "service_key": "여기에 service_role 키 (이 PC에만 보관, 절대 공유 금지)",
     "bucket": "media"
   },
   "encoder": "auto",

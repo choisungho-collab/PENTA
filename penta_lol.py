@@ -125,6 +125,12 @@ def analyze_match(match, timeline=None):
             "position": p.get("teamPosition") or p.get("individualPosition"),
             "win": bool(p.get("win")),
             "puuid": p.get("puuid"),
+            # 멀티킬(PENTA 하이라이트). 0이면 표시 안 함.
+            "pentas": p.get("pentaKills") or 0,
+            "quadras": p.get("quadraKills") or 0,
+            "triples": p.get("tripleKills") or 0,
+            "doubles": p.get("doubleKills") or 0,
+            "multi": p.get("largestMultiKill") or 0,
         })
 
     # 승리 팀
@@ -136,10 +142,13 @@ def analyze_match(match, timeline=None):
     if win_team is None and parts:
         win_team = 100 if any(p.get("teamId") == 100 and p.get("win") for p in parts) else 200
 
-    # 오브젝트(드래곤/바론/전령/타워)
+    # 오브젝트(드래곤/바론/전령/타워) + 밴
     objectives = {}
+    bans = {}
     for tm in (info.get("teams") or []):
-        objectives[tm.get("teamId")] = tm.get("objectives")
+        tid = tm.get("teamId")
+        objectives[tid] = tm.get("objectives")
+        bans[tid] = [b.get("championId") for b in (tm.get("bans") or []) if b.get("championId", -1) > 0]
 
     return {
         "players": players,
@@ -148,6 +157,7 @@ def analyze_match(match, timeline=None):
         "queue": info.get("queueId"),
         "patch": info.get("gameVersion"),
         "objectives": objectives,
+        "bans": bans,
         "series": _timeline_series(timeline) if timeline else None,
     }
 

@@ -211,6 +211,7 @@ h2.sec .ln{flex:1;height:1px;background:var(--line)}
   var ROWS = [];          // 이 매치의 시점들
   var ANALYSIS = null;    // 대표 분석
   var MID = '';
+  var STAT = { likes: 0, views: 0 };   // match_id 그룹 단위 좋아요/조회
   var curPov = 0;
   var split = false;
   var selected = [];      // 분할 선택 인덱스
@@ -403,23 +404,19 @@ h2.sec .ln{flex:1;height:1px;background:var(--line)}
     });
   }
 
-  // ── 좋아요/조회/댓글 ──
-  function primaryRowId(){ var pr=P.pickPrimary(ROWS); return pr?pr.id:null; }
-  function groupLikes(){ return ROWS.reduce(function(s,r){return s+(r.likes||0);},0); }
-  function groupViews(){ return ROWS.reduce(function(s,r){return s+(r.views||0);},0); }
+  // ── 좋아요/조회/댓글 (match_id 그룹 단위) ──
+  function groupLikes(){ return STAT.likes||0; }
+  function groupViews(){ return STAT.views||0; }
 
-  async function bumpView(){
-    var id = primaryRowId(); if(!id) return;
-    try{ await P.sbRpc('bump_view',{mid:id}); }catch(e){}
-  }
+  async function bumpView(){ if(!MID) return; try{ await P.viewGroup(MID); }catch(e){} }
   var liked = false;
   async function toggleLike(btn){
-    var id = primaryRowId(); if(!id) return;
+    if(!MID) return;
     liked = !liked;
-    try{ await P.sbRpc('like_match',{mid:id, delta: liked?1:-1}); }catch(e){}
-    var base = groupLikes() + (liked?1:0);
+    try{ var res = await P.likeGroup(MID, liked?1:-1); var lk = Array.isArray(res)?res[0]:res; if(typeof lk==='number') STAT.likes = lk; }
+    catch(e){ STAT.likes = Math.max(0,(STAT.likes||0) + (liked?1:-1)); }
     btn.classList.toggle('liked', liked);
-    btn.querySelector('.cnt').textContent = base;
+    btn.querySelector('.cnt').textContent = STAT.likes;
   }
 
   async function loadComments(){
@@ -492,6 +489,7 @@ h2.sec .ln{flex:1;height:1px;background:var(--line)}
       return;
     }
     ROWS = rows;
+    try{ STAT = await P.statsOne(MID); }catch(e){ STAT = {likes:0, views:0}; }
     // 분석은 영상 있는 대표 우선, 없으면 첫 행
     var rep = P.pickPrimary(ROWS) || ROWS[0];
     ANALYSIS = rep.analysis || {};

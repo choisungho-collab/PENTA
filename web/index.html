@@ -229,6 +229,7 @@ footer{border-top:1px solid var(--line);margin-top:40px}
       elFailed = document.getElementById('failed');
   var ver = '15.1.1';
   var GROUPS = [];          // 전체 그룹
+  var STATS = {};           // match_id → {likes, views}
   var filter = 'all';
   var search = '';
 
@@ -248,7 +249,8 @@ footer{border-top:1px solid var(--line);margin-top:40px}
     var role = P.posKo(me.position);
     var povN = group.length;
     var bm = P.bestMulti(me);
-    var views = group.reduce(function(s,x){ return s + (x.views||0); }, 0);
+    var gk = P.groupKeyOf(r);
+    var views = (STATS[gk] && STATS[gk].views) || group.reduce(function(s,x){ return s + (x.views||0); }, 0);
 
     var multiHTML = bm ? ('<div class="multi"><svg class="ic" viewBox="0 0 24 24"><path d="M13 2 L4 14 H11 L9 22 L20 9 H13 Z" fill="currentColor"/></svg>'
         + bm.label + (bm.n>1 ? (' ×'+bm.n) : '') + '</div>') : '';
@@ -331,6 +333,7 @@ footer{border-top:1px solid var(--line);margin-top:40px}
       show(elFailed); return;
     }
     GROUPS = P.clusterByMatch(rows || []);
+    try{ STATS = await P.statsAll(); }catch(e){ STATS = {}; }
     setStats();
     render();
   }

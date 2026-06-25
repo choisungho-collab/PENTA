@@ -2,7 +2,6 @@
   functions = "netlify/functions"
   publish = "web"
 
-# /api/riot 로 짧게 호출 가능하게 리다이렉트
 [[redirects]]
   from = "/api/riot"
   to = "/.netlify/functions/riot"
