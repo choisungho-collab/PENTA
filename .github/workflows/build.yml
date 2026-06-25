@@ -1,0 +1,57 @@
+name: Build PENTA EXE
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-recorder.txt
+          pip install pyinstaller
+
+      - name: Build (onedir)
+        run: >
+          pyinstaller --onedir --windowed --name penta_recorder --noupx
+          --add-data "web;web"
+          --hidden-import psutil --hidden-import requests --hidden-import tkinter
+          --hidden-import windows_capture --hidden-import pyaudiowpatch
+          --collect-all windows_capture
+          --hidden-import boto3 --hidden-import botocore --collect-data botocore
+          penta_recorder.py
+
+      - name: Package as zip
+        run: Compress-Archive -Path dist\penta_recorder -DestinationPath penta_recorder.zip -Force
+
+      - name: Upload zip artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: penta_recorder-windows
+          path: penta_recorder.zip
+
+      - name: Publish Release (only on version tag)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: penta_recorder.zip
+          make_latest: true
+          body: |
+            압축을 풀고 penta_recorder 폴더 안의 penta_recorder.exe 를 더블클릭하세요 — 파이썬 설치 불필요.
+            최초 실행 시 영상 도구(ffmpeg)를 한 번 자동으로 내려받습니다(1~2분).
