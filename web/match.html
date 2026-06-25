@@ -1,0 +1,509 @@
+<!doctype html><html lang="ko"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PENTA — 매치 분석</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2 L15 9 L22 9 L16.5 13.5 L18.5 21 L12 16.5 L5.5 21 L7.5 13.5 L2 9 L9 9 Z' fill='%23C8AA6E'/%3E%3C/svg%3E">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Marcellus&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+ --bg:#0A1015;--surface:#101924;--surface2:#15212E;--hover:#1A2835;--well:#0C141C;
+ --ink:#F0E6D2;--ink2:#CDBE91;--dim:#A09B8C;--faint:#62605A;
+ --line:#1E2D3A;--line2:#2C3F4F;
+ --gold:#C8AA6E;--gold-ink:#F0DCA8;--gold-soft:rgba(200,170,110,.11);--gold-line:rgba(200,170,110,.36);
+ --win:#0AC8B9;--win-soft:rgba(10,200,185,.12);--win-line:rgba(10,200,185,.42);
+ --loss:#E8526A;--loss-soft:rgba(232,82,106,.12);--loss-line:rgba(232,82,106,.42);
+ --blue:#3D9BE0;--blue-soft:rgba(61,155,224,.1);--blue-line:rgba(61,155,224,.34);
+ --red:#E0563D;--red-soft:rgba(224,86,61,.1);--red-line:rgba(224,86,61,.34);
+ --fd:'Pretendard Variable','Pretendard','Apple SD Gothic Neo',system-ui,sans-serif;
+ --fs:'Marcellus',serif;
+ --fm:'IBM Plex Mono',ui-monospace,monospace;
+ --r1:10px;--r2:14px;--r3:18px;--sh:0 18px 44px -22px rgba(0,0,0,.8);
+}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--fd);font-size:15px;line-height:1.55;word-break:keep-all;overflow-wrap:break-word;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}svg{display:block}img{display:block;max-width:100%}
+.ic{width:1em;height:1em;flex-shrink:0}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:var(--line2);border-radius:6px;border:3px solid var(--bg)}
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px 120px}
+
+.bar{position:sticky;top:0;z-index:50;background:rgba(10,16,21,.86);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.bar-in{max-width:1120px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;gap:16px}
+.brand{display:flex;align-items:center;gap:10px}
+.brand .mk{width:22px;height:22px;color:var(--gold);filter:drop-shadow(0 0 9px rgba(200,170,110,.4))}
+.brand b{font-family:var(--fs);font-weight:400;font-size:20px;letter-spacing:.26em;color:var(--ink);padding-left:.26em}
+.back{display:inline-flex;align-items:center;gap:7px;font-family:var(--fd);font-weight:600;font-size:13.5px;color:var(--dim);padding:8px 13px;border-radius:var(--r1);transition:.14s}
+.back:hover{color:var(--ink);background:var(--surface)}.back .ic{width:15px;height:15px}
+.bar .sp{flex:1}
+
+/* 영상 무대 */
+.player{margin:22px 0 0}
+.stage{position:relative;background:#05080b;border:1px solid var(--line);border-radius:var(--r3);overflow:hidden;aspect-ratio:16/9}
+.stage video{width:100%;height:100%;object-fit:contain;background:#05080b;display:block}
+.stage.empty{display:grid;place-items:center}
+.stage .novid{text-align:center;color:var(--faint);font-family:var(--fd);font-size:14px;padding:24px}
+.stage .novid .mk{width:46px;height:46px;color:var(--line2);margin:0 auto 14px}
+/* 분할 레이아웃 */
+.stage.grid{display:grid;gap:2px;background:var(--line)}
+.stage.mv-2{grid-template-columns:1fr 1fr}
+.stage.mv-3{grid-template-columns:1fr 1fr}
+.stage.mv-3 .cell:first-child{grid-column:1/-1}
+.stage.mv-4{grid-template-columns:1fr 1fr}
+.stage .cell{position:relative;background:#05080b;overflow:hidden;min-height:0}
+.stage .cell video{width:100%;height:100%}
+.stage .cell .tag{position:absolute;left:8px;top:8px;font-family:var(--fd);font-size:11px;font-weight:600;color:#fff;background:rgba(5,8,11,.78);padding:3px 8px;border-radius:6px;display:flex;align-items:center;gap:5px;z-index:2}
+.stage .cell .tag i{width:8px;height:8px;border-radius:50%}
+
+/* POV 바 */
+.povbar{display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap}
+.povtabs{display:flex;gap:7px;flex-wrap:wrap;flex:1}
+.povtab{display:flex;align-items:center;gap:9px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r1);padding:7px 12px 7px 8px;cursor:pointer;transition:.14s}
+.povtab:hover{border-color:var(--line2)}
+.povtab.on{border-color:var(--gold-line);background:var(--gold-soft)}
+.povtab.sel{outline:2px solid var(--gold-line);outline-offset:1px}
+.povtab img{width:30px;height:30px;border-radius:7px;border:1px solid var(--line2);background:var(--well)}
+.povtab .who{min-width:0}
+.povtab .who .nm{font-family:var(--fd);font-weight:600;font-size:13px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px}
+.povtab .who .ch{font-family:var(--fd);font-size:11px;color:var(--dim);white-space:nowrap}
+.splitbtn{display:inline-flex;align-items:center;gap:8px;font-family:var(--fd);font-weight:600;font-size:13px;color:var(--ink2);background:var(--surface);border:1px solid var(--line);padding:9px 14px;border-radius:var(--r1);cursor:pointer;transition:.14s;white-space:nowrap}
+.splitbtn:hover{border-color:var(--line2);color:var(--ink)}
+.splitbtn.on{color:var(--bg);background:var(--gold);border-color:var(--gold)}
+.splitbtn .ic{width:15px;height:15px}
+.splithint{font-family:var(--fd);font-size:12px;color:var(--faint);width:100%}
+
+/* 요약 바 */
+.summary{margin-top:24px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r2);padding:18px 20px;display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+.summary .verdict{font-family:var(--fs);font-weight:400;font-size:26px;letter-spacing:.01em;padding-right:22px;border-right:1px solid var(--line)}
+.summary .verdict.w{color:var(--win)}.summary .verdict.l{color:var(--loss)}
+.summary .si{display:flex;flex-direction:column;gap:4px}
+.summary .si .k{font-family:var(--fd);font-size:11px;color:var(--dim);letter-spacing:.02em}
+.summary .si .v{font-family:var(--fm);font-size:15px;color:var(--ink);font-variant-numeric:tabular-nums}
+.summary .sp{flex:1}
+.summary .acts{display:flex;align-items:center;gap:9px}
+.actbtn{display:inline-flex;align-items:center;gap:7px;font-family:var(--fd);font-weight:600;font-size:13.5px;color:var(--ink2);background:var(--well);border:1px solid var(--line);padding:9px 14px;border-radius:var(--r1);cursor:pointer;transition:.14s;font-variant-numeric:tabular-nums}
+.actbtn:hover{border-color:var(--line2);color:var(--ink)}
+.actbtn.liked{color:var(--loss);border-color:var(--loss-line);background:var(--loss-soft)}
+.actbtn .ic{width:15px;height:15px}
+.actbtn.view{cursor:default}
+
+h2.sec{font-family:var(--fs);font-weight:400;font-size:20px;letter-spacing:.02em;color:var(--ink);margin:34px 0 14px;display:flex;align-items:center;gap:11px}
+h2.sec .ln{flex:1;height:1px;background:var(--line)}
+
+/* 골드 그래프 */
+.chartcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r2);padding:18px 18px 12px}
+.chartcard .lg{display:flex;align-items:center;gap:18px;margin-bottom:6px;font-family:var(--fd);font-size:12.5px;color:var(--dim)}
+.chartcard .lg i{display:inline-block;width:18px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}
+.chartcard svg{width:100%;height:auto;display:block;overflow:visible}
+.chartcard .gx{font-family:var(--fm);font-size:10px;fill:var(--faint)}
+
+/* 오브젝트 */
+.objgrid{display:grid;grid-template-columns:1fr auto 1fr;gap:8px 16px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:var(--r2);padding:16px 22px}
+.objgrid .ot{font-family:var(--fd);font-size:12.5px;color:var(--dim);text-align:center;letter-spacing:.02em}
+.objgrid .ov{font-family:var(--fm);font-size:16px;font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:7px}
+.objgrid .ov.b{color:var(--blue);justify-content:flex-end}
+.objgrid .ov.r{color:var(--red)}
+.objgrid .ov .ic{width:15px;height:15px;opacity:.85}
+.objgrid .ov b{font-weight:600}.objgrid .ov.lead b{color:var(--gold-ink)}
+
+/* 스코어보드 */
+.board{display:flex;flex-direction:column;gap:16px}
+.team{background:var(--surface);border:1px solid var(--line);border-radius:var(--r2);overflow:hidden}
+.team.blue{border-top:2px solid var(--blue-line)}
+.team.red{border-top:2px solid var(--red-line)}
+.thead{display:flex;align-items:center;gap:12px;padding:13px 18px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.thead .tn{font-family:var(--fs);font-weight:400;font-size:18px;letter-spacing:.01em}
+.team.blue .thead .tn{color:var(--blue)}.team.red .thead .tn{color:var(--red)}
+.thead .wl{font-family:var(--fm);font-size:11px;font-weight:600;letter-spacing:.06em;padding:3px 9px;border-radius:6px}
+.thead .wl.w{color:var(--win);background:var(--win-soft);border:1px solid var(--win-line)}
+.thead .wl.l{color:var(--loss);background:var(--loss-soft);border:1px solid var(--loss-line)}
+.thead .tstats{font-family:var(--fm);font-size:12.5px;color:var(--dim);font-variant-numeric:tabular-nums;display:flex;gap:14px}
+.thead .tstats b{color:var(--ink2);font-weight:600}
+.thead .sp{flex:1}
+.thead .bans{display:flex;align-items:center;gap:5px}
+.thead .bans .bl{font-family:var(--fd);font-size:10.5px;color:var(--faint);margin-right:2px}
+.thead .bans img{width:22px;height:22px;border-radius:5px;filter:grayscale(.55) brightness(.8);border:1px solid var(--line2)}
+
+.prow{display:grid;grid-template-columns:auto auto 1fr auto auto auto auto;gap:12px;align-items:center;padding:10px 18px;border-bottom:1px solid var(--line)}
+.prow:last-child{border-bottom:0}
+.prow.me{background:var(--gold-soft)}
+.pchamp{position:relative;width:42px;height:42px;flex-shrink:0}
+.pchamp img{width:42px;height:42px;border-radius:9px;border:1px solid var(--line2);background:var(--well)}
+.pchamp .lv{position:absolute;right:-4px;bottom:-4px;font-family:var(--fm);font-size:10px;font-weight:600;color:var(--ink);background:var(--bg);border:1px solid var(--line2);border-radius:5px;padding:0 4px;min-width:17px;text-align:center}
+.pspells{display:flex;flex-direction:column;gap:3px}
+.pspells img{width:19px;height:19px;border-radius:5px;background:var(--well);border:1px solid var(--line)}
+.pwho{min-width:0}
+.pwho .pn{font-family:var(--fd);font-weight:600;font-size:13.5px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:7px}
+.pwho .pn .mb{font-family:var(--fm);font-size:9.5px;font-weight:600;letter-spacing:.08em;color:#1a1206;background:linear-gradient(180deg,#F0DCA8,#C8AA6E);padding:1px 6px;border-radius:5px}
+.pwho .pp{font-family:var(--fd);font-size:11.5px;color:var(--dim);margin-top:2px}
+.pkda{text-align:center;min-width:74px}
+.pkda .n{font-family:var(--fm);font-size:14px;color:var(--ink);font-variant-numeric:tabular-nums}
+.pkda .n .s{color:var(--faint)}
+.pkda .r{font-family:var(--fd);font-size:11px;color:var(--dim);margin-top:2px}
+.pstat{text-align:center;min-width:46px}
+.pstat .n{font-family:var(--fm);font-size:13.5px;color:var(--ink2);font-variant-numeric:tabular-nums}
+.pstat .l{font-family:var(--fd);font-size:10.5px;color:var(--faint);margin-top:2px}
+.pitems{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.pitems .it{width:26px;height:26px;border-radius:6px;background:var(--well);border:1px solid var(--line);overflow:hidden}
+.pitems .it.trinket{border-color:var(--gold-line)}
+.pitems .it img{width:100%;height:100%}
+
+/* 댓글 */
+.cmts{background:var(--surface);border:1px solid var(--line);border-radius:var(--r2);padding:20px}
+.cform{display:flex;gap:10px;margin-bottom:18px}
+.cform input{flex:1;background:var(--well);border:1px solid var(--line);border-radius:var(--r1);padding:11px 14px;color:var(--ink);font-family:var(--fd);font-size:14px;outline:0}
+.cform input:focus{border-color:var(--gold-line)}
+.cform button{font-family:var(--fd);font-weight:600;font-size:13.5px;color:var(--bg);background:var(--gold);border:0;padding:0 18px;border-radius:var(--r1);cursor:pointer}
+.clist{display:flex;flex-direction:column;gap:14px}
+.citem{display:flex;flex-direction:column;gap:4px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.citem:last-child{border-bottom:0;padding-bottom:0}
+.citem .ch{display:flex;align-items:center;gap:9px}
+.citem .ca{font-family:var(--fd);font-weight:600;font-size:13px;color:var(--ink2)}
+.citem .ct{font-family:var(--fd);font-size:11.5px;color:var(--faint)}
+.citem .cb{font-family:var(--fd);font-size:14px;color:var(--ink);line-height:1.6}
+.cempty{font-family:var(--fd);font-size:13.5px;color:var(--faint);text-align:center;padding:20px}
+
+.state{padding:90px 24px;text-align:center}
+.state .mk{width:50px;height:50px;color:var(--line2);margin:0 auto 20px}
+.state h3{font-family:var(--fs);font-weight:400;font-size:22px;color:var(--ink);margin:0 0 10px}
+.state p{font-family:var(--fd);font-size:14.5px;color:var(--dim);margin:0 auto;max-width:420px;line-height:1.7}
+.state a{color:var(--gold-ink);font-weight:600}
+
+@media(max-width:780px){
+ .wrap{padding:0 14px 80px}.bar-in{padding:12px 14px}
+ .summary{gap:14px 18px}.summary .verdict{font-size:22px;padding-right:16px}
+ .prow{grid-template-columns:auto auto 1fr auto;gap:9px;padding:10px 12px}
+ .pspells{display:none}.pstat.csst{display:none}.pitems{grid-column:1/-1;grid-template-columns:repeat(7,1fr);margin-top:2px}
+ .pkda{min-width:64px}
+ .thead .tstats{display:none}
+ .objgrid{padding:14px}
+}
+</style>
+</head>
+<body>
+
+<header class="bar">
+ <div class="bar-in">
+  <a class="brand" href="index.html">
+   <svg class="mk" viewBox="0 0 24 24"><path d="M12 2 L15 9 L22 9 L16.5 13.5 L18.5 21 L12 16.5 L5.5 21 L7.5 13.5 L2 9 L9 9 Z" fill="currentColor"/></svg>
+   <b>PENTA</b>
+  </a>
+  <a class="back" href="index.html">
+   <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+   목록으로
+  </a>
+  <div class="sp"></div>
+ </div>
+</header>
+
+<main class="wrap" id="main">
+ <div class="state" id="loading">
+  <svg class="mk" viewBox="0 0 24 24"><path d="M12 2 L15 9 L22 9 L16.5 13.5 L18.5 21 L12 16.5 L5.5 21 L7.5 13.5 L2 9 L9 9 Z" fill="currentColor"/></svg>
+  <h3>불러오는 중…</h3>
+ </div>
+</main>
+
+<script src="penta-common.js"></script>
+<script>
+(function(){
+  var P = window.PENTA;
+  var main = document.getElementById('main');
+  var ver = '15.1.1';
+  var ROWS = [];          // 이 매치의 시점들
+  var ANALYSIS = null;    // 대표 분석
+  var MID = '';
+  var curPov = 0;
+  var split = false;
+  var selected = [];      // 분할 선택 인덱스
+  var syncRAF = null;
+
+  function qs(name){ return new URLSearchParams(location.search).get(name); }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+
+  // 소환사 주문 아이콘(있으면)
+  function spellImg(id){ var u=P.spellIcon(ver,id); return u?('<img src="'+u+'" alt="" onerror="this.style.visibility=\'hidden\'">'):'<span style="width:19px;height:19px"></span>'; }
+  function itemCell(id,trinket){
+    var u=P.itemIcon(ver,id);
+    return '<div class="it'+(trinket?' trinket':'')+'">'+(u?'<img src="'+u+'" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">':'')+'</div>';
+  }
+
+  function teamBlock(team){
+    var ps = (ANALYSIS.players||[]).filter(function(p){return p.team===team;})
+      .sort(function(a,b){return P.posRank(a.position)-P.posRank(b.position);});
+    var won = ANALYSIS.win_team===team;
+    var kills = ps.reduce(function(s,p){return s+(p.kills||0);},0);
+    var deaths = ps.reduce(function(s,p){return s+(p.deaths||0);},0);
+    var assists = ps.reduce(function(s,p){return s+(p.assists||0);},0);
+    var gold = ps.reduce(function(s,p){return s+(p.gold||0);},0);
+    var bans = ((ANALYSIS.bans||{})[team])||((ANALYSIS.bans||{})[String(team)])||[];
+    var saver = (ROWS[curPov]||{}).saver;
+
+    var rows = ps.map(function(p){
+      var bm = P.bestMulti(p);
+      var me = saver && p.name===saver;
+      var items = (p.items||[]);
+      var itemHTML = '';
+      for(var i=0;i<6;i++) itemHTML += itemCell(items[i],false);
+      itemHTML += itemCell(items[6],true); // 장신구
+      return '<div class="prow'+(me?' me':'')+'">'
+        + '<div class="pchamp"><img src="'+P.champIcon(ver,p.champion)+'" alt="'+esc(p.champion)+'" loading="lazy" onerror="this.style.visibility=\'hidden\'"><span class="lv">'+(p.level||'')+'</span></div>'
+        + '<div class="pspells">'+spellImg((p.spells||[])[0])+spellImg((p.spells||[])[1])+'</div>'
+        + '<div class="pwho"><div class="pn">'+esc(p.name||'소환사')+(bm?'<span class="mb">'+(bm.rank===5?'PENTA':bm.rank===4?'QUADRA':'TRIPLE')+'</span>':'')+'</div>'
+          + '<div class="pp">'+esc(p.champion)+(P.posKo(p.position)?(' · '+P.posKo(p.position)):'')+'</div></div>'
+        + '<div class="pkda"><div class="n">'+(p.kills||0)+'<span class="s"> / </span>'+(p.deaths||0)+'<span class="s"> / </span>'+(p.assists||0)+'</div><div class="r">'+P.kdaRatio(p.kills,p.deaths,p.assists)+' 평점</div></div>'
+        + '<div class="pstat csst"><div class="n">'+(p.cs||0)+'</div><div class="l">CS</div></div>'
+        + '<div class="pstat"><div class="n">'+P.compact(p.gold)+'</div><div class="l">골드</div></div>'
+        + '<div class="pitems">'+itemHTML+'</div>'
+      + '</div>';
+    }).join('');
+
+    var banHTML = bans.length ? ('<div class="bans"><span class="bl">밴</span>'+bans.map(function(cid){
+      return '<img src="'+P.champIcon(ver, champNameById(cid))+'" alt="" loading="lazy" onerror="this.style.display=\'none\'">';
+    }).join('')+'</div>') : '';
+
+    return '<div class="team '+(team===100?'blue':'red')+'">'
+      + '<div class="thead"><span class="tn">'+(team===100?'블루팀':'레드팀')+'</span>'
+        + '<span class="wl '+(won?'w':'l')+'">'+(won?'승리':'패배')+'</span>'
+        + '<span class="tstats"><span><b>'+kills+'/'+deaths+'/'+assists+'</b> KDA</span><span><b>'+P.compact(gold)+'</b> 골드</span></span>'
+        + '<span class="sp"></span>'+banHTML
+      + '</div>' + rows + '</div>';
+  }
+
+  // 챔피언 id→이름: DataDragon은 이름 기반이라, 밴은 id만 있음.
+  // 간단 매핑 테이블(이번 매치 밴에 등장하는 것 위주 + 자주 쓰는 것). 없으면 빈 아이콘.
+  var CHID = {266:'Aatrox',32:'Amumu',3:'Galio',81:'Ezreal',80:'Pantheon',17:'Teemo',950:'Naafiri',131:'Diana',145:'Kaisa',54:'Malphite',
+    517:'Sylas',67:'Vayne',201:'Braum',518:'Neeko',238:'Zed',800:'Mel',777:'Yone',235:'Senna',233:'Briar',99:'Lux'};
+  function champNameById(id){ return CHID[id] || ''; }
+
+  // 골드 추이 SVG
+  function goldChart(series){
+    if(!series || series.length<2) return '';
+    var W=1000, H=240, pad=8;
+    var maxT = series[series.length-1].t || 1;
+    var maxG = 1; series.forEach(function(s){ maxG=Math.max(maxG, s.g100, s.g200); });
+    function x(t){ return pad + (t/maxT)*(W-2*pad); }
+    function y(g){ return H-pad - (g/maxG)*(H-2*pad); }
+    function path(key){ return series.map(function(s,i){ return (i?'L':'M')+x(s.t).toFixed(1)+' '+y(s[key]).toFixed(1); }).join(' '); }
+    // 골드 차이 영역(블루-레드)
+    var diffTop = series.map(function(s,i){ return (i?'L':'M')+x(s.t).toFixed(1)+' '+y(Math.max(s.g100,s.g200)).toFixed(1); }).join(' ');
+    // x축 라벨(분)
+    var ticks=''; var step = maxT>1800?600:300;
+    for(var t=0;t<=maxT;t+=step){ ticks += '<text class="gx" x="'+x(t).toFixed(1)+'" y="'+(H-2)+'" text-anchor="middle">'+Math.round(t/60)+'분</text>'; }
+    return '<div class="chartcard"><div class="lg"><span><i style="background:var(--blue)"></i>블루팀</span><span><i style="background:var(--red)"></i>레드팀</span><span style="margin-left:auto;color:var(--faint)">누적 획득 골드</span></div>'
+      + '<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none">'
+      + '<path d="'+path('g100')+'" fill="none" stroke="var(--blue)" stroke-width="2.5"/>'
+      + '<path d="'+path('g200')+'" fill="none" stroke="var(--red)" stroke-width="2.5"/>'
+      + ticks + '</svg></div>';
+  }
+
+  // 오브젝트 한 줄
+  function objRow(label, b, r, icon){
+    var bl = b>r, rl = r>b;
+    return '<div class="ov b'+(bl?' lead':'')+'">'+icon+'<b>'+b+'</b></div>'
+      + '<div class="ot">'+label+'</div>'
+      + '<div class="ov r'+(rl?' lead':'')+'"><b>'+r+'</b>'+icon+'</div>';
+  }
+  function kills(o,k){ var v=(o||{})[k]; return (v&&typeof v==='object')?(v.kills||0):(v||0); }
+
+  function objectivesBlock(){
+    var o100=(ANALYSIS.objectives||{})[100]||(ANALYSIS.objectives||{})['100']||{};
+    var o200=(ANALYSIS.objectives||{})[200]||(ANALYSIS.objectives||{})['200']||{};
+    var dragon='<svg class="ic" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c2 3 5 3 7 2-1 4-3 5-3 5s3 1 4 4c-3 0-5-1-5-1s1 4-2 7c-1-3-2-4-2-4s-1 1-2 4c-3-3-2-7-2-7s-2 1-5 1c1-3 4-4 4-4S4 8 3 4c2 1 5 1 7-2 1 1 1 2 2 2s1-1 0 0z"/></svg>';
+    var baron='<svg class="ic" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 5 5-1-2 5 3 4-5 1-2 5-3-4-3 4-2-5-5-1 3-4-2-5 5 1z"/></svg>';
+    var tower='<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 21V9l6-5 6 5v12M9 21v-6h6v6"/></svg>';
+    var herald='<svg class="ic" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9"/></svg>';
+    var inhib='<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
+    return '<div class="objgrid">'
+      + objRow('드래곤', kills(o100,'dragon'), kills(o200,'dragon'), dragon)
+      + objRow('바론', kills(o100,'baron'), kills(o200,'baron'), baron)
+      + objRow('전령', kills(o100,'riftHerald'), kills(o200,'riftHerald'), herald)
+      + objRow('타워', kills(o100,'tower'), kills(o200,'tower'), tower)
+      + objRow('억제기', kills(o100,'inhibitor'), kills(o200,'inhibitor'), inhib)
+      + '</div>';
+  }
+
+  // ── 영상(POV/분할) ──
+  function stageSingle(){
+    var r = ROWS[curPov] || {};
+    if(!r.video){
+      return '<div class="stage empty"><div class="novid"><svg class="mk" viewBox="0 0 24 24"><path d="M12 2 L15 9 L22 9 L16.5 13.5 L18.5 21 L12 16.5 L5.5 21 L7.5 13.5 L2 9 L9 9 Z" fill="currentColor"/></svg>이 시점의 영상이 아직 없습니다</div></div>';
+    }
+    return '<div class="stage"><video id="vmain" controls playsinline preload="metadata" poster="'+(r.thumb||'')+'" src="'+r.video+'"></video></div>';
+  }
+  function stageSplit(){
+    var cells = selected.map(function(idx){
+      var r = ROWS[idx]; var me = saverCardName(r);
+      return '<div class="cell"><span class="tag"><i style="background:'+(r._team===100?'var(--blue)':'var(--red)')+'"></i>'+esc(r.saver||'시점')+'</span>'
+        + '<video data-idx="'+idx+'" '+(idx===selected[0]?'controls':'muted')+' playsinline preload="metadata" poster="'+(r.thumb||'')+'" src="'+(r.video||'')+'"></video></div>';
+    }).join('');
+    return '<div class="stage grid mv-'+selected.length+'">'+cells+'</div>';
+  }
+  function saverCardName(r){ var c=P.saverCard(r); return c?c.champion:''; }
+
+  function renderStage(){
+    var host = document.getElementById('stagehost');
+    if(!host) return;
+    if(syncRAF){ cancelAnimationFrame(syncRAF); syncRAF=null; }
+    host.innerHTML = (split && selected.length>=2) ? stageSplit() : stageSingle();
+    if(split && selected.length>=2) startSync();
+  }
+  function startSync(){
+    var vids = Array.prototype.slice.call(document.querySelectorAll('#stagehost video'));
+    if(vids.length<2) return;
+    var master = vids[0];
+    master.addEventListener('play', function(){ vids.forEach(function(v){ if(v!==master) v.play().catch(function(){}); }); });
+    master.addEventListener('pause', function(){ vids.forEach(function(v){ if(v!==master) v.pause(); }); });
+    master.addEventListener('seeked', function(){ vids.forEach(function(v){ if(v!==master) v.currentTime=master.currentTime; }); });
+    function loop(){
+      vids.forEach(function(v){ if(v!==master && Math.abs(v.currentTime-master.currentTime)>0.35){ v.currentTime=master.currentTime; } });
+      syncRAF = requestAnimationFrame(loop);
+    }
+    syncRAF = requestAnimationFrame(loop);
+  }
+
+  function renderPovBar(){
+    var host = document.getElementById('povhost');
+    if(!host) return;
+    if(ROWS.length<=1 && !ROWS[0]) { host.innerHTML=''; return; }
+    var tabs = ROWS.map(function(r,i){
+      var c = P.saverCard(r) || {};
+      var sel = split && selected.indexOf(i)>=0;
+      var on = !split && i===curPov;
+      var icon = c.champion ? P.champIcon(ver,c.champion) : '';
+      return '<div class="povtab'+(on?' on':'')+(sel?' sel':'')+'" data-idx="'+i+'">'
+        + (icon?'<img src="'+icon+'" alt="" onerror="this.style.visibility=\'hidden\'">':'<span style="width:30px;height:30px"></span>')
+        + '<div class="who"><div class="nm">'+esc(r.saver||('시점 '+(i+1)))+'</div><div class="ch">'+esc(c.champion||'')+(P.posKo(c.position)?(' · '+P.posKo(c.position)):'')+'</div></div></div>';
+    }).join('');
+    var canSplit = ROWS.filter(function(r){return r.video;}).length>=2;
+    host.innerHTML = '<div class="povtabs">'+tabs+'</div>'
+      + (canSplit?('<button class="splitbtn'+(split?' on':'')+'" id="splitbtn"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="8" height="16" rx="1"/><rect x="13" y="4" width="8" height="16" rx="1"/></svg>'+(split?'분할 보기 끄기':'시점 비교')+'</button>'):'')
+      + (split?'<div class="splithint">최대 4개까지 시점을 골라 같은 순간을 나란히 볼 수 있습니다. 첫 번째 영상으로 모두 동기화됩니다.</div>':'');
+  }
+
+  function bindPov(){
+    var host = document.getElementById('povhost');
+    if(!host) return;
+    host.addEventListener('click', function(e){
+      var sb = e.target.closest('#splitbtn');
+      if(sb){
+        split = !split;
+        if(split){ selected = [curPov]; }
+        else { selected = []; }
+        renderPovBar(); renderStage(); return;
+      }
+      var tab = e.target.closest('.povtab'); if(!tab) return;
+      var i = +tab.dataset.idx;
+      if(split){
+        var pos = selected.indexOf(i);
+        if(pos>=0){ if(selected.length>1) selected.splice(pos,1); }
+        else if(selected.length<4 && ROWS[i].video){ selected.push(i); }
+        renderPovBar(); renderStage();
+      } else {
+        curPov = i; renderPovBar(); renderStage();
+      }
+    });
+  }
+
+  // ── 좋아요/조회/댓글 ──
+  function primaryRowId(){ var pr=P.pickPrimary(ROWS); return pr?pr.id:null; }
+  function groupLikes(){ return ROWS.reduce(function(s,r){return s+(r.likes||0);},0); }
+  function groupViews(){ return ROWS.reduce(function(s,r){return s+(r.views||0);},0); }
+
+  async function bumpView(){
+    var id = primaryRowId(); if(!id) return;
+    try{ await P.sbRpc('bump_view',{mid:id}); }catch(e){}
+  }
+  var liked = false;
+  async function toggleLike(btn){
+    var id = primaryRowId(); if(!id) return;
+    liked = !liked;
+    try{ await P.sbRpc('like_match',{mid:id, delta: liked?1:-1}); }catch(e){}
+    var base = groupLikes() + (liked?1:0);
+    btn.classList.toggle('liked', liked);
+    btn.querySelector('.cnt').textContent = base;
+  }
+
+  async function loadComments(){
+    var host = document.getElementById('clist'); if(!host) return;
+    var rows=[];
+    try{ rows = await P.sbSelect('comments','select=*&match_id=eq.'+encodeURIComponent(MID)+'&order=created.desc&limit=100'); }catch(e){}
+    if(!rows.length){ host.innerHTML='<div class="cempty">첫 댓글을 남겨보세요.</div>'; return; }
+    host.innerHTML = rows.map(function(c){
+      return '<div class="citem"><div class="ch"><span class="ca">'+esc(c.author||'익명')+'</span><span class="ct">'+(P.ago(c.created)||'')+'</span></div><div class="cb">'+esc(c.body)+'</div></div>';
+    }).join('');
+  }
+  async function postComment(){
+    var ai=document.getElementById('cauthor'), bi=document.getElementById('cbody');
+    var author=(ai.value||'익명').trim(), body=(bi.value||'').trim();
+    if(!body) return;
+    try{
+      await P.sbInsert('comments',{match_id:MID, author:author, body:body, created:new Date().toISOString()});
+      bi.value=''; loadComments();
+    }catch(e){ alert('댓글 등록에 실패했습니다.'); }
+  }
+
+  function renderAll(){
+    var rep = ROWS[curPov] || P.pickPrimary(ROWS) || {};
+    var won = ANALYSIS.win_team!=null ? (saverWon(rep)) : null;
+    var len = rep.length || P.mmss(ANALYSIS.duration);
+    var patch = (ANALYSIS.patch||'').split('.').slice(0,2).join('.');
+    var verdict = won===true?'승리':won===false?'패배':'결과';
+
+    main.innerHTML =
+      '<div class="player"><div id="stagehost"></div><div class="povbar" id="povhost"></div></div>'
+      + '<div class="summary">'
+        + '<div class="verdict '+(won?'w':'l')+'">'+verdict+'</div>'
+        + '<div class="si"><div class="k">큐</div><div class="v">'+P.queueName(rep.type||ANALYSIS.queue)+'</div></div>'
+        + '<div class="si"><div class="k">시간</div><div class="v">'+len+'</div></div>'
+        + (patch?('<div class="si"><div class="k">패치</div><div class="v">'+patch+'</div></div>'):'')
+        + '<div class="si"><div class="k">날짜</div><div class="v">'+(P.ago(rep.uploaded)||'-')+'</div></div>'
+        + '<div class="sp"></div>'
+        + '<div class="acts">'
+          + '<button class="actbtn like" id="likebtn"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-4.5-9.5-9C1 9 2.5 5.5 6 5.5c2 0 3.2 1.2 4 2.4.8-1.2 2-2.4 4-2.4 3.5 0 5 3.5 3.5 6.5C19 16.5 12 21 12 21z"/></svg><span class="cnt">'+groupLikes()+'</span></button>'
+          + '<div class="actbtn view"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3.2"/><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/></svg>'+P.compact(groupViews())+'</div>'
+        + '</div>'
+      + '</div>'
+      + (ANALYSIS.series ? ('<h2 class="sec">골드 추이<span class="ln"></span></h2>'+goldChart(ANALYSIS.series)) : '')
+      + '<h2 class="sec">오브젝트<span class="ln"></span></h2>'+objectivesBlock()
+      + '<h2 class="sec">스코어보드<span class="ln"></span></h2><div class="board">'+teamBlock(100)+teamBlock(200)+'</div>'
+      + '<h2 class="sec">댓글<span class="ln"></span></h2>'
+      + '<div class="cmts"><div class="cform"><input id="cauthor" placeholder="이름(선택)" maxlength="24"><input id="cbody" placeholder="댓글을 입력하세요" maxlength="300"><button id="cpost">등록</button></div><div class="clist" id="clist"></div></div>';
+
+    renderStage(); renderPovBar(); bindPov();
+    document.getElementById('likebtn').addEventListener('click', function(){ toggleLike(this); });
+    document.getElementById('cpost').addEventListener('click', postComment);
+    document.getElementById('cbody').addEventListener('keydown', function(e){ if(e.key==='Enter') postComment(); });
+    loadComments();
+  }
+
+  function saverWon(rep){
+    if(rep && rep.won!=null) return rep.won;
+    var c=P.saverCard(rep); return c?!!c.win:(ANALYSIS.win_team===100?null:null);
+  }
+
+  async function load(){
+    MID = qs('id') || '';
+    if(!MID){ main.innerHTML='<div class="state"><h3>매치를 찾을 수 없습니다</h3><p><a href="index.html">목록으로 돌아가기</a></p></div>'; return; }
+    try{ ver = await P.ddVersion(); }catch(e){}
+    var rows;
+    try{ rows = await P.sbSelect('matches','select=*&match_id=eq.'+encodeURIComponent(MID)+'&order=uploaded.desc'); }
+    catch(e){ main.innerHTML='<div class="state"><h3>불러오지 못했습니다</h3><p>잠시 후 다시 시도해 주세요.</p></div>'; return; }
+    if(!rows || !rows.length){
+      main.innerHTML='<div class="state"><svg class="mk" viewBox="0 0 24 24"><path d="M12 2 L15 9 L22 9 L16.5 13.5 L18.5 21 L12 16.5 L5.5 21 L7.5 13.5 L2 9 L9 9 Z" fill="currentColor"/></svg><h3>매치를 찾을 수 없습니다</h3><p>삭제되었거나 아직 업로드되지 않았을 수 있습니다. <a href="index.html">목록으로</a></p></div>';
+      return;
+    }
+    ROWS = rows;
+    // 분석은 영상 있는 대표 우선, 없으면 첫 행
+    var rep = P.pickPrimary(ROWS) || ROWS[0];
+    ANALYSIS = rep.analysis || {};
+    // 각 행에 _team(녹화자 팀) 부착(분할 태그 색)
+    ROWS.forEach(function(r){ var c=P.saverCard(r); r._team = c?c.team:100; });
+    // 대표를 curPov로
+    curPov = Math.max(0, ROWS.indexOf(rep));
+    renderAll();
+    bumpView();
+  }
+
+  load();
+})();
+</script>
+</body></html>
