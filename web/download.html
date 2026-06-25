@@ -26,7 +26,7 @@ a{color:inherit;text-decoration:none}svg{display:block}
 .brand{display:flex;align-items:center;gap:10px}
 .brand .mk{width:22px;height:22px;color:var(--gold);filter:drop-shadow(0 0 9px rgba(200,170,110,.4))}
 .brand b{font-family:var(--fs);font-weight:400;font-size:20px;letter-spacing:.26em;color:var(--ink);padding-left:.26em}
-.nav{display:flex;gap:2px;margin-left:14px}
+.nav{display:flex;gap:2px;margin-left:12px}
 .nav a{font-family:var(--fd);font-weight:600;font-size:14px;color:var(--dim);padding:8px 13px;border-radius:var(--r1);transition:.14s}
 .nav a.on{color:var(--ink);background:var(--surface)}.nav a:hover{color:var(--ink)}
 .bar .sp{flex:1}
@@ -153,8 +153,8 @@ footer .by b{color:var(--ink2)}
  <section class="sec">
   <h2>시작하기 <span class="sub">4단계</span></h2>
   <ol class="steps">
-   <li><b>위에서 받은 <span class="k">penta_recorder.zip</span>의 압축을 풉니다.</b> 생긴 <span class="k">penta_recorder</span> 폴더 안의 <span class="k">_internal</span> 폴더는 지우지 마세요.</li>
-   <li><b>설정 파일을 넣습니다.</b> <span class="k">penta_recorder.exe</span> 옆에 <span class="k">config.json</span> 파일을 만들고 아래 내용을 채웁니다(다음 항목 참고). 프록시 주소와 Supabase 정보가 있어야 분석·업로드가 연결됩니다.</li>
+   <li><b>받은 <span class="k">penta_recorder.zip</span>의 압축을 풉니다.</b> 생긴 <span class="k">penta_recorder</span> 폴더 안의 <span class="k">_internal</span> 폴더는 지우지 마세요.</li>
+   <li><b>설정 파일을 같은 폴더에 넣습니다.</b> <span class="k">penta_recorder.exe</span> 옆에 <span class="k">config.json</span> 파일을 만들고 아래 내용을 채웁니다(다음 항목 참고). 프록시 주소와 Supabase 정보가 있어야 분석·업로드가 연결됩니다.</li>
    <li><b><span class="k">penta_recorder.exe</span>를 더블클릭</b>합니다. 처음 한 번은 영상 도구(ffmpeg)를 자동으로 받아오니 1~2분 기다리면 됩니다.</li>
    <li><b>리그 오브 레전드를 플레이</b>하세요. 게임이 끝나면 영상과 전적이 아카이브에 자동으로 올라갑니다. 창은 켜둔 채로 두면 됩니다.</li>
   </ol>
@@ -213,10 +213,10 @@ footer .by b{color:var(--ink2)}
  <section class="sec">
   <h2>처음 실행할 때</h2>
   <div class="note">
-   <p><b>압축 풀기 전 "차단 해제"</b> — 내려받은 <span class="k">penta_recorder.zip</span>을 우클릭 → 속성 → 아래쪽 <span class="k">차단 해제</span>에 체크한 뒤 압축을 풀면 경고가 줄어듭니다.</p>
-   <p><b>"확인되지 않은 앱" 경고</b> — 서명되지 않은 개인 제작 프로그램이라 Windows가 한 번 경고를 띄울 수 있습니다. <span class="k">추가 정보 → 실행</span>으로 진행하면 됩니다.</p>
+   <p><b>압축 풀기 전 "차단 해제"</b> — 내려받은 <span class="k">penta_recorder.zip</span>을 우클릭 → 속성 → 아래쪽 <span class="k">차단 해제</span>에 체크하고 적용한 뒤 압축을 풀면 경고가 줄어듭니다.</p>
+   <p><b>"확인되지 않은 앱" 경고(SmartScreen)</b> — 서명되지 않은 개인 제작 프로그램이라 Windows가 한 번 경고를 띄울 수 있습니다. <span class="k">추가 정보 → 실행</span>으로 진행하면 됩니다.</p>
+   <p><b>"스마트 앱 컨트롤"이 아예 차단할 때</b> — 실행 옵션조차 없이 막히면 스마트 앱 컨트롤(SAC)이 켜진 PC입니다. <span class="k">설정 → 개인정보 및 보안 → Windows 보안 → 앱 및 브라우저 컨트롤 → 스마트 앱 컨트롤 설정</span>에서 끌 수 있습니다. (한 번 끄면 다시 켜려면 Windows 재설치가 필요하니 신중히 결정하세요.) 대부분의 PC는 SAC가 꺼져 있어 이 화면을 보지 않습니다.</p>
    <p><b>백신이 막을 때</b> — 드물게 강하게 막으면 예외(허용) 목록에 <span class="k">penta_recorder.exe</span>를 등록해 주세요.</p>
-   <p><b>최신 빌드가 막힐 때</b> — 새로 올라온 빌드는 평판을 쌓기 전이라 그럴 수 있습니다. 저장소 <span class="k">Actions</span> 탭에서도 받을 수 있습니다.</p>
   </div>
  </section>
 

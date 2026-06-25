@@ -3,6 +3,7 @@
   "league_process": "League of Legends.exe",
   "proxy_url": "https://mypenta.netlify.app",
   "platform": "kr",
+  "gallery_url": "https://mypenta.netlify.app/",
   "supabase": {
     "url": "https://bsrvmesrygbfeqicquvq.supabase.co",
     "anon_key": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzcnZtZXNyeWdiZmVxaWNxdXZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzNjA2NjQsImV4cCI6MjA5NzkzNjY2NH0.PBnGgLxvMDOK_yUQxTH11EwizEz5oJ1OWp-9I5nG8Ug",
