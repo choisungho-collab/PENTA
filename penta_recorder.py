@@ -102,10 +102,14 @@ def log(m):
     s = str(m)
     if any(k in s for k in ("오류", "에러", "실패", "Traceback", "Error")) and ("다시 시작" not in s):
         LAST_ERR["msg"] = s[:240]; LAST_ERR["t"] = time.time()
-    if "녹화 시작" in s: REC_STATE["recording"] = True
-    elif ("녹화 종료" in s) or ("대기 상태" in s) or ("게임 종료" in s): REC_STATE["recording"] = False
-    if "준비 완료. 리그" in s: REC_STATE["ready"] = True
-    if s.startswith("인코더:"): REC_STATE["encoder"] = s.split("인코더:", 1)[1].strip()
+    if "Recording started" in s:
+        REC_STATE["recording"] = True
+        if "WGC" in s: REC_STATE["capture"] = "WGC"
+        elif "gdigrab" in s: REC_STATE["capture"] = "GDI"
+        elif "Monitor" in s: REC_STATE["capture"] = "DXGI"
+    elif ("Recording stopped" in s) or ("Idle" in s) or ("Game ended" in s): REC_STATE["recording"] = False
+    if "Ready." in s: REC_STATE["ready"] = True
+    if s.startswith("Encoder:"): REC_STATE["encoder"] = s.split("Encoder:", 1)[1].strip()
     try: GUI_Q.put_nowait(line)
     except Exception: pass
     try:
@@ -176,7 +180,7 @@ def load_or_make_config():
             "autostart": True, "min_game_sec": 300,
         }
         json.dump(cfg, open(CONFIG_PATH, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
-        log(f"설정 자동 생성됨 → {CONFIG_PATH}")
+        log(f"Config created → {CONFIG_PATH}")
     # service_key 영구보관: 한 번 넣으면 data 폴더에 저장 → 이후 zip 통째로 덮어써도 유지
     try:
         _sk = ((cfg.get("supabase") or {}).get("service_key") or "").strip()
@@ -198,13 +202,13 @@ def ensure_audio():
     except Exception:
         pass
     try:
-        log("소리 엔진 준비 중(pyaudiowpatch, 처음 한 번)…")
+        log("Setting up audio engine (pyaudiowpatch, first run)…")
         _run([sys.executable, "-m", "pip", "install", "-q", "pyaudiowpatch", "--break-system-packages"], timeout=300)
         import pyaudiowpatch  # noqa
-        log("소리 엔진 준비 완료.")
+        log("Audio engine ready.")
         return True
     except Exception as e:
-        log(f"  (소리) pyaudiowpatch 자동 설치 실패 → 무음 녹화. 수동: pip install pyaudiowpatch ({e})")
+        log(f"  (audio) pyaudiowpatch install failed → recording without sound. Manual: pip install pyaudiowpatch ({e})")
         return False
 
 def ensure_ffmpeg():
@@ -212,12 +216,32 @@ def ensure_ffmpeg():
     if os.path.isfile(local): return local
     found = shutil.which("ffmpeg")
     if found: return found
-    log("ffmpeg 다운로드 중… (~90MB, 처음 한 번만, 1~2분)")
+    log("Downloading ffmpeg… (~80MB, first run only, 1–3 min)")
     sources = [
-        ("BtbN", "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip"),
         ("gyan-essentials", "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"),
+        ("BtbN", "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip"),
         ("gyan-full", "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-full.zip"),
     ]
+    def _fetch(url, timeout=180, tries=3):
+        last = None
+        for _i in range(tries):
+            try:
+                req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+                with urllib.request.urlopen(req, timeout=timeout) as r:
+                    total = int(r.headers.get("Content-Length") or 0)
+                    buf = io.BytesIO(); got = 0
+                    while True:
+                        chunk = r.read(262144)
+                        if not chunk: break
+                        buf.write(chunk); got += len(chunk)
+                    if total and got < int(total * 0.99):
+                        raise IOError(f"불완전 다운로드 {got}/{total} bytes")
+                    return buf.getvalue()
+            except Exception as e:
+                last = e
+                if _i < tries - 1:
+                    log(f"    Retrying {_i+1}/{tries-1} ({type(e).__name__})…"); time.sleep(2.0 * (_i + 1))
+        raise last
     # BtbN 최신 릴리스에서 win64-gpl 자산을 동적으로 찾아 추가 (파일명이 또 바뀌어도 대응)
     try:
         api = urllib.request.Request("https://api.github.com/repos/BtbN/FFmpeg-Builds/releases/latest",
@@ -231,8 +255,7 @@ def ensure_ffmpeg():
         pass
     for label, url in sources:
         try:
-            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-            data = urllib.request.urlopen(req, timeout=180).read()
+            data = _fetch(url)
             z = zipfile.ZipFile(io.BytesIO(data))
             member = next(n for n in z.namelist() if n.lower().endswith("/bin/ffmpeg.exe"))
             with z.open(member) as src, open(local, "wb") as dst:
@@ -244,15 +267,15 @@ def ensure_ffmpeg():
                         shutil.copyfileobj(src, dst)
             except Exception:
                 pass
-            log(f"ffmpeg 준비 완료. (출처: {label})")
+            log(f"ffmpeg ready. (source: {label})")
             return local
         except Exception as e:
-            log(f"    {label} 실패: {e} → 다음 소스 시도")
-    log("[!] ffmpeg 자동 다운로드에 모두 실패했어요. 수동으로 받아주세요:")
-    log("    1) https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip 다운로드")
-    log("    2) 압축 풀고 그 안의  bin\\ffmpeg.exe  를 찾아")
-    log(f"    3) 이 폴더에 복사:  {HERE}")
-    log("    4) penta_recorder.exe 다시 실행")
+            log(f"    {label} failed: {e} → trying next source")
+    log("[!] ffmpeg auto-download failed on all sources. Please download manually:")
+    log("    1) Download https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip")
+    log("    2) Unzip and find  bin\\ffmpeg.exe  inside")
+    log(f"    3) Copy it to this folder:  {HERE}")
+    log("    4) Run penta_recorder.exe again")
     return None
 
 
@@ -280,8 +303,8 @@ def count_matches():
 # config 의 "supabase" 를 채우면 자동으로 켜짐. 비어 있으면 전부 로컬(SQLite)로 동작.
 # Supabase 공개 기본값 — anon_key 는 공개돼도 안전(RLS 가 데이터 보호). config.json 이 없거나 비어 있어도 클라우드 모드로 동작.
 SB_DEFAULTS = {
-    "url": "https://luljnalcnxfyxmlgoxbc.supabase.co",
-    "anon_key": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx1bGpuYWxjbnhmeXhtbGdveGJjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwMDU1NDIsImV4cCI6MjA5NzU4MTU0Mn0.WhPOfWiOlokOHVZLmffIKKTDpQunhxwwwJOd6CSoC2k",
+    "url": "https://bsrvmesrygbfeqicquvq.supabase.co",
+    "anon_key": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzcnZtZXNyeWdiZmVxaWNxdXZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzNjA2NjQsImV4cCI6MjA5NzkzNjY2NH0.PBnGgLxvMDOK_yUQxTH11EwizEz5oJ1OWp-9I5nG8Ug",
     "bucket": "media",
 }
 def sb_cfg():
@@ -347,12 +370,12 @@ def _trim_lead(video_path, game_len_sec, lead=6.0):
                  capture_output=True)
         if r.returncode == 0 and os.path.isfile(tmp) and os.path.getsize(tmp) > 1024:
             os.replace(tmp, video_path)
-            log("영상 앞 로비/로딩을 잘라 카운트다운부터 시작하도록 정리했어")
+            log("Trimmed the lobby/loading intro so it starts at the countdown")
         else:
             try: os.remove(tmp)
             except OSError: pass
     except Exception as e:
-        log(f"영상 트림 건너뜀(원본 유지): {e}")
+        log(f"Skipped trimming (keeping original): {e}")
 
 
 # ===================== 영상 처리 =====================
@@ -395,11 +418,11 @@ def _encoder_args():
                                capture_output=True, text=True, timeout=30)
             if r.returncode != 0:
                 errs = [l for l in (r.stderr or "").splitlines() if l.strip()]
-                if errs: log("  NVENC 오류: " + "  /  ".join(errs[-2:]))
+                if errs: log("  NVENC error: " + "  /  ".join(errs[-2:]))
                 return False
             return True
         except Exception as e:
-            log(f"  NVENC 테스트 예외: {e}")
+            log(f"  NVENC test exception: {e}")
             return False
     if pref == "nvenc":
         use_nvenc = True
@@ -408,16 +431,16 @@ def _encoder_args():
     else:  # auto — 실제 인코딩 테스트
         use_nvenc = ("h264_nvenc" in have) and _nvenc_ok()
         if ("h264_nvenc" in have) and not use_nvenc:
-            log("  NVENC가 목록엔 있지만 실제 인코딩에 실패 → 소프트웨어(libx264)로 전환")
+            log("  NVENC is listed but failed to encode → switching to software (libx264)")
     if use_nvenc:
         _ENC_IS_SW = False
-        _ENC_CACHE = ["-c:v", "h264_nvenc", "-preset", "p5", "-cq", "20"]; name = "NVENC (NVIDIA 하드웨어)"
+        _ENC_CACHE = ["-c:v", "h264_nvenc", "-preset", "p5", "-cq", "20"]; name = "NVENC"
     else:
         _ENC_IS_SW = True
         preset = (CFG.get("preset") or "auto").lower()
         if preset in ("auto", ""): preset = "superfast"   # 소프트웨어는 게임 끊김 방지 위해 가벼운 프리셋
-        _ENC_CACHE = ["-c:v", "libx264", "-preset", preset, "-crf", "25"]; name = f"libx264 (소프트웨어, {preset})"
-    log(f"인코더: {name}")
+        _ENC_CACHE = ["-c:v", "libx264", "-preset", preset, "-crf", "25"]; name = f"x264 ({preset})"
+    log(f"Encoder: {name}")
     return _ENC_CACHE
 
 def _target_height(src_h=0):
@@ -506,7 +529,7 @@ class Recorder:
             try:
                 import pyaudiowpatch as pa, wave
             except Exception as e:
-                log(f"  (소리) pyaudiowpatch 미설치 → 무음 녹화. 설치: pip install pyaudiowpatch ({e})"); return
+                log(f"  (audio) pyaudiowpatch not installed → recording without sound. Install: pip install pyaudiowpatch ({e})"); return
             p = stream = wf = None
             try:
                 p = pa.PyAudio()
@@ -524,12 +547,12 @@ class Recorder:
                 stream = p.open(format=pa.paInt16, channels=ch, rate=rate, input=True,
                                 input_device_index=dev["index"], frames_per_buffer=2048)
                 box["t0"] = time.time(); box["ok"] = True
-                log(f"  ♪ 소리 녹음 시작 ({str(dev.get('name','?'))[:26]} · {rate}Hz {ch}ch)")
+                log(f"  ♪ Audio recording started ({str(dev.get('name','?'))[:26]} · {rate}Hz {ch}ch)")
                 while not box["stop"].is_set():
                     try: wf.writeframes(stream.read(2048, exception_on_overflow=False))
                     except Exception: break
             except Exception as e:
-                log(f"  (소리) 캡처 실패 → 무음 녹화: {e}")
+                log(f"  (audio) capture failed → recording without sound: {e}")
             finally:
                 for fn in (lambda: stream and stream.stop_stream(), lambda: stream and stream.close(),
                            lambda: wf and wf.close(), lambda: p and p.terminate()):
@@ -583,14 +606,14 @@ class Recorder:
                 for f in (vid, wav):
                     try: os.remove(f)
                     except OSError: pass
-                self.path = out; log("■ 소리 합치기 완료"); return out
-            log("  (소리) 합치기 결과가 비어 영상만 사용")
+                self.path = out; log("■ Audio merged"); return out
+            log("  (audio) merge result empty → using video only")
             try:
                 if os.path.isfile(out): os.remove(out)
             except OSError: pass
             return vid
         except Exception as e:
-            log(f"  (소리) 합치기 실패 → 영상만: {e}"); return vid
+            log(f"  (audio) merge failed → video only: {e}"); return vid
 
     def _start_wgc(self, verify=True):
         """WGC(OBS식)로 프레임을 받아 ffmpeg로 인코딩. 정지화면이어도 직전 프레임을 고정 fps로 계속 먹임(전체화면 게임도 잡힘)."""
@@ -598,15 +621,15 @@ class Recorder:
             from windows_capture import WindowsCapture
         except ImportError:
             try:
-                log("WGC 엔진 설치 중(windows-capture)…")
+                log("Installing WGC engine (windows-capture)…")
                 _run([sys.executable, "-m", "pip", "install", "-q", "windows-capture", "--break-system-packages"], timeout=240)
                 from windows_capture import WindowsCapture
             except Exception as e:
-                log(f"  WGC 사용 불가(설치 실패: {e})"); return False
+                log(f"  WGC unavailable (install failed: {e})"); return False
         try:
             import numpy as _np
         except Exception as e:
-            log(f"  WGC 사용 불가(numpy 없음: {e})"); return False
+            log(f"  WGC unavailable (numpy missing: {e})"); return False
         self.path = os.path.join(REC_DIR, f"clip_{datetime.datetime.now():%Y%m%d_%H%M%S}.mp4")
         enc = _encoder_args(); pathx = self.path; fps = self.fps
         shared = {"buf": None, "wh": None, "n": 0, "err": None}
@@ -614,7 +637,7 @@ class Recorder:
         try:
             cap = WindowsCapture(cursor_capture=None, draw_border=None, monitor_index=1, window_name=None)
         except Exception as e:
-            log(f"  WGC 초기화 실패: {e}"); return False
+            log(f"  WGC init failed: {e}"); return False
 
         @cap.event
         def on_frame_arrived(frame, capture_control):
@@ -643,7 +666,7 @@ class Recorder:
             cmd = [FFMPEG, "-y", "-loglevel", "error",
                    "-f", "rawvideo", "-pixel_format", "bgra", "-video_size", f"{w}x{h}", "-framerate", str(fps),
                    "-i", "pipe:", *vf, *enc, "-pix_fmt", "yuv420p", "-movflags", "+faststart", pathx]
-            if vf: log(f"  소프트웨어 부하↓: {h}p 캡처 → {_target_height(h)}p 로 인코딩")
+            if vf: log(f"  Lowering CPU load: capturing {h}p → encoding at {_target_height(h)}p")
             errlog = os.path.join(REC_DIR, "wgc_ffmpeg.log")
             try: _ef = open(errlog, "w", encoding="utf-8", errors="replace")
             except Exception: _ef = subprocess.DEVNULL
@@ -674,13 +697,13 @@ class Recorder:
         try:
             control = cap.start_free_threaded()
         except Exception as e:
-            log(f"  WGC 시작 실패: {e}"); return False
+            log(f"  WGC start failed: {e}"); return False
         ft = threading.Thread(target=feeder, daemon=True); ft.start()
         self._wgc_control = control
         self._wgc_state = {"stop": stop_ev, "feeder": ft, "proc_box": proc_box}
         self.backend = "wgc"
         if not verify:
-            log("● 녹화 시작 (WGC)"); return True
+            log("● Recording started (WGC)"); return True
         # --- WGC 검증 ---
         # WGC는 프레임 카운터로 '화면 잡힘'을 직접 확인할 수 있다. 파일 크기는 ffmpeg가 쓰는 중인지 확인용.
         # (NVENC는 첫 키프레임을 측정 전에 쓰고 정적 화면에선 이후 증가가 작아, '델타 40KB' 방식은 오판함 → 절대 크기로 판단)
@@ -701,18 +724,18 @@ class Recorder:
         ferr = _fflog()
         ok = (n1 >= 15) and alive and (not ferr)   # 프레임 들어옴 + ffmpeg 정상 동작
         if ok and _sz() >= 8000:
-            log("● 녹화 시작 (WGC — 화면 캡처 정상 확인)"); return True
+            log("● Recording started (WGC — capture verified)"); return True
         if ok:                                       # 파일이 아직 작으면(정적 화면) 잠깐 더 대기 후 재확인
             time.sleep(2.5)
             if _sz() >= 8000:
-                log("● 녹화 시작 (WGC — 화면 캡처 정상 확인)"); return True
+                log("● Recording started (WGC — capture verified)"); return True
         stop_ev.set()
         try: control.stop()
         except Exception: pass
         try: ft.join(timeout=5)
         except Exception: pass
         self.backend = "ffmpeg"; self._wgc_control = None; self._wgc_state = None
-        log("  WGC 캡처 안 됨 (받은 프레임:{}개, ffmpeg:{}, 파일:{}B, 에러:{}) → 다른 방식 시도".format(
+        log("  WGC produced no frames (frames:{}, ffmpeg:{}, file:{}B, err:{}) → trying another method".format(
             n1, "동작중" if alive else "종료됨", _sz(), ferr or "없음"))
         return False
 
@@ -729,7 +752,7 @@ class Recorder:
                 else:
                     self._spawn(self.mode, self.output_idx); time.sleep(1.0)
                     if self._alive():
-                        log(f"● 녹화 시작 ({'모니터 '+str(self.output_idx) if self.mode=='ddagrab' else 'gdigrab'})"); return True
+                        log(f"● Recording started ({'Monitor '+str(self.output_idx) if self.mode=='ddagrab' else 'gdigrab'})"); return True
             except Exception: pass
             self.verified = False
         # 1순위: WGC (auto/wgc) — 전체화면도 잡히는 OBS식 엔진
@@ -738,9 +761,9 @@ class Recorder:
                 if self._start_wgc(verify=True):
                     self.verified = True; self.verified_backend = "wgc"; return True
             except Exception as e:
-                log(f"WGC 오류: {e}")
+                log(f"WGC error: {e}")
             if capmode == "wgc":
-                log("  WGC 실패 → ddagrab/gdigrab 폴백")
+                log("  WGC failed → falling back to ddagrab/gdigrab")
         # 2순위: ddagrab(모니터 0/1/2) → gdigrab
         ci = CFG.get("output_idx", "auto")
         if isinstance(ci, int) or (isinstance(ci, str) and ci.isdigit()):
@@ -755,16 +778,16 @@ class Recorder:
                 if self._capturing():
                     self.mode = mode; self.output_idx = idx; self.backend = "ffmpeg"
                     self.verified = True; self.verified_backend = "ffmpeg"; self.warned_black = False
-                    log(f"● 녹화 시작 ({'모니터 '+str(idx) if mode=='ddagrab' else 'gdigrab'}) — 화면 캡처 정상 확인")
+                    log(f"● Recording started ({'Monitor '+str(idx) if mode=='ddagrab' else 'gdigrab'}) — capture verified")
                     return True
                 self._kill()
             except Exception as e:
-                log(f"녹화 시작 오류({mode} #{idx}): {e}"); self._kill()
+                log(f"Recording start error ({mode} #{idx}): {e}"); self._kill()
         if not self.warned_black:
             self.warned_black = True
-            log("[!] 화면 캡처를 확인 못 했어요(검은 화면일 수 있음). 그래도 녹화는 계속합니다.")
-            log("    • 먼저 한 판 하고 녹화된 영상을 확인해 보세요 (로딩 화면 오탐일 수 있음)")
-            log("    • config.json 의 \"capture\" 를 \"wgc\" 로 바꾸거나, 리그 오브 레전드를 '창 모드(전체 화면)'로 해보세요")
+            log("[!] Couldn't verify capture (the screen may be black). Recording continues anyway.")
+            log("    • Play a game first and check the recording (it may be a false alarm from the loading screen)")
+            log("    • Set \"capture\" to \"wgc\" in config.json, or run League in 'windowed (fullscreen)' mode")
         try:
             self._spawn("ddagrab", 0); time.sleep(1.0); self.mode = "ddagrab"; self.output_idx = 0; self.backend = "ffmpeg"
             return self._alive()
@@ -784,7 +807,7 @@ class Recorder:
                 try: ft.join(timeout=20)   # 피더가 ffmpeg stdin 닫고 마무리
                 except Exception: pass
             self.backend = "ffmpeg"; self._wgc_control = None; self._wgc_state = None
-            log("■ 녹화 종료")
+            log("■ Recording stopped")
             return self._finalize()
         if not self.proc: return None
         p = self.proc; self.proc = None
@@ -795,7 +818,7 @@ class Recorder:
                 try: p.wait(timeout=12)
                 except subprocess.TimeoutExpired: p.terminate()
         except Exception: pass
-        log("■ 녹화 종료")
+        log("■ Recording stopped")
         return self._finalize()
 
 def sc_running(name):
@@ -812,7 +835,7 @@ def _sec_mmss(s):
     return f"{s//60}:{s%60:02d}"
 
 def _discard(video_path, reason):
-    log(f"  저장하지 않고 버립니다 — {reason}")
+    log(f"  Discarding (not saving) — {reason}")
     try:
         if video_path and os.path.isfile(video_path): os.remove(video_path)
     except OSError: pass
@@ -820,11 +843,11 @@ def _discard(video_path, reason):
 def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr"):
     # 화면 녹화 + (게임 종료 후) Riot 매치를 연결해 분석·업로드한다.
     if not video_path or not os.path.isfile(video_path) or os.path.getsize(video_path) < 10000:
-        log("영상이 비어있어 등록 생략."); return
+        log("Video is empty → skipping registration."); return
     if not riot_id:
         return _discard(video_path, "내 Riot ID를 확인하지 못함(게임이 아니었을 수 있음)")
     if not proxy_url:
-        log("proxy_url 미설정 — 영상은 로컬에 두고 분석은 생략합니다."); return
+        log("proxy_url not set — keeping the video locally and skipping analysis."); return
     match, puuid = penta_lol.resolve_match(proxy_url, riot_id, start_ts, end_ts, platform)
     if not match:
         return _discard(video_path, "녹화 시간과 일치하는 매치를 찾지 못함")
@@ -847,7 +870,7 @@ def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr"):
         if dur: _trim_lead(video_path, dur)   # 로비/로딩 잘라 게임 시작부터 보이게
     except Exception: pass
     if not sb_writable():
-        log("클라우드(Supabase)가 설정되지 않아 로컬 보관만 합니다."); return
+        log("Cloud (Supabase) not configured → keeping locally only."); return
     tmp_thumb = os.path.join(base, "thumb.jpg"); has_thumb = make_thumb(video_path, tmp_thumb)
     try:
         video_url = sb_upload(video_path, f"videos/{safe}.mp4", "video/mp4")
@@ -868,9 +891,9 @@ def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr"):
             "np": len(players), "players": players, "won": won,
             "analysis": analysis,
         })
-        log(f"업로드 완료 — matchId {gid}")
+        log(f"Upload complete — matchId {gid}")
     except Exception as e:
-        log(f"업로드 실패: {e}")
+        log(f"Upload failed: {e}")
 
 def recorder_loop(cfg):
     proc = cfg.get("league_process", "League of Legends.exe")
@@ -880,13 +903,13 @@ def recorder_loop(cfg):
     try: ensure_audio()
     except Exception: pass
     if not proxy:
-        log("주의: config.json의 proxy_url이 비어 있습니다. Netlify 프록시 주소를 넣어야 분석이 연결됩니다.")
-    log("준비 완료. 리그 오브 레전드 게임을 시작하면 자동으로 녹화됩니다. (이 창은 켜둔 채로 두세요)")
+        log("Note: proxy_url in config.json is empty. Set your Netlify proxy URL to connect analysis.")
+    log("Ready. Start a League of Legends game and it records automatically. (Keep this window open.)")
     while True:
         try:
             run = sc_running(proc)   # 게임 인스턴스(League of Legends.exe) = 인게임
             if run and not was:
-                log("게임 감지됨. 내 정보 확인 중...")
+                log("Game detected. Checking your info…")
                 for _ in range(20):
                     if penta_lol.game_active():
                         riot_id = penta_lol.my_riot_id() or riot_id; break
@@ -894,17 +917,17 @@ def recorder_loop(cfg):
                 start_ts = time.time(); active = rec.start()
             if run:
                 if not rec._recording():
-                    if active: log("녹화 스트림이 끊겨 자동으로 다시 시작합니다.")
+                    if active: log("Recording stream dropped → restarting automatically.")
                     active = rec.start()
                 if not riot_id and penta_lol.game_active():
                     riot_id = penta_lol.my_riot_id()
             if not run and was:
-                log("게임 종료 감지.")
+                log("Game ended.")
                 vid = rec.stop(); active = False; rec.verified = False
                 end_ts = time.time()
                 if vid and os.path.isfile(vid):
                     threading.Thread(target=ingest_lol, args=(vid, riot_id, start_ts, end_ts, proxy, platform), daemon=True).start()
-                riot_id = None; start_ts = None; log("대기 상태.")
+                riot_id = None; start_ts = None; log("Idle.")
             # 웹 표시용 실시간 상태 갱신
             if run and rec._recording():
                 REC_STATE.update(rec=True, text="녹화 중")
@@ -914,9 +937,9 @@ def recorder_loop(cfg):
                 REC_STATE.update(rec=False, text="대기 중 — 게임을 시작하면 자동 녹화")
             was = run; time.sleep(poll)
         except KeyboardInterrupt:
-            log("종료합니다."); rec.stop(); break
+            log("Quitting."); rec.stop(); break
         except Exception:
-            log("오류:\n" + traceback.format_exc()); time.sleep(poll)
+            log("Error:\n" + traceback.format_exc()); time.sleep(poll)
 
 # ===================== main =====================
 
@@ -950,14 +973,14 @@ def set_autostart(enable):
             cmd = _autostart_cmd()
             if not cmd: winreg.CloseKey(key); return False
             winreg.SetValueEx(key, "PENTA", 0, winreg.REG_SZ, cmd)
-            log("윈도우 시작 시 자동 실행 등록됨 (끄려면 config.json 의 autostart 를 false 로)")
+            log("Registered to run at Windows startup (set autostart to false in config.json to disable)")
         else:
             try: winreg.DeleteValue(key, "PENTA")
             except FileNotFoundError: pass
         winreg.CloseKey(key)
         return True
     except Exception as e:
-        log(f"자동 실행 설정 건너뜀: {e}")
+        log(f"Skipped autostart setup: {e}")
         return False
 
 def is_autostart():
@@ -988,13 +1011,14 @@ def _hide_console():
     except Exception: pass
 
 def run_gui(cfg, url):
-    """아주 작은 상태 표시줄. 평소엔 상태만, 문제가 있을 때만 로그가 펼쳐진다."""
+    """Compact status bar. Shows status only; expands the log when something needs attention."""
     import tkinter as tk
     import tkinter.font as _tkfont
-    BG="#0A1015"; SURF="#15212E"; INK="#F0E6D2"; INK2="#CDBE91"; DIM="#A09B8C"; FAINT="#62605A"
-    JADE="#C8AA6E"; JADE2="#F0DCA8"; REC="#E8526A"; AMB="#C8AA6E"; LINE="#1E2D3A"; LINE2="#2C3F4F"
-    W = 444
-    root = tk.Tk(); root.title("PENTA"); root.configure(bg=BG)
+    BG="#0A1015"; SURF="#172431"; CARD="#0F1A24"
+    INK="#F0E6D2"; INK2="#C8AA6E"; DIM="#92A2B5"; FAINT="#5C6B7A"
+    GOLD="#C8AA6E"; GOLD2="#F0DCA8"; REC="#FF5470"; LINE="#22323F"; LINE2="#33485A"
+    W=466
+    root=tk.Tk(); root.title("PENTA"); root.configure(bg=BG)
     try: root.iconphoto(True, tk.PhotoImage(data=_PENTA_ICON))
     except Exception: pass
     try:
@@ -1005,174 +1029,189 @@ def run_gui(cfg, url):
             return c[-1]
     except Exception:
         def _pick(*c): return c[0]
-    KOR=_pick("Malgun Gothic","맑은 고딕","Segoe UI"); LAT=_pick("Segoe UI","Malgun Gothic"); MON=_pick("Consolas","Cascadia Mono","Segoe UI")
-    BASE_H, SET_H, LOG_H = 200, 210, 208
+    UI=_pick("Segoe UI","Malgun Gothic","Arial")
+    SEMI=_pick("Segoe UI Semibold","Segoe UI","Malgun Gothic")
+    MON=_pick("Cascadia Mono","Consolas","Segoe UI")
+    BASE_H, SET_H, LOG_H = 220, 234, 210
     root.geometry(f"{W}x{BASE_H}"); root.resizable(False, True)
-    st = {"log": False, "settings": False}
+    st={"log":False,"settings":False}
+    _CAPLBL={"auto":"Auto","wgc":"WGC","ddagrab":"DXGI","gdigrab":"GDI"}
+    _ENCLBL={"auto":"Auto","nvenc":"NVENC","x264":"x264"}
+    _SCLBL={"auto":"Auto","source":"Source","1080":"1080p","720":"720p","480":"480p"}
 
-    head = tk.Frame(root, bg=BG); head.pack(fill="x", padx=14, pady=(10,0))
-    mk = tk.Canvas(head, width=22, height=17, bg=BG, highlightthickness=0); mk.pack(side="left", pady=(2,0))
-    mk.create_polygon(11,1, 13,6.2, 18.6,6.5, 14.2,10, 15.7,15.5, 11,12.4, 6.3,15.5, 7.8,10, 3.4,6.5, 9,6.2, fill=JADE2, outline="")
-    tk.Label(head, text="PENTA", bg=BG, fg=INK, font=(LAT,13,"bold")).pack(side="left", padx=(7,0))
-    games_lbl = tk.Label(head, text="", bg=BG, fg=DIM, font=(MON,9)); games_lbl.pack(side="right")
-    _cs = cloud_state()
-    _cmap = {"cloud": (JADE2, "☁ 클라우드"), "readonly": (AMB, "⚠ 키 필요"), "local": (DIM, "● 로컬")}
-    _cc, _ct = _cmap[_cs]
-    tk.Label(head, text=_ct, bg=SURF, fg=_cc, font=(KOR,9,"bold"), padx=8, pady=2).pack(side="right", padx=(0,9))
+    # === Header: logo + cloud badge + game count ===
+    head=tk.Frame(root,bg=BG); head.pack(fill="x",padx=17,pady=(14,0))
+    mk=tk.Canvas(head,width=24,height=19,bg=BG,highlightthickness=0); mk.pack(side="left",pady=(2,0))
+    mk.create_polygon(12,1, 14.4,6.9, 20.6,7.2, 15.6,11.1, 17.3,17.2, 12,13.7, 6.7,17.2, 8.4,11.1, 3.4,7.2, 9.6,6.9, fill=GOLD2, outline="")
+    tk.Label(head,text="PENTA",bg=BG,fg=INK,font=(SEMI,15,"bold")).pack(side="left",padx=(9,0))
+    games_lbl=tk.Label(head,text="",bg=BG,fg=DIM,font=(MON,9)); games_lbl.pack(side="right")
+    _cs=cloud_state()
+    _cmap={"cloud":(GOLD2,"\u2601 Cloud"),"readonly":(GOLD,"\u26a0 Key needed"),"local":(DIM,"\u25cf Local")}
+    _cc,_ct=_cmap[_cs]
+    tk.Label(head,text=_ct,bg=SURF,fg=_cc,font=(SEMI,9,"bold"),padx=10,pady=3).pack(side="right",padx=(0,10))
 
-    midf = tk.Frame(root, bg=BG); midf.pack(fill="x", padx=14, pady=(6,0))
-    dot = tk.Canvas(midf, width=12, height=12, bg=BG, highlightthickness=0); dot.pack(side="left", pady=(5,0))
-    did = dot.create_oval(1,1,11,11, fill=FAINT, outline="")
-    stx = tk.Frame(midf, bg=BG); stx.pack(side="left", padx=(9,0))
-    status_lbl = tk.Label(stx, text="시작 중…", bg=BG, fg=INK, font=(KOR,16,"bold"), anchor="w"); status_lbl.pack(anchor="w")
-    sub_lbl = tk.Label(stx, text="", bg=BG, fg=DIM, font=(KOR,9), anchor="w"); sub_lbl.pack(anchor="w")
+    # === Status: dot + big label + sub ===
+    midf=tk.Frame(root,bg=BG); midf.pack(fill="x",padx=17,pady=(12,0))
+    dot=tk.Canvas(midf,width=13,height=13,bg=BG,highlightthickness=0); dot.pack(side="left",pady=(7,0))
+    did=dot.create_oval(1,1,12,12,fill=DIM,outline="")
+    stx=tk.Frame(midf,bg=BG); stx.pack(side="left",padx=(11,0),fill="x",expand=True)
+    status_lbl=tk.Label(stx,text="Starting\u2026",bg=BG,fg=INK,font=(SEMI,18,"bold"),anchor="w"); status_lbl.pack(anchor="w")
+    sub_lbl=tk.Label(stx,text="",bg=BG,fg=DIM,font=(UI,9),anchor="w"); sub_lbl.pack(anchor="w")
 
-    logwrap = tk.Frame(root, bg=BG)
-    errbar = tk.Label(logwrap, text="", bg="#3A1E18", fg="#ffb4a6", font=(KOR,9), anchor="w",
-                      padx=10, pady=6, justify="left", wraplength=W-40)
-    logtxt = tk.Text(logwrap, bg="#0C0D10", fg=DIM, font=(MON,9), bd=0, padx=10, pady=8,
-                     height=8, wrap="word", state="disabled")
+    # === Engine chips: Capture / Encoder / Quality ===
+    engf=tk.Frame(root,bg=BG); engf.pack(fill="x",padx=17,pady=(10,0))
+    def _chip(parent):
+        f=tk.Frame(parent,bg=CARD,highlightbackground=LINE,highlightthickness=1)
+        l=tk.Label(f,text="",bg=CARD,fg=INK2,font=(MON,8),padx=9,pady=4); l.pack()
+        f.pack(side="left",padx=(0,6)); return l
+    cap_chip=_chip(engf); enc_chip=_chip(engf); sc_chip=_chip(engf)
 
-    # === 콜백 ===
+    # === Log area (hidden until needed) ===
+    logwrap=tk.Frame(root,bg=BG)
+    errbar=tk.Label(logwrap,text="",bg="#3A1E18",fg="#FFB4A6",font=(UI,9),anchor="w",padx=11,pady=6,justify="left",wraplength=W-44)
+    logtxt=tk.Text(logwrap,bg="#0C0D10",fg=DIM,font=(MON,9),bd=0,padx=11,pady=8,height=8,wrap="word",state="disabled")
+
+    # === Callbacks ===
     def open_gallery():
         try: open_app(url)
         except Exception: pass
     def open_folder():
         try:
-            if sys.platform == "win32": os.startfile(REC_DIR)
+            if sys.platform=="win32": os.startfile(REC_DIR)
         except Exception: pass
     def do_quit():
         try: root.destroy()
         except Exception: pass
         os._exit(0)
     def _save_cfg():
-        try: json.dump(cfg, open(CONFIG_PATH, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
-        except Exception as e: log(f"설정 저장 실패: {e}")
+        try: json.dump(cfg, open(CONFIG_PATH,"w",encoding="utf-8"), ensure_ascii=False, indent=2)
+        except Exception as e: log(f"Failed to save settings: {e}")
 
-    # === 녹화 설정 패널 (접이식) ===
-    PANEL = "#0B0C0F"
-    optwrap = tk.Frame(root, bg=PANEL, highlightbackground=LINE, highlightthickness=1)
-    tk.Label(optwrap, text="녹화 설정", bg=PANEL, fg=INK2, font=(KOR,9,"bold")).pack(anchor="w", padx=14, pady=(11,5))
-    SCALE_OPTS=[("자동 (최상)","auto"),("원본 해상도","source"),("1080p","1080"),("720p","720"),("480p","480")]
-    ENC_OPTS=[("자동 (GPU 우선)","auto"),("GPU · NVENC","nvenc"),("CPU · x264","x264")]
-    CAP_OPTS=[("자동","auto"),("WGC (전체화면 OK)","wgc"),("DDA","ddagrab"),("GDI","gdigrab")]
-    MON_OPTS=[("자동","auto"),("모니터 1","0"),("모니터 2","1"),("모니터 3","2")]
+    # === Settings panel (collapsible) ===
+    PANEL="#0B0C0F"
+    optwrap=tk.Frame(root,bg=PANEL,highlightbackground=LINE,highlightthickness=1)
+    tk.Label(optwrap,text="RECORDING SETTINGS",bg=PANEL,fg=INK2,font=(SEMI,8,"bold")).pack(anchor="w",padx=15,pady=(12,6))
+    SCALE_OPTS=[("Auto (best)","auto"),("Source","source"),("1080p","1080"),("720p","720"),("480p","480")]
+    ENC_OPTS=[("Auto (GPU first)","auto"),("GPU \u00b7 NVENC","nvenc"),("CPU \u00b7 x264","x264")]
+    CAP_OPTS=[("Auto","auto"),("WGC (fullscreen)","wgc"),("DXGI","ddagrab"),("GDI","gdigrab")]
+    MON_OPTS=[("Auto","auto"),("Monitor 1","0"),("Monitor 2","1"),("Monitor 3","2")]
     def opt_row(label, opts, key):
-        row = tk.Frame(optwrap, bg=PANEL); row.pack(fill="x", padx=14, pady=3)
-        tk.Label(row, text=label, bg=PANEL, fg=INK2, font=(KOR,9), width=6, anchor="w").pack(side="left")
-        cur = str(cfg.get(key, "auto")); m = {l: v for l, v in opts}
-        curlbl = next((l for l, v in opts if v == cur), opts[0][0])
-        var = tk.StringVar(value=curlbl)
-        def on_sel(lbl, k=key, mp=m, lb=label):
-            cfg[k] = mp[lbl]; _save_cfg(); log(f"설정: {lb} → {lbl} (다음 녹화부터 적용)")
-        om = tk.OptionMenu(row, var, *[l for l, _ in opts], command=on_sel)
-        om.config(bg="#181B21", fg=INK, font=(KOR,9), activebackground="#23272F", activeforeground=INK,
-                  relief="flat", bd=0, highlightthickness=1, highlightbackground=LINE2, anchor="w", padx=10, pady=4, cursor="hand2")
-        try: om["menu"].config(bg=SURF, fg=INK, activebackground=JADE, activeforeground="#fff", font=(KOR,9), bd=0, activeborderwidth=0)
+        row=tk.Frame(optwrap,bg=PANEL); row.pack(fill="x",padx=15,pady=3)
+        tk.Label(row,text=label,bg=PANEL,fg=DIM,font=(UI,9),width=8,anchor="w").pack(side="left")
+        cur=str(cfg.get(key,"auto")); m={l:v for l,v in opts}
+        curlbl=next((l for l,v in opts if v==cur), opts[0][0])
+        var=tk.StringVar(value=curlbl)
+        def on_sel(lbl,k=key,mp=m,lb=label):
+            cfg[k]=mp[lbl]; _save_cfg(); log(f"Setting: {lb} \u2192 {lbl} (applies to next recording)")
+        om=tk.OptionMenu(row,var,*[l for l,_ in opts],command=on_sel)
+        om.config(bg="#181B21",fg=INK,font=(UI,9),activebackground="#23272F",activeforeground=INK,relief="flat",bd=0,highlightthickness=1,highlightbackground=LINE2,anchor="w",padx=11,pady=4,cursor="hand2")
+        try: om["menu"].config(bg=SURF,fg=INK,activebackground=GOLD,activeforeground="#0A1015",font=(UI,9),bd=0,activeborderwidth=0)
         except Exception: pass
-        om.pack(side="left", fill="x", expand=True)
-    opt_row("화질", SCALE_OPTS, "scale")
-    opt_row("인코더", ENC_OPTS, "encoder")
-    opt_row("캡처", CAP_OPTS, "capture")
-    opt_row("모니터", MON_OPTS, "output_idx")
-    tk.Label(optwrap, text="기본값(자동)이 최상 화질 — GPU로 게임 끊김 없이 녹화합니다", bg=PANEL, fg=DIM,
-             font=(KOR,8), wraplength=W-48, justify="left").pack(anchor="w", padx=14, pady=(5,11))
+        om.pack(side="left",fill="x",expand=True)
+    opt_row("Quality",SCALE_OPTS,"scale")
+    opt_row("Encoder",ENC_OPTS,"encoder")
+    opt_row("Capture",CAP_OPTS,"capture")
+    opt_row("Monitor",MON_OPTS,"output_idx")
+    tk.Label(optwrap,text="Auto = best quality, GPU-accelerated so your game stays smooth",bg=PANEL,fg=FAINT,font=(UI,8),wraplength=W-50,justify="left").pack(anchor="w",padx=15,pady=(6,12))
 
-    # === 패널 토글 + 리사이즈 ===
+    # === Panel toggle + resize ===
     def _resize():
-        h = BASE_H + (SET_H if st["settings"] else 0) + (LOG_H if st["log"] else 0)
+        h=BASE_H+(SET_H if st["settings"] else 0)+(LOG_H if st["log"] else 0)
         root.geometry(f"{W}x{h}")
     def set_log(open_):
         if open_ and st["settings"]: set_settings(False)
-        st["log"] = open_
+        st["log"]=open_
         if open_:
-            logwrap.pack(fill="both", expand=True, padx=11, pady=(0,7))
-            if LAST_ERR.get("msg"): errbar.config(text="\u26a0 " + LAST_ERR["msg"]); errbar.pack(fill="x", pady=(0,5))
+            logwrap.pack(fill="both",expand=True,padx=12,pady=(0,8))
+            if LAST_ERR.get("msg"): errbar.config(text="\u26a0 "+LAST_ERR["msg"]); errbar.pack(fill="x",pady=(0,5))
             else: errbar.pack_forget()
-            logtxt.pack(fill="both", expand=True); logtog.config(text="로그 \u25b4")
+            logtxt.pack(fill="both",expand=True); logtog.config(text="Log \u25b4")
         else:
-            logwrap.pack_forget(); logtog.config(text="로그 \u25be")
+            logwrap.pack_forget(); logtog.config(text="Log \u25be")
         _resize()
     def set_settings(open_):
         if open_ and st["log"]: set_log(False)
-        st["settings"] = open_
-        if open_: optwrap.pack(fill="x", padx=12, pady=(2,2)); settog.config(text="\u2699 설정 \u25b4", fg=JADE)
-        else: optwrap.pack_forget(); settog.config(text="\u2699 설정", fg=DIM)
+        st["settings"]=open_
+        if open_: optwrap.pack(fill="x",padx=13,pady=(3,2)); settog.config(text="\u2699 Settings \u25b4",fg=GOLD)
+        else: optwrap.pack_forget(); settog.config(text="\u2699 Settings",fg=DIM)
         _resize()
     def toggle_log(): set_log(not st["log"])
     def toggle_settings(): set_settings(not st["settings"])
 
-    # === 버튼 헬퍼 ===
+    # === Button helpers ===
     def btn(parent, text, cmd, primary=False):
-        base = JADE if primary else "#181B21"; hov = JADE2 if primary else "#23272F"; fg = "#FFFFFF" if primary else INK
-        bord = JADE if primary else LINE2
-        b = tk.Label(parent, text=text, bg=base, fg=fg, font=(KOR,10,"bold"), padx=15, pady=9, cursor="hand2",
-                     highlightthickness=1, highlightbackground=bord, highlightcolor=bord)
-        b.bind("<Button-1>", lambda e: cmd())
-        b.bind("<Enter>", lambda e: b.config(bg=hov)); b.bind("<Leave>", lambda e: b.config(bg=base))
+        base=GOLD if primary else "#181B21"; hov=GOLD2 if primary else "#23272F"; fg="#0A1015" if primary else INK
+        bord=GOLD if primary else LINE2
+        b=tk.Label(parent,text=text,bg=base,fg=fg,font=(SEMI,10,"bold"),padx=16,pady=9,cursor="hand2",highlightthickness=1,highlightbackground=bord,highlightcolor=bord)
+        b.bind("<Button-1>",lambda e: cmd())
+        b.bind("<Enter>",lambda e: b.config(bg=hov)); b.bind("<Leave>",lambda e: b.config(bg=base))
         return b
     def link(parent, text, cmd, color=DIM):
-        l = tk.Label(parent, text=text, bg=BG, fg=color, font=(KOR,9,"bold"), cursor="hand2")
-        l.bind("<Button-1>", lambda e: cmd())
-        l.bind("<Enter>", lambda e: l.config(fg=INK)); l.bind("<Leave>", lambda e: l.config(fg=color))
+        l=tk.Label(parent,text=text,bg=BG,fg=color,font=(UI,9,"bold"),cursor="hand2")
+        l.bind("<Button-1>",lambda e: cmd())
+        l.bind("<Enter>",lambda e: l.config(fg=INK)); l.bind("<Leave>",lambda e: l.config(fg=color))
         return l
 
-    # === 액션 버튼 행 ===
-    tk.Frame(root, bg=LINE, height=1).pack(fill="x", padx=14, pady=(11,0))
-    acts = tk.Frame(root, bg=BG); acts.pack(fill="x", padx=13, pady=(10,0))
-    btn(acts, "갤러리", open_gallery, primary=True).pack(side="left")
-    btn(acts, "폴더 열기", open_folder).pack(side="left", padx=(7,0))
+    # === Action buttons ===
+    tk.Frame(root,bg=LINE,height=1).pack(fill="x",padx=17,pady=(12,0))
+    acts=tk.Frame(root,bg=BG); acts.pack(fill="x",padx=15,pady=(11,0))
+    btn(acts,"Gallery",open_gallery,primary=True).pack(side="left")
+    btn(acts,"Open folder",open_folder).pack(side="left",padx=(8,0))
 
-    # === 푸터 (토글 + 종료) ===
-    foot = tk.Frame(root, bg=BG); foot.pack(side="bottom", fill="x", padx=15, pady=(8,10))
-    settog = link(foot, "\u2699 설정", toggle_settings, DIM); settog.pack(side="left")
-    logtog = link(foot, "로그 \u25be", toggle_log, DIM); logtog.pack(side="left", padx=(16,0))
-    link(foot, "종료", do_quit, DIM).pack(side="right")
-    root.protocol("WM_DELETE_WINDOW", do_quit)
+    # === Footer (toggles + quit) ===
+    foot=tk.Frame(root,bg=BG); foot.pack(side="bottom",fill="x",padx=16,pady=(9,11))
+    settog=link(foot,"\u2699 Settings",toggle_settings,DIM); settog.pack(side="left")
+    logtog=link(foot,"Log \u25be",toggle_log,DIM); logtog.pack(side="left",padx=(17,0))
+    link(foot,"Quit",do_quit,DIM).pack(side="right")
+    root.protocol("WM_DELETE_WINDOW",do_quit)
 
     def _prep_and_run():
         global FFMPEG
         try:
-            if not FFMPEG: FFMPEG = ensure_ffmpeg()
+            if not FFMPEG: FFMPEG=ensure_ffmpeg()
         except Exception as e:
-            log(f"도구 준비 중 문제: {e}")
+            log(f"Tool setup issue: {e}")
         if not FFMPEG:
-            log("\u26a0 ffmpeg 준비 실패 — 인터넷 연결 확인 후 다시 실행해 주세요."); return
+            log("\u26a0 ffmpeg setup failed \u2014 check your internet connection and restart."); return
         recorder_loop(cfg)
-    threading.Thread(target=_prep_and_run, daemon=True).start()
+    threading.Thread(target=_prep_and_run,daemon=True).start()
 
     def poll():
-        appended = False
+        appended=False
         for _ in range(150):
-            try: line = GUI_Q.get_nowait()
+            try: line=GUI_Q.get_nowait()
             except Exception: break
             if st["log"]:
-                logtxt.config(state="normal"); logtxt.insert("end", line + "\n"); appended = True
+                logtxt.config(state="normal"); logtxt.insert("end",line+"\n"); appended=True
         if appended:
-            n = int(logtxt.index("end-1c").split(".")[0])
-            if n > 300: logtxt.delete("1.0", f"{n-300}.0")
+            n=int(logtxt.index("end-1c").split(".")[0])
+            if n>300: logtxt.delete("1.0",f"{n-300}.0")
             logtxt.see("end"); logtxt.config(state="disabled")
         if REC_STATE.get("recording"):
-            dot.itemconfig(did, fill=REC); status_lbl.config(text="녹화 중", fg=REC); sub_lbl.config(text="게임 화면 녹화 중")
+            dot.itemconfig(did,fill=REC); status_lbl.config(text="Recording",fg=REC); sub_lbl.config(text="Capturing your gameplay")
         elif REC_STATE.get("ready"):
-            dot.itemconfig(did, fill=JADE); status_lbl.config(text="대기 중", fg=INK); sub_lbl.config(text="게임 켜면 자동 녹화")
+            dot.itemconfig(did,fill=GOLD); status_lbl.config(text="Ready",fg=INK); sub_lbl.config(text="Auto-records when a game starts")
         else:
-            dot.itemconfig(did, fill=AMB); status_lbl.config(text="준비 중…", fg=INK); sub_lbl.config(text="최초 실행 — 도구 준비 중 (1~2분)")
+            dot.itemconfig(did,fill=GOLD); status_lbl.config(text="Preparing\u2026",fg=INK); sub_lbl.config(text="First run \u2014 setting up tools (1\u20132 min)")
+        cap=REC_STATE.get("capture") or _CAPLBL.get(str(cfg.get("capture","auto")),"Auto")
+        _er=(REC_STATE.get("encoder") or "").split(); enc=(_er[0] if _er else _ENCLBL.get(str(cfg.get("encoder","auto")),"Auto"))
+        sc=_SCLBL.get(str(cfg.get("scale","auto")),"Auto")
+        cap_chip.config(text=f"Capture \u00b7 {cap}"); enc_chip.config(text=f"Encoder \u00b7 {enc}"); sc_chip.config(text=f"Quality \u00b7 {sc}")
         try:
-            n = count_matches(); e = (REC_STATE.get("encoder") or "").split()
-            games_lbl.config(text=(f"경기 {n} · {e[0]}" if e else f"경기 {n}"))
+            n=count_matches(); games_lbl.config(text=f"{n} games")
         except Exception: pass
-        if LAST_ERR.get("msg") and (time.time() - LAST_ERR.get("t", 0) < 8):
+        if LAST_ERR.get("msg") and (time.time()-LAST_ERR.get("t",0)<8):
             if not st["log"]: set_log(True)
-            else: errbar.config(text="\u26a0 " + LAST_ERR["msg"])
-        root.after(500, poll)
+            else: errbar.config(text="\u26a0 "+LAST_ERR["msg"])
+        root.after(500,poll)
 
     try: root.update()
     except Exception: pass
-    if sys.platform == "win32": _hide_console()   # py.exe 로 돌려도 콘솔창 숨김
+    if sys.platform=="win32": _hide_console()
     poll()
     try: root.mainloop()
-    except Exception as ex: log(f"GUI 창 종료: {ex}")
+    except Exception as ex: log(f"GUI closed: {ex}")
+
 
 def _print_status():
     s = sb_cfg(); st = cloud_state()
@@ -1238,11 +1277,11 @@ def main():
     print("=" * 56); print(f"  PENTA — 리그 오브 레전드 자동 녹화 — 모드: {mode}"); print("=" * 56)
     _cst = cloud_state()
     if _cst == "cloud":
-        log(f"☁ 클라우드 ON — Supabase({_sb_base()}) 에 저장·공유됩니다.")
+        log(f"☁ Cloud ON — saving & sharing via Supabase({_sb_base()}).")
     elif _cst == "readonly":
-        log("⚠ 클라우드 읽기전용 — config.json 의 supabase.service_key 가 비어있어요. 채우고 재시작하면 업로드가 켜져요.")
+        log("⚠ Cloud read-only — supabase.service_key in config.json is empty. Fill it and restart to enable uploads.")
     else:
-        log("● 로컬 모드 — 이 PC에만 저장됩니다. (config.json 의 supabase 를 채우면 클라우드 ON)")
+        log("● Local mode — saved on this PC only. (Fill supabase in config.json to enable cloud)")
     if mode in ("all", "recorder"):
         if not use_gui:               # GUI면 창부터 띄우고 백그라운드에서 받음(첫 실행이 멈춘 듯 안 보이게)
             FFMPEG = ensure_ffmpeg()
@@ -1252,7 +1291,7 @@ def main():
         if not FFMPEG: FFMPEG = ensure_ffmpeg()
     url = (cfg.get("gallery_url") or "https://mypenta.netlify.app/").rstrip("/")
     if mode == "all":
-        log(f"갤러리 → {url}")
+        log(f"Gallery → {url}")
         try: open_app(url)
         except Exception: pass
         # 보기 좋은 상태창(GUI). 윈도우 + tkinter 가능하면 GUI로, 아니면 콘솔로.
@@ -1261,7 +1300,7 @@ def main():
                 import tkinter  # noqa: F401  (가용성 확인)
                 run_gui(cfg, url); return
             except Exception as e:
-                log(f"GUI 사용 불가({e}) → 콘솔 모드로 계속")
+                log(f"GUI unavailable ({e}) → continuing in console mode")
     if mode in ("all", "recorder"):
         if not FFMPEG: FFMPEG = ensure_ffmpeg()
         print("-" * 56); recorder_loop(cfg)
