@@ -1,0 +1,5 @@
+psutil
+requests
+windows-capture
+pyaudiowpatch
+boto3

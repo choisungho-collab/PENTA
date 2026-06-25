@@ -1,0 +1,19 @@
+{
+  "mode": "all",
+  "league_process": "League of Legends.exe",
+  "proxy_url": "https://여기에-네틀리파이-주소.netlify.app",
+  "platform": "kr",
+  "supabase": {
+    "url": "https://여기.supabase.co",
+    "anon_key": "여기에 anon key",
+    "service_key": "여기에 service key (이 PC에만 보관)",
+    "bucket": "media"
+  },
+  "encoder": "auto",
+  "scale": "auto",
+  "capture": "auto",
+  "output_idx": "auto",
+  "fps": 30,
+  "min_game_sec": 300,
+  "autostart": true
+}
