@@ -27,9 +27,9 @@ jobs:
           pip install -r requirements-recorder.txt
           pip install pyinstaller
 
-      - name: Build (onefile)
+      - name: Build (onedir)
         run: >
-          pyinstaller --onefile --windowed --name penta_recorder --noupx
+          pyinstaller --onedir --windowed --name penta_recorder --noupx
           --add-data "web;web"
           --hidden-import psutil --hidden-import requests --hidden-import tkinter
           --hidden-import windows_capture --hidden-import pyaudiowpatch
@@ -37,19 +37,22 @@ jobs:
           --hidden-import boto3 --hidden-import botocore --collect-data botocore
           penta_recorder.py
 
-      - name: Upload exe artifact
+      - name: Package as zip
+        run: Compress-Archive -Path dist\penta_recorder -DestinationPath penta_recorder.zip -Force
+
+      - name: Upload zip artifact
         uses: actions/upload-artifact@v4
         with:
           name: penta_recorder-windows
-          path: dist\penta_recorder.exe
+          path: penta_recorder.zip
 
       - name: Publish Release (only on version tag)
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: dist\penta_recorder.exe
+          files: penta_recorder.zip
           make_latest: true
           body: |
-            penta_recorder.exe 를 받아서 더블클릭하세요 — 파이썬 설치 불필요.
-            같은 폴더에 config.json 을 넣어야 분석·업로드가 연결됩니다.
+            penta_recorder.zip 을 받아 압축을 풀고, penta_recorder 폴더 안의 penta_recorder.exe 를 더블클릭하세요 — 파이썬 설치 불필요.
+            같은 폴더의 _internal 폴더는 지우지 마세요. config.json 을 exe 옆에 넣어야 분석·업로드가 연결됩니다.
             최초 실행 시 영상 도구(ffmpeg)를 한 번 자동으로 내려받습니다(1~2분).
