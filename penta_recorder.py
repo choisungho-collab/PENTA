@@ -1032,50 +1032,33 @@ def run_gui(cfg, url):
     UI=_pick("Segoe UI","Malgun Gothic","Arial")
     SEMI=_pick("Segoe UI Semibold","Segoe UI","Malgun Gothic")
     MON=_pick("Cascadia Mono","Consolas","Segoe UI")
-    BASE_H, SET_H, LOG_H = 242, 238, 210
+    BASE_H, SET_H, LOG_H = 242, 156, 210
     root.geometry(f"{W}x{BASE_H}"); root.resizable(False, True)
     st={"log":False,"settings":False}
     _CAPLBL={"auto":"Auto","wgc":"WGC","ddagrab":"DXGI","gdigrab":"GDI"}
     _ENCLBL={"auto":"Auto","nvenc":"NVENC","x264":"x264"}
     _SCLBL={"auto":"Auto","source":"Source","1080":"1080p","720":"720p","480":"480p"}
 
-    # === Header: logo + cloud badge + game count ===
-    head=tk.Frame(root,bg=BG); head.pack(fill="x",padx=17,pady=(12,0))
+    # === Header: logo (left) + cloud (right edge) ===
+    head=tk.Frame(root,bg=BG); head.pack(fill="x",padx=17,pady=(14,0))
     tk.Label(head,text="my",bg=BG,fg=INK,font=(SEMI,15,"bold")).pack(side="left")
     tk.Label(head,text="PENTA",bg=BG,fg=GOLD,font=(SEMI,15,"bold")).pack(side="left")
-    games_lbl=tk.Label(head,text="",bg=BG,fg=DIM,font=(MON,9)); games_lbl.pack(side="right")
     _cs=cloud_state()
     _cmap={"cloud":(GOLD2,"\u2601 Cloud"),"readonly":(GOLD,"\u26a0 Key needed"),"local":(DIM,"\u25cf Local")}
     _cc,_ct=_cmap[_cs]
-    tk.Label(head,text=_ct,bg=SURF,fg=_cc,font=(SEMI,9,"bold"),padx=10,pady=3).pack(side="right",padx=(0,10))
-
-    # divider separating brand from status
+    tk.Label(head,text=_ct,bg=SURF,fg=_cc,font=(SEMI,9,"bold"),padx=10,pady=3).pack(side="right")
     tk.Frame(root,bg=LINE,height=1).pack(fill="x",padx=17,pady=(13,0))
 
-    # === Status: dot + big label + sub ===
-    midf=tk.Frame(root,bg=BG); midf.pack(fill="x",padx=17,pady=(12,0))
-    dot=tk.Canvas(midf,width=10,height=10,bg=BG,highlightthickness=0); dot.pack(side="left",pady=(6,0))
-    did=dot.create_oval(1,1,9,9,fill=DIM,outline="")
-    status_lbl=tk.Label(midf,text="Starting\u2026",bg=BG,fg=INK,font=(SEMI,15,"bold")); status_lbl.pack(side="left",padx=(9,0))
-    sub_lbl=tk.Label(midf,text="",bg=BG,fg=DIM,font=(UI,9)); sub_lbl.pack(side="left",anchor="s",padx=(9,0),pady=(0,2))
-
-    # === Engine chips: Capture / Encoder / Quality (click any chip to open Settings) ===
-    engrow=tk.Frame(root,bg=BG); engrow.pack(fill="x",padx=17,pady=(11,0))
-    tk.Label(engrow,text="RECORDING",bg=BG,fg=FAINT,font=(MON,8,"bold")).pack(side="left")
-    eng_hint=tk.Label(engrow,text="tap to change ›",bg=BG,fg=GOLD,font=(SEMI,8,"bold"),cursor="hand2")
-    eng_hint.pack(side="right"); eng_hint.bind("<Button-1>",lambda e: set_settings(True))
-    eng_hint.bind("<Enter>",lambda e: eng_hint.config(fg=GOLD2)); eng_hint.bind("<Leave>",lambda e: eng_hint.config(fg=GOLD))
-    engf=tk.Frame(root,bg=BG); engf.pack(fill="x",padx=17,pady=(6,0))
-    def _chip(parent):
-        f=tk.Frame(parent,bg=CARD,highlightbackground=LINE,highlightthickness=1,cursor="hand2")
-        l=tk.Label(f,text="",bg=CARD,fg=INK2,font=(MON,8),padx=10,pady=5,cursor="hand2"); l.pack()
-        f.pack(side="left",padx=(0,6))
-        for w in (f,l):
-            w.bind("<Button-1>",lambda e: set_settings(True))
-            w.bind("<Enter>",lambda e:(f.config(highlightbackground=GOLD),l.config(fg=INK)))
-            w.bind("<Leave>",lambda e:(f.config(highlightbackground=LINE),l.config(fg=INK2)))
-        return l
-    cap_chip=_chip(engf); enc_chip=_chip(engf); sc_chip=_chip(engf)
+    # === Status line (slim, no card): dot + label + sub + preset (click preset to change) ===
+    midf=tk.Frame(root,bg=BG); midf.pack(fill="x",padx=17,pady=(13,0))
+    dot=tk.Canvas(midf,width=8,height=8,bg=BG,highlightthickness=0); dot.pack(side="left",pady=(6,0))
+    did=dot.create_oval(1,1,7,7,fill=DIM,outline="")
+    status_lbl=tk.Label(midf,text="Starting\u2026",bg=BG,fg=INK,font=(UI,15)); status_lbl.pack(side="left",padx=(9,0))
+    sub_lbl=tk.Label(midf,text="",bg=BG,fg=DIM,font=(UI,9)); sub_lbl.pack(side="left",anchor="s",padx=(8,0),pady=(0,2))
+    opt_lbl=tk.Label(midf,text="",bg=BG,fg=DIM,font=(MON,9),cursor="hand2"); opt_lbl.pack(side="right",anchor="s",pady=(0,2))
+    opt_lbl.bind("<Button-1>",lambda e: set_settings(True))
+    opt_lbl.bind("<Enter>",lambda e: opt_lbl.config(fg=INK2)); opt_lbl.bind("<Leave>",lambda e: opt_lbl.config(fg=DIM))
+    tk.Frame(root,bg=LINE,height=1).pack(fill="x",padx=17,pady=(13,0))
 
     # === Log area (hidden until needed) ===
     logwrap=tk.Frame(root,bg=BG)
@@ -1121,8 +1104,6 @@ def run_gui(cfg, url):
         om.pack(side="left",fill="x",expand=True)
     opt_row("Quality",SCALE_OPTS,"scale")
     opt_row("Encoder",ENC_OPTS,"encoder")
-    opt_row("Capture",CAP_OPTS,"capture")
-    opt_row("Monitor",MON_OPTS,"output_idx")
     tk.Label(optwrap,text="Auto = best quality, GPU-accelerated so your game stays smooth",bg=PANEL,fg=FAINT,font=(UI,8),wraplength=W-50,justify="left").pack(anchor="w",padx=15,pady=(6,12))
 
     # === Panel toggle + resize ===
@@ -1163,11 +1144,18 @@ def run_gui(cfg, url):
         l.bind("<Enter>",lambda e: l.config(fg=INK)); l.bind("<Leave>",lambda e: l.config(fg=color))
         return l
 
-    # === Action buttons ===
-    tk.Frame(root,bg=LINE,height=1).pack(fill="x",padx=17,pady=(11,0))
-    acts=tk.Frame(root,bg=BG); acts.pack(fill="x",padx=15,pady=(10,0))
-    btn(acts,"Gallery",open_gallery,primary=True).pack(side="left")
-    btn(acts,"Open folder",open_folder).pack(side="left",padx=(8,0))
+    # === Action buttons (slim line-split) ===
+    acts=tk.Frame(root,bg=BG); acts.pack(fill="x")
+    _g=tk.Label(acts,text="Gallery",bg=BG,fg=GOLD,font=(UI,12),pady=10,cursor="hand2")
+    _g.pack(side="left",fill="both",expand=True)
+    _g.bind("<Button-1>",lambda e: open_gallery())
+    _g.bind("<Enter>",lambda e: _g.config(fg=GOLD2)); _g.bind("<Leave>",lambda e: _g.config(fg=GOLD))
+    tk.Frame(acts,bg=LINE,width=1).pack(side="left",fill="y")
+    _o=tk.Label(acts,text="Open folder",bg=BG,fg=INK2,font=(UI,12),pady=10,cursor="hand2")
+    _o.pack(side="left",fill="both",expand=True)
+    _o.bind("<Button-1>",lambda e: open_folder())
+    _o.bind("<Enter>",lambda e: _o.config(fg=INK)); _o.bind("<Leave>",lambda e: _o.config(fg=INK2))
+    tk.Frame(root,bg=LINE,height=1).pack(fill="x")
 
     # === Footer (toggles + quit) ===
     foot=tk.Frame(root,bg=BG); foot.pack(side="bottom",fill="x",padx=16,pady=(9,11))
@@ -1199,18 +1187,14 @@ def run_gui(cfg, url):
             if n>300: logtxt.delete("1.0",f"{n-300}.0")
             logtxt.see("end"); logtxt.config(state="disabled")
         if REC_STATE.get("recording"):
-            dot.itemconfig(did,fill=REC); status_lbl.config(text="Recording",fg=REC); sub_lbl.config(text="Capturing your gameplay")
+            dot.itemconfig(did,fill=REC); status_lbl.config(text="Recording",fg=REC); sub_lbl.config(text="\u00b7 recording your game")
         elif REC_STATE.get("ready"):
-            dot.itemconfig(did,fill=GOLD); status_lbl.config(text="Ready",fg=INK); sub_lbl.config(text="Auto-records when a game starts")
+            dot.itemconfig(did,fill=GOLD); status_lbl.config(text="Ready",fg=INK); sub_lbl.config(text="\u00b7 auto-records")
         else:
-            dot.itemconfig(did,fill=GOLD); status_lbl.config(text="Preparing\u2026",fg=INK); sub_lbl.config(text="First run \u2014 setting up tools (1\u20132 min)")
-        cap=REC_STATE.get("capture") or _CAPLBL.get(str(cfg.get("capture","auto")),"Auto")
+            dot.itemconfig(did,fill=GOLD); status_lbl.config(text="Preparing\u2026",fg=INK); sub_lbl.config(text="\u00b7 setting up tools")
         _er=(REC_STATE.get("encoder") or "").split(); enc=(_er[0] if _er else _ENCLBL.get(str(cfg.get("encoder","auto")),"Auto"))
         sc=_SCLBL.get(str(cfg.get("scale","auto")),"Auto")
-        cap_chip.config(text=f"Capture \u00b7 {cap}"); enc_chip.config(text=f"Encoder \u00b7 {enc}"); sc_chip.config(text=f"Quality \u00b7 {sc}")
-        try:
-            n=count_matches(); games_lbl.config(text=f"{n} games")
-        except Exception: pass
+        opt_lbl.config(text=f"{sc} \u00b7 {enc}")
         if LAST_ERR.get("msg") and (time.time()-LAST_ERR.get("t",0)<8):
             if not st["log"]: set_log(True)
             else: errbar.config(text="\u26a0 "+LAST_ERR["msg"])
