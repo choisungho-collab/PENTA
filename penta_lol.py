@@ -106,8 +106,17 @@ def analyze_match(match, timeline=None):
     info = match.get("info") or {}
     parts = info.get("participants") or []
 
+    dur = info.get("gameDuration") or 0
+    dur_sec = dur / 1000.0 if dur > 10000 else float(dur)
+    dur_min = dur_sec / 60.0 if dur_sec else 0
+    team_kills = {100: 0, 200: 0}
+    for _p in parts:
+        team_kills[100 if _p.get("teamId") == 100 else 200] += _p.get("kills") or 0
+
     players = []
     for p in parts:
+        _k = p.get("kills") or 0; _d = p.get("deaths") or 0; _a = p.get("assists") or 0
+        _tm = 100 if p.get("teamId") == 100 else 200
         players.append({
             "name": p.get("riotIdGameName") or p.get("summonerName"),
             "tag": p.get("riotIdTagline"),
@@ -131,6 +140,11 @@ def analyze_match(match, timeline=None):
             "triples": p.get("tripleKills") or 0,
             "doubles": p.get("doubleKills") or 0,
             "multi": p.get("largestMultiKill") or 0,
+            # 효율 지표(판정·조언용)
+            "cs_per_min": round(_cs(p) / dur_min, 1) if dur_min else 0,
+            "kda": round((_k + _a) / max(1, _d), 2),
+            "kp": round((_k + _a) / max(1, team_kills[_tm]), 2) if team_kills.get(_tm) else 0,
+            "dpg": round((p.get("totalDamageDealtToChampions") or 0) / max(1, p.get("goldEarned") or 1), 2),
         })
 
     # 승리 팀
@@ -150,6 +164,12 @@ def analyze_match(match, timeline=None):
         objectives[tid] = tm.get("objectives")
         bans[tid] = [b.get("championId") for b in (tm.get("bans") or []) if b.get("championId", -1) > 0]
 
+    # 라인전 격차(상대 라이너 대비)를 각 선수에 merge
+    if timeline:
+        _lanes = _lane_diffs(timeline, parts)
+        for _i, _pl in enumerate(players):
+            _pl["lane"] = _lanes.get(_i + 1, {})
+
     return {
         "players": players,
         "win_team": win_team,
@@ -159,6 +179,8 @@ def analyze_match(match, timeline=None):
         "objectives": objectives,
         "bans": bans,
         "series": _timeline_series(timeline) if timeline else None,
+        "kills": _kill_events(timeline) if timeline else [],
+        "objs": _obj_events(timeline) if timeline else [],
     }
 
 
@@ -190,3 +212,89 @@ def saver_won(analysis, puuid):
         if p.get("puuid") == puuid:
             return p.get("win")
     return None
+
+
+def _lane_diffs(timeline, parts):
+    """각 선수의 10/15분 CS·골드를 상대 라이너(같은 포지션 반대팀)와 비교한 격차."""
+    frames = ((timeline.get("info") or {}).get("frames")) or []
+    def _frame_at(ms):
+        best = None
+        for f in frames:
+            if (f.get("timestamp") or 0) <= ms:
+                best = f
+            else:
+                break
+        return best
+    pos_team = {}
+    for i, p in enumerate(parts):
+        pos = (p.get("teamPosition") or "").upper()
+        tm = 100 if p.get("teamId") == 100 else 200
+        if pos:
+            pos_team[(pos, tm)] = i + 1
+    out = {}
+    for i, p in enumerate(parts):
+        pid = i + 1
+        pos = (p.get("teamPosition") or "").upper()
+        tm = 100 if p.get("teamId") == 100 else 200
+        opp = pos_team.get((pos, 200 if tm == 100 else 100))
+        d = {}
+        for lbl, ms in (("10", 600000), ("15", 900000)):
+            fr = _frame_at(ms)
+            if not fr:
+                continue
+            pf = fr.get("participantFrames") or {}
+            me = pf.get(str(pid)) or {}
+            mcs = (me.get("minionsKilled") or 0) + (me.get("jungleMinionsKilled") or 0)
+            mg = me.get("totalGold") or 0
+            d["mycs" + lbl] = mcs
+            if opp:
+                op = pf.get(str(opp)) or {}
+                ocs = (op.get("minionsKilled") or 0) + (op.get("jungleMinionsKilled") or 0)
+                d["cs" + lbl] = mcs - ocs
+                d["gold" + lbl] = mg - (op.get("totalGold") or 0)
+        out[pid] = d
+    return out
+
+
+def _kill_events(timeline):
+    """킬/데스 이벤트(시각·위치·관련자) — 영상 점프 + 데스 분석용."""
+    frames = ((timeline.get("info") or {}).get("frames")) or []
+    out = []
+    for f in frames:
+        for e in (f.get("events") or []):
+            if e.get("type") == "CHAMPION_KILL":
+                out.append({
+                    "t": (e.get("timestamp") or 0) // 1000,
+                    "killer": e.get("killerId"),
+                    "victim": e.get("victimId"),
+                    "assists": e.get("assistingParticipantIds") or [],
+                    "pos": e.get("position"),
+                    "bounty": e.get("shutdownBounty") or e.get("bounty") or 0,
+                })
+    return out
+
+
+def _obj_events(timeline):
+    """오브젝트(드래곤·바론·전령·타워) 처치 이벤트."""
+    frames = ((timeline.get("info") or {}).get("frames")) or []
+    out = []
+    for f in frames:
+        for e in (f.get("events") or []):
+            t = e.get("type")
+            if t == "ELITE_MONSTER_KILL":
+                out.append({
+                    "t": (e.get("timestamp") or 0) // 1000,
+                    "kind": e.get("monsterType"),
+                    "sub": e.get("monsterSubType"),
+                    "killer": e.get("killerId"),
+                    "team": e.get("killerTeamId"),
+                })
+            elif t == "BUILDING_KILL":
+                out.append({
+                    "t": (e.get("timestamp") or 0) // 1000,
+                    "kind": "TOWER" if e.get("buildingType") == "TOWER_BUILDING" else "BUILDING",
+                    "lane": e.get("laneType"),
+                    "killer": e.get("killerId"),
+                    "team": e.get("teamId"),
+                })
+    return out

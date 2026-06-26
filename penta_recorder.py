@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-PENTA — 리그 오브 레전드 자동 녹화 (한 번 실행하면 다 됨)
+myPENTA — 리그 오브 레전드 자동 녹화 (한 번 실행하면 다 됨)
 =====================================================
 이 파일 하나만 실행하면:
   · 필요한 파이썬 패키지 자동 설치
@@ -85,7 +85,7 @@ REC_DIR    = os.path.join(DATA_DIR, "recordings")
 CONFIG_PATH= os.path.join(HERE, "config.json")
 FPS        = 30
 _PENTA_ICON = "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"
-REC_STATE  = {"rec": False, "text": "대기 중", "game": None}   # 실시간 녹화 상태(웹 표시용)
+REC_STATE  = {"rec": False, "text": "Idle", "game": None}   # 실시간 녹화 상태(웹 표시용)
 for d in (DATA_DIR, UPLOAD_DIR, REC_DIR): os.makedirs(d, exist_ok=True)
 FFMPEG = None
 CFG    = {}
@@ -100,7 +100,7 @@ def log(m):
     try: print(line, flush=True)
     except Exception: pass
     s = str(m)
-    if any(k in s for k in ("오류", "에러", "실패", "Traceback", "Error")) and ("다시 시작" not in s):
+    if any(k in s for k in ("error", "Error", "failed", "Failed", "exception", "Traceback")) and ("restarting" not in s):
         LAST_ERR["msg"] = s[:240]; LAST_ERR["t"] = time.time()
     if "Recording started" in s:
         REC_STATE["recording"] = True
@@ -736,7 +736,7 @@ class Recorder:
         except Exception: pass
         self.backend = "ffmpeg"; self._wgc_control = None; self._wgc_state = None
         log("  WGC produced no frames (frames:{}, ffmpeg:{}, file:{}B, err:{}) → trying another method".format(
-            n1, "동작중" if alive else "종료됨", _sz(), ferr or "없음"))
+            n1, "alive" if alive else "dead", _sz(), ferr or "none"))
         return False
 
     def start(self):
@@ -845,22 +845,22 @@ def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr"):
     if not video_path or not os.path.isfile(video_path) or os.path.getsize(video_path) < 10000:
         log("Video is empty → skipping registration."); return
     if not riot_id:
-        return _discard(video_path, "내 Riot ID를 확인하지 못함(게임이 아니었을 수 있음)")
+        return _discard(video_path, "Couldn't verify your Riot ID (may not be a game)")
     if not proxy_url:
         log("proxy_url not set — keeping the video locally and skipping analysis."); return
     match, puuid = penta_lol.resolve_match(proxy_url, riot_id, start_ts, end_ts, platform)
     if not match:
-        return _discard(video_path, "녹화 시간과 일치하는 매치를 찾지 못함")
+        return _discard(video_path, "No match found for the recording time")
     info = match.get("info") or {}
     mid = (match.get("metadata") or {}).get("matchId") or str(info.get("gameId") or "")
     if not mid:
-        return _discard(video_path, "matchId 없음")
+        return _discard(video_path, "No matchId")
     timeline = penta_lol.proxy_get(proxy_url, "timeline", matchId=mid, platform=platform)
     analysis = penta_lol.analyze_match(match, timeline)
     dur = analysis.get("duration") or 0
     if dur and dur > 100000: dur = dur / 1000.0    # 과거 게임은 길이가 ms일 수 있어 보정
     if dur and dur < CFG.get("min_game_sec", 300):
-        return _discard(video_path, f"게임이 너무 짧음({int(dur)}초)")
+        return _discard(video_path, f"Game too short ({int(dur)}s)")
     gid = mid
     row_id = gid + "__" + (puuid or "x").replace("/", "_")   # 시점별 고유 행 id(멀티 POV 충돌 방지)
     safe = row_id.replace("/", "_")
@@ -930,11 +930,11 @@ def recorder_loop(cfg):
                 riot_id = None; start_ts = None; log("Idle.")
             # 웹 표시용 실시간 상태 갱신
             if run and rec._recording():
-                REC_STATE.update(rec=True, text="녹화 중")
+                REC_STATE.update(rec=True, text="Recording")
             elif run:
-                REC_STATE.update(rec=False, text="게임 감지됨")
+                REC_STATE.update(rec=False, text="Game detected")
             else:
-                REC_STATE.update(rec=False, text="대기 중 — 게임을 시작하면 자동 녹화")
+                REC_STATE.update(rec=False, text="Idle — auto-records when a game starts")
             was = run; time.sleep(poll)
         except KeyboardInterrupt:
             log("Quitting."); rec.stop(); break
@@ -1014,11 +1014,11 @@ def run_gui(cfg, url):
     """Compact status bar. Shows status only; expands the log when something needs attention."""
     import tkinter as tk
     import tkinter.font as _tkfont
-    BG="#0A1015"; SURF="#172431"; CARD="#0F1A24"
-    INK="#F0E6D2"; INK2="#C8AA6E"; DIM="#92A2B5"; FAINT="#5C6B7A"
-    GOLD="#C8AA6E"; GOLD2="#F0DCA8"; REC="#FF5470"; LINE="#22323F"; LINE2="#33485A"
+    BG="#080A0E"; SURF="#161B23"; CARD="#0F131A"
+    INK="#ECE7DD"; INK2="#C2BBAD"; DIM="#867F71"; FAINT="#564F44"
+    GOLD="#DEC79C"; GOLD2="#EFDDBC"; REC="#FF5470"; LINE="#1F252E"; LINE2="#2B323C"
     W=466
-    root=tk.Tk(); root.title("PENTA"); root.configure(bg=BG)
+    root=tk.Tk(); root.title("myPENTA"); root.configure(bg=BG)
     try: root.iconphoto(True, tk.PhotoImage(data=_PENTA_ICON))
     except Exception: pass
     try:
@@ -1032,7 +1032,7 @@ def run_gui(cfg, url):
     UI=_pick("Segoe UI","Malgun Gothic","Arial")
     SEMI=_pick("Segoe UI Semibold","Segoe UI","Malgun Gothic")
     MON=_pick("Cascadia Mono","Consolas","Segoe UI")
-    BASE_H, SET_H, LOG_H = 220, 234, 210
+    BASE_H, SET_H, LOG_H = 242, 238, 210
     root.geometry(f"{W}x{BASE_H}"); root.resizable(False, True)
     st={"log":False,"settings":False}
     _CAPLBL={"auto":"Auto","wgc":"WGC","ddagrab":"DXGI","gdigrab":"GDI"}
@@ -1040,30 +1040,41 @@ def run_gui(cfg, url):
     _SCLBL={"auto":"Auto","source":"Source","1080":"1080p","720":"720p","480":"480p"}
 
     # === Header: logo + cloud badge + game count ===
-    head=tk.Frame(root,bg=BG); head.pack(fill="x",padx=17,pady=(14,0))
-    mk=tk.Canvas(head,width=24,height=19,bg=BG,highlightthickness=0); mk.pack(side="left",pady=(2,0))
-    mk.create_polygon(12,1, 14.4,6.9, 20.6,7.2, 15.6,11.1, 17.3,17.2, 12,13.7, 6.7,17.2, 8.4,11.1, 3.4,7.2, 9.6,6.9, fill=GOLD2, outline="")
-    tk.Label(head,text="PENTA",bg=BG,fg=INK,font=(SEMI,15,"bold")).pack(side="left",padx=(9,0))
+    head=tk.Frame(root,bg=BG); head.pack(fill="x",padx=17,pady=(12,0))
+    tk.Label(head,text="my",bg=BG,fg=INK,font=(SEMI,15,"bold")).pack(side="left")
+    tk.Label(head,text="PENTA",bg=BG,fg=GOLD,font=(SEMI,15,"bold")).pack(side="left")
     games_lbl=tk.Label(head,text="",bg=BG,fg=DIM,font=(MON,9)); games_lbl.pack(side="right")
     _cs=cloud_state()
     _cmap={"cloud":(GOLD2,"\u2601 Cloud"),"readonly":(GOLD,"\u26a0 Key needed"),"local":(DIM,"\u25cf Local")}
     _cc,_ct=_cmap[_cs]
     tk.Label(head,text=_ct,bg=SURF,fg=_cc,font=(SEMI,9,"bold"),padx=10,pady=3).pack(side="right",padx=(0,10))
 
+    # divider separating brand from status
+    tk.Frame(root,bg=LINE,height=1).pack(fill="x",padx=17,pady=(13,0))
+
     # === Status: dot + big label + sub ===
     midf=tk.Frame(root,bg=BG); midf.pack(fill="x",padx=17,pady=(12,0))
-    dot=tk.Canvas(midf,width=13,height=13,bg=BG,highlightthickness=0); dot.pack(side="left",pady=(7,0))
-    did=dot.create_oval(1,1,12,12,fill=DIM,outline="")
-    stx=tk.Frame(midf,bg=BG); stx.pack(side="left",padx=(11,0),fill="x",expand=True)
-    status_lbl=tk.Label(stx,text="Starting\u2026",bg=BG,fg=INK,font=(SEMI,18,"bold"),anchor="w"); status_lbl.pack(anchor="w")
-    sub_lbl=tk.Label(stx,text="",bg=BG,fg=DIM,font=(UI,9),anchor="w"); sub_lbl.pack(anchor="w")
+    dot=tk.Canvas(midf,width=10,height=10,bg=BG,highlightthickness=0); dot.pack(side="left",pady=(6,0))
+    did=dot.create_oval(1,1,9,9,fill=DIM,outline="")
+    status_lbl=tk.Label(midf,text="Starting\u2026",bg=BG,fg=INK,font=(SEMI,15,"bold")); status_lbl.pack(side="left",padx=(9,0))
+    sub_lbl=tk.Label(midf,text="",bg=BG,fg=DIM,font=(UI,9)); sub_lbl.pack(side="left",anchor="s",padx=(9,0),pady=(0,2))
 
-    # === Engine chips: Capture / Encoder / Quality ===
-    engf=tk.Frame(root,bg=BG); engf.pack(fill="x",padx=17,pady=(10,0))
+    # === Engine chips: Capture / Encoder / Quality (click any chip to open Settings) ===
+    engrow=tk.Frame(root,bg=BG); engrow.pack(fill="x",padx=17,pady=(11,0))
+    tk.Label(engrow,text="RECORDING",bg=BG,fg=FAINT,font=(MON,8,"bold")).pack(side="left")
+    eng_hint=tk.Label(engrow,text="tap to change ›",bg=BG,fg=GOLD,font=(SEMI,8,"bold"),cursor="hand2")
+    eng_hint.pack(side="right"); eng_hint.bind("<Button-1>",lambda e: set_settings(True))
+    eng_hint.bind("<Enter>",lambda e: eng_hint.config(fg=GOLD2)); eng_hint.bind("<Leave>",lambda e: eng_hint.config(fg=GOLD))
+    engf=tk.Frame(root,bg=BG); engf.pack(fill="x",padx=17,pady=(6,0))
     def _chip(parent):
-        f=tk.Frame(parent,bg=CARD,highlightbackground=LINE,highlightthickness=1)
-        l=tk.Label(f,text="",bg=CARD,fg=INK2,font=(MON,8),padx=9,pady=4); l.pack()
-        f.pack(side="left",padx=(0,6)); return l
+        f=tk.Frame(parent,bg=CARD,highlightbackground=LINE,highlightthickness=1,cursor="hand2")
+        l=tk.Label(f,text="",bg=CARD,fg=INK2,font=(MON,8),padx=10,pady=5,cursor="hand2"); l.pack()
+        f.pack(side="left",padx=(0,6))
+        for w in (f,l):
+            w.bind("<Button-1>",lambda e: set_settings(True))
+            w.bind("<Enter>",lambda e:(f.config(highlightbackground=GOLD),l.config(fg=INK)))
+            w.bind("<Leave>",lambda e:(f.config(highlightbackground=LINE),l.config(fg=INK2)))
+        return l
     cap_chip=_chip(engf); enc_chip=_chip(engf); sc_chip=_chip(engf)
 
     # === Log area (hidden until needed) ===
@@ -1105,7 +1116,7 @@ def run_gui(cfg, url):
             cfg[k]=mp[lbl]; _save_cfg(); log(f"Setting: {lb} \u2192 {lbl} (applies to next recording)")
         om=tk.OptionMenu(row,var,*[l for l,_ in opts],command=on_sel)
         om.config(bg="#181B21",fg=INK,font=(UI,9),activebackground="#23272F",activeforeground=INK,relief="flat",bd=0,highlightthickness=1,highlightbackground=LINE2,anchor="w",padx=11,pady=4,cursor="hand2")
-        try: om["menu"].config(bg=SURF,fg=INK,activebackground=GOLD,activeforeground="#0A1015",font=(UI,9),bd=0,activeborderwidth=0)
+        try: om["menu"].config(bg=SURF,fg=INK,activebackground=GOLD,activeforeground="#080A0E",font=(UI,9),bd=0,activeborderwidth=0)
         except Exception: pass
         om.pack(side="left",fill="x",expand=True)
     opt_row("Quality",SCALE_OPTS,"scale")
@@ -1140,7 +1151,7 @@ def run_gui(cfg, url):
 
     # === Button helpers ===
     def btn(parent, text, cmd, primary=False):
-        base=GOLD if primary else "#181B21"; hov=GOLD2 if primary else "#23272F"; fg="#0A1015" if primary else INK
+        base=GOLD if primary else "#181B21"; hov=GOLD2 if primary else "#23272F"; fg="#080A0E" if primary else INK
         bord=GOLD if primary else LINE2
         b=tk.Label(parent,text=text,bg=base,fg=fg,font=(SEMI,10,"bold"),padx=16,pady=9,cursor="hand2",highlightthickness=1,highlightbackground=bord,highlightcolor=bord)
         b.bind("<Button-1>",lambda e: cmd())
@@ -1153,14 +1164,14 @@ def run_gui(cfg, url):
         return l
 
     # === Action buttons ===
-    tk.Frame(root,bg=LINE,height=1).pack(fill="x",padx=17,pady=(12,0))
-    acts=tk.Frame(root,bg=BG); acts.pack(fill="x",padx=15,pady=(11,0))
+    tk.Frame(root,bg=LINE,height=1).pack(fill="x",padx=17,pady=(11,0))
+    acts=tk.Frame(root,bg=BG); acts.pack(fill="x",padx=15,pady=(10,0))
     btn(acts,"Gallery",open_gallery,primary=True).pack(side="left")
     btn(acts,"Open folder",open_folder).pack(side="left",padx=(8,0))
 
     # === Footer (toggles + quit) ===
     foot=tk.Frame(root,bg=BG); foot.pack(side="bottom",fill="x",padx=16,pady=(9,11))
-    settog=link(foot,"\u2699 Settings",toggle_settings,DIM); settog.pack(side="left")
+    settog=link(foot,"\u2699 Settings",toggle_settings,GOLD); settog.pack(side="left")
     logtog=link(foot,"Log \u25be",toggle_log,DIM); logtog.pack(side="left",padx=(17,0))
     link(foot,"Quit",do_quit,DIM).pack(side="right")
     root.protocol("WM_DELETE_WINDOW",do_quit)
@@ -1207,6 +1218,10 @@ def run_gui(cfg, url):
 
     try: root.update()
     except Exception: pass
+    try:  # 내용에 맞춰 창 높이 자동 — 푸터(Settings/Log/Quit)가 항상 보이도록
+        root.update_idletasks(); _rh=root.winfo_reqheight()
+        if _rh>120: BASE_H=_rh; root.geometry(f"{W}x{BASE_H}")
+    except Exception: pass
     if sys.platform=="win32": _hide_console()
     poll()
     try: root.mainloop()
@@ -1216,7 +1231,7 @@ def run_gui(cfg, url):
 def _print_status():
     s = sb_cfg(); st = cloud_state()
     print("\n" + "=" * 50)
-    print("  PENTA 상태 점검")
+    print("  myPENTA 상태 점검")
     print("=" * 50)
     print(f"  데이터 폴더 : {DATA_DIR}")
     print("-" * 50)
@@ -1274,7 +1289,7 @@ def main():
     except Exception: pass
     mode = cfg.get("mode", "all")
     use_gui = (mode == "all" and sys.platform == "win32" and cfg.get("ui", "window") != "console")
-    print("=" * 56); print(f"  PENTA — 리그 오브 레전드 자동 녹화 — 모드: {mode}"); print("=" * 56)
+    print("=" * 56); print(f"  myPENTA — 리그 오브 레전드 자동 녹화 — 모드: {mode}"); print("=" * 56)
     _cst = cloud_state()
     if _cst == "cloud":
         log(f"☁ Cloud ON — saving & sharing via Supabase({_sb_base()}).")
