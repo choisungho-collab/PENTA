@@ -1010,6 +1010,20 @@ def _hide_console():
         if hwnd: ctypes.windll.user32.ShowWindow(hwnd, 0)   # SW_HIDE
     except Exception: pass
 
+def _load_recorder_fonts():
+    """Register bundled .ttf fonts so Tkinter can use Space Grotesk / IBM Plex Mono (Windows only)."""
+    if sys.platform != "win32": return
+    try:
+        import ctypes
+        base = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+        fdir = os.path.join(base, "fonts")
+        if not os.path.isdir(fdir): return
+        for fn in os.listdir(fdir):
+            if fn.lower().endswith((".ttf", ".otf")):
+                ctypes.windll.gdi32.AddFontResourceExW(os.path.join(fdir, fn), 0x10, 0)
+    except Exception: pass
+
+
 def run_gui(cfg, url):
     """Compact status bar. Shows status only; expands the log when something needs attention."""
     import tkinter as tk
@@ -1018,6 +1032,7 @@ def run_gui(cfg, url):
     INK="#ECE7DD"; INK2="#C2BBAD"; DIM="#867F71"; FAINT="#564F44"
     GOLD="#DEC79C"; GOLD2="#EFDDBC"; REC="#FF5470"; LINE="#1F252E"; LINE2="#2B323C"
     W=466
+    _load_recorder_fonts()
     root=tk.Tk(); root.title("myPENTA"); root.configure(bg=BG)
     try: root.iconphoto(True, tk.PhotoImage(data=_PENTA_ICON))
     except Exception: pass
@@ -1029,9 +1044,12 @@ def run_gui(cfg, url):
             return c[-1]
     except Exception:
         def _pick(*c): return c[0]
-    UI=_pick("Segoe UI","Malgun Gothic","Arial")
-    SEMI=_pick("Segoe UI Semibold","Segoe UI","Malgun Gothic")
-    MON=_pick("Cascadia Mono","Consolas","Segoe UI")
+    SG_L=_pick("Space Grotesk Light","Space Grotesk","Segoe UI Light","Segoe UI")
+    SG  =_pick("Space Grotesk","Segoe UI")
+    SG_M=_pick("Space Grotesk Medium","Space Grotesk","Segoe UI Semibold","Segoe UI")
+    SG_S=_pick("Space Grotesk SemiBold","Space Grotesk","Segoe UI Semibold","Segoe UI")
+    PLEX=_pick("IBM Plex Mono","Consolas","Segoe UI")
+    UI=SG; SEMI=SG_S; MON=PLEX
     BASE_H, SET_H, LOG_H = 242, 156, 210
     root.geometry(f"{W}x{BASE_H}"); root.resizable(False, True)
     st={"log":False,"settings":False}
@@ -1040,25 +1058,25 @@ def run_gui(cfg, url):
     _SCLBL={"auto":"Auto","source":"Source","1080":"1080p","720":"720p","480":"480p"}
 
     # === Header: logo (left) + cloud (right edge) ===
-    head=tk.Frame(root,bg=BG); head.pack(fill="x",padx=17,pady=(14,0))
-    tk.Label(head,text="my",bg=BG,fg=INK,font=(SEMI,15,"bold")).pack(side="left")
-    tk.Label(head,text="PENTA",bg=BG,fg=GOLD,font=(SEMI,15,"bold")).pack(side="left")
+    head=tk.Frame(root,bg=BG); head.pack(fill="x",padx=17,pady=(8,0))
+    tk.Label(head,text="my",bg=BG,fg=INK,font=(SG_L,13)).pack(side="left")
+    tk.Label(head,text="PENTA",bg=BG,fg=GOLD,font=(SG_S,13)).pack(side="left")
     _cs=cloud_state()
     _cmap={"cloud":(GOLD2,"\u2601 Cloud"),"readonly":(GOLD,"\u26a0 Key needed"),"local":(DIM,"\u25cf Local")}
     _cc,_ct=_cmap[_cs]
-    tk.Label(head,text=_ct,bg=SURF,fg=_cc,font=(SEMI,9,"bold"),padx=10,pady=3).pack(side="right")
-    tk.Frame(root,bg=LINE,height=1).pack(fill="x",padx=17,pady=(13,0))
+    tk.Label(head,text=_ct,bg=SURF,fg=_cc,font=(SG_M,8),padx=10,pady=3).pack(side="right")
+    tk.Frame(root,bg=LINE,height=1).pack(fill="x",padx=17,pady=(8,0))
 
     # === Status line (slim, no card): dot + label + sub + preset (click preset to change) ===
-    midf=tk.Frame(root,bg=BG); midf.pack(fill="x",padx=17,pady=(13,0))
-    dot=tk.Canvas(midf,width=8,height=8,bg=BG,highlightthickness=0); dot.pack(side="left",pady=(6,0))
-    did=dot.create_oval(1,1,7,7,fill=DIM,outline="")
-    status_lbl=tk.Label(midf,text="Starting\u2026",bg=BG,fg=INK,font=(UI,15)); status_lbl.pack(side="left",padx=(9,0))
-    sub_lbl=tk.Label(midf,text="",bg=BG,fg=DIM,font=(UI,9)); sub_lbl.pack(side="left",anchor="s",padx=(8,0),pady=(0,2))
-    opt_lbl=tk.Label(midf,text="",bg=BG,fg=DIM,font=(MON,9),cursor="hand2"); opt_lbl.pack(side="right",anchor="s",pady=(0,2))
+    midf=tk.Frame(root,bg=BG); midf.pack(fill="x",padx=17,pady=(7,0))
+    dot=tk.Canvas(midf,width=7,height=7,bg=BG,highlightthickness=0); dot.pack(side="left",pady=(5,0))
+    did=dot.create_oval(1,1,6,6,fill=DIM,outline="")
+    status_lbl=tk.Label(midf,text="Starting\u2026",bg=BG,fg=INK,font=(SG_M,12)); status_lbl.pack(side="left",padx=(8,0))
+    sub_lbl=tk.Label(midf,text="",bg=BG,fg=DIM,font=(SG,8)); sub_lbl.pack(side="left",anchor="s",padx=(7,0),pady=(0,2))
+    opt_lbl=tk.Label(midf,text="",bg=BG,fg=DIM,font=(PLEX,8),cursor="hand2"); opt_lbl.pack(side="right",anchor="s",pady=(0,2))
     opt_lbl.bind("<Button-1>",lambda e: set_settings(True))
     opt_lbl.bind("<Enter>",lambda e: opt_lbl.config(fg=INK2)); opt_lbl.bind("<Leave>",lambda e: opt_lbl.config(fg=DIM))
-    tk.Frame(root,bg=LINE,height=1).pack(fill="x",padx=17,pady=(13,0))
+    tk.Frame(root,bg=LINE,height=1).pack(fill="x",padx=17,pady=(8,0))
 
     # === Log area (hidden until needed) ===
     logwrap=tk.Frame(root,bg=BG)
@@ -1139,26 +1157,26 @@ def run_gui(cfg, url):
         b.bind("<Enter>",lambda e: b.config(bg=hov)); b.bind("<Leave>",lambda e: b.config(bg=base))
         return b
     def link(parent, text, cmd, color=DIM):
-        l=tk.Label(parent,text=text,bg=BG,fg=color,font=(UI,9,"bold"),cursor="hand2")
+        l=tk.Label(parent,text=text,bg=BG,fg=color,font=(SG,8),cursor="hand2")
         l.bind("<Button-1>",lambda e: cmd())
         l.bind("<Enter>",lambda e: l.config(fg=INK)); l.bind("<Leave>",lambda e: l.config(fg=color))
         return l
 
     # === Action buttons (slim line-split) ===
     acts=tk.Frame(root,bg=BG); acts.pack(fill="x")
-    _g=tk.Label(acts,text="Gallery",bg=BG,fg=GOLD,font=(UI,12),pady=10,cursor="hand2")
+    _g=tk.Label(acts,text="Gallery",bg=BG,fg=GOLD,font=(SG_M,10),pady=7,cursor="hand2")
     _g.pack(side="left",fill="both",expand=True)
     _g.bind("<Button-1>",lambda e: open_gallery())
     _g.bind("<Enter>",lambda e: _g.config(fg=GOLD2)); _g.bind("<Leave>",lambda e: _g.config(fg=GOLD))
     tk.Frame(acts,bg=LINE,width=1).pack(side="left",fill="y")
-    _o=tk.Label(acts,text="Open folder",bg=BG,fg=INK2,font=(UI,12),pady=10,cursor="hand2")
+    _o=tk.Label(acts,text="Open folder",bg=BG,fg=INK2,font=(SG_M,10),pady=7,cursor="hand2")
     _o.pack(side="left",fill="both",expand=True)
     _o.bind("<Button-1>",lambda e: open_folder())
     _o.bind("<Enter>",lambda e: _o.config(fg=INK)); _o.bind("<Leave>",lambda e: _o.config(fg=INK2))
     tk.Frame(root,bg=LINE,height=1).pack(fill="x")
 
     # === Footer (toggles + quit) ===
-    foot=tk.Frame(root,bg=BG); foot.pack(side="bottom",fill="x",padx=16,pady=(9,11))
+    foot=tk.Frame(root,bg=BG); foot.pack(side="bottom",fill="x",padx=16,pady=(7,9))
     settog=link(foot,"\u2699 Settings",toggle_settings,GOLD); settog.pack(side="left")
     logtog=link(foot,"Log \u25be",toggle_log,DIM); logtog.pack(side="left",padx=(17,0))
     link(foot,"Quit",do_quit,DIM).pack(side="right")
@@ -1192,9 +1210,21 @@ def run_gui(cfg, url):
             dot.itemconfig(did,fill=GOLD); status_lbl.config(text="Ready",fg=INK); sub_lbl.config(text="\u00b7 auto-records")
         else:
             dot.itemconfig(did,fill=GOLD); status_lbl.config(text="Preparing\u2026",fg=INK); sub_lbl.config(text="\u00b7 setting up tools")
-        _er=(REC_STATE.get("encoder") or "").split(); enc=(_er[0] if _er else _ENCLBL.get(str(cfg.get("encoder","auto")),"Auto"))
-        sc=_SCLBL.get(str(cfg.get("scale","auto")),"Auto")
-        opt_lbl.config(text=f"{sc} \u00b7 {enc}")
+        ea=(REC_STATE.get("encoder") or "").lower()
+        if "nvenc" in ea: enc="NVENC"; is_sw=False
+        elif ("x264" in ea) or ("264" in ea): enc="x264"; is_sw=True
+        else:
+            ec=str(cfg.get("encoder","auto")).lower()
+            if ec=="x264": enc="x264"; is_sw=True
+            else: enc="NVENC"; is_sw=False
+        try: _sh=root.winfo_screenheight()
+        except Exception: _sh=1080
+        _scl=str(cfg.get("scale","auto")).lower().rstrip("p")
+        if _scl in ("source","native","full","off","0"): th=_sh
+        elif _scl in ("1080","720","480","1440"): th=int(_scl)
+        else: th=(720 if is_sw else _sh)
+        if th>_sh: th=_sh
+        opt_lbl.config(text=f"{th}p \u00b7 {enc}")
         if LAST_ERR.get("msg") and (time.time()-LAST_ERR.get("t",0)<8):
             if not st["log"]: set_log(True)
             else: errbar.config(text="\u26a0 "+LAST_ERR["msg"])
