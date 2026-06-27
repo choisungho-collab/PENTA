@@ -1139,38 +1139,32 @@ def run_gui(cfg, url):
             return c[-1]
     except Exception:
         def _pick(*c): return c[0]
-    SG_L=_pick("Space Grotesk Light","Space Grotesk","Segoe UI Light","Segoe UI")
     SG  =_pick("Space Grotesk","Segoe UI")
     SG_M=_pick("Space Grotesk Medium","Space Grotesk","Segoe UI Semibold","Segoe UI")
     SG_S=_pick("Space Grotesk SemiBold","Space Grotesk","Segoe UI Semibold","Segoe UI")
     PLEX=_pick("IBM Plex Mono","Consolas","Segoe UI")
     UI=SG; SEMI=SG_S; MON=PLEX
-    BASE_H, SET_H, LOG_H = 242, 156, 210
+    BASE_H, SET_H, LOG_H = 160, 156, 210
     root.geometry(f"{W}x{BASE_H}"); root.resizable(False, True)
     st={"log":False,"settings":False}
     _CAPLBL={"auto":"Auto","wgc":"WGC","ddagrab":"DXGI","gdigrab":"GDI"}
     _ENCLBL={"auto":"Auto","nvenc":"NVENC","x264":"x264"}
     _SCLBL={"auto":"Auto","source":"Source","1080":"1080p","720":"720p","480":"480p"}
 
-    # === Header: logo (left) + cloud (right edge) ===
-    head=tk.Frame(root,bg=BG); head.pack(fill="x",padx=17,pady=(8,0))
-    tk.Label(head,text="my",bg=BG,fg=INK,font=(SG_L,13)).pack(side="left")
-    tk.Label(head,text="PENTA",bg=BG,fg=GOLD,font=(SG_S,13)).pack(side="left")
-    _cs=cloud_state()
-    _cmap={"cloud":(GOLD2,"\u2601 Cloud"),"readonly":(GOLD,"\u26a0 Key needed"),"local":(DIM,"\u25cf Local")}
-    _cc,_ct=_cmap[_cs]
-    tk.Label(head,text=_ct,bg=SURF,fg=_cc,font=(SG_M,8),padx=10,pady=3).pack(side="right")
-    tk.Frame(root,bg=LINE,height=1).pack(fill="x",padx=17,pady=(8,0))
-
-    # === Status line (slim, no card): dot + label + sub + preset (click preset to change) ===
-    midf=tk.Frame(root,bg=BG); midf.pack(fill="x",padx=17,pady=(7,0))
+    # === Status line: dot + status + sub + cloud (left) | quality preset toggle (right) ===
+    # 앱 이름 'myPENTA'는 OS 타이틀바에 이미 있어 상단 헤더는 제거. Cloud 상태는 상태줄 왼쪽으로 이동.
+    midf=tk.Frame(root,bg=BG); midf.pack(fill="x",padx=17,pady=(11,0))
     dot=tk.Canvas(midf,width=7,height=7,bg=BG,highlightthickness=0); dot.pack(side="left",pady=(5,0))
     did=dot.create_oval(1,1,6,6,fill=DIM,outline="")
     status_lbl=tk.Label(midf,text="Starting\u2026",bg=BG,fg=INK,font=(SG_M,12)); status_lbl.pack(side="left",padx=(8,0))
     sub_lbl=tk.Label(midf,text="",bg=BG,fg=DIM,font=(SG,8)); sub_lbl.pack(side="left",anchor="s",padx=(7,0),pady=(0,2))
+    _cs=cloud_state()
+    _cmap={"cloud":(GOLD2,"\u2601 Cloud"),"readonly":(GOLD,"\u26a0 Key needed"),"local":(DIM,"\u25cf Local")}
+    _cc,_ct=_cmap.get(_cs,_cmap["local"])
+    cloud_lbl=tk.Label(midf,text=_ct,bg=BG,fg=_cc,font=(SG_M,8)); cloud_lbl.pack(side="left",anchor="s",padx=(11,0),pady=(0,2))
     opt_lbl=tk.Label(midf,text="",bg=BG,fg=DIM,font=(PLEX,8),cursor="hand2"); opt_lbl.pack(side="right",anchor="s",pady=(0,2))
-    opt_lbl.bind("<Button-1>",lambda e: set_settings(True))
-    opt_lbl.bind("<Enter>",lambda e: opt_lbl.config(fg=INK2)); opt_lbl.bind("<Leave>",lambda e: opt_lbl.config(fg=DIM))
+    opt_lbl.bind("<Button-1>",lambda e: toggle_settings())
+    opt_lbl.bind("<Enter>",lambda e: opt_lbl.config(fg=GOLD2 if st["settings"] else INK2)); opt_lbl.bind("<Leave>",lambda e: opt_lbl.config(fg=GOLD if st["settings"] else DIM))
     tk.Frame(root,bg=LINE,height=1).pack(fill="x",padx=17,pady=(8,0))
 
     # === Log area (hidden until needed) ===
@@ -1237,8 +1231,8 @@ def run_gui(cfg, url):
     def set_settings(open_):
         if open_ and st["log"]: set_log(False)
         st["settings"]=open_
-        if open_: optwrap.pack(fill="x",padx=13,pady=(3,2)); settog.config(text="\u2699 Settings \u25b4",fg=GOLD)
-        else: optwrap.pack_forget(); settog.config(text="\u2699 Settings",fg=DIM)
+        if open_: optwrap.pack(fill="x",padx=13,pady=(3,2)); settog.config(text="\u2699 Settings \u25b4",fg=GOLD); opt_lbl.config(fg=GOLD)
+        else: optwrap.pack_forget(); settog.config(text="\u2699 Settings",fg=DIM); opt_lbl.config(fg=DIM)
         _resize()
     def toggle_log(): set_log(not st["log"])
     def toggle_settings(): set_settings(not st["settings"])
@@ -1327,9 +1321,9 @@ def run_gui(cfg, url):
 
     try: root.update()
     except Exception: pass
-    try:  # 내용에 맞춰 창 높이 자동 — 푸터(Settings/Log/Quit)가 항상 보이도록
+    try:  # 내용에 맞춰 창 높이 자동 — 푸터(Settings/Log/Quit)가 빈 공간 없이 바로 아래 붙도록
         root.update_idletasks(); _rh=root.winfo_reqheight()
-        if _rh>120: BASE_H=_rh; root.geometry(f"{W}x{BASE_H}")
+        if _rh>=60: BASE_H=_rh; root.geometry(f"{W}x{BASE_H}")
     except Exception: pass
     if sys.platform=="win32": _hide_console()
     poll()
