@@ -4,7 +4,8 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2 L15 9 L22 9 L16.5 13.5 L18.5 21 L12 16.5 L5.5 21 L7.5 13.5 L2 9 L9 9 Z' fill='%23DEC79C'/%3E%3C/svg%3E">
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Space+Grotesk:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://api.fontshare.com/v2/css?f[]=clash-display@400,500,600,700&display=swap" rel="stylesheet">
 <style>
 :root{
  --bg:#080A0E;--surface:#0F131A;--surface2:#161B23;--hover:#1C2530;--well:#0B0E13;
@@ -16,7 +17,7 @@
  --blue:#3D9BE0;--blue-soft:rgba(61,155,224,.1);--blue-line:rgba(61,155,224,.34);
  --red:#E0563D;--red-soft:rgba(224,86,61,.1);--red-line:rgba(224,86,61,.34);
  --fd:'Pretendard Variable','Pretendard','Apple SD Gothic Neo',system-ui,sans-serif;
- --fs:'Marcellus',serif;
+ --fs:'Clash Display','Pretendard Variable','Pretendard',sans-serif;
  --fg:'Space Grotesk',sans-serif;
  --fm:'IBM Plex Mono',ui-monospace,monospace;
  --r1:10px;--r2:14px;--r3:18px;--sh:0 18px 44px -22px rgba(0,0,0,.8);
@@ -153,9 +154,10 @@ h2.sec .ln{flex:1;height:1px;background:var(--line)}
 /* 댓글 */
 .cmts{background:var(--surface);border:1px solid var(--line);border-radius:var(--r2);padding:20px}
 .cform{display:flex;gap:10px;margin-bottom:18px}
-.cform input{flex:1;background:var(--well);border:1px solid var(--line);border-radius:var(--r1);padding:11px 14px;color:var(--ink);font-family:var(--fd);font-size:14px;outline:0}
+.cform input{flex:1;min-width:0;background:var(--well);border:1px solid var(--line);border-radius:var(--r1);padding:11px 14px;color:var(--ink);font-family:var(--fd);font-size:14px;outline:0}
 .cform input:focus{border-color:var(--gold-line)}
-.cform button{font-family:var(--fd);font-weight:600;font-size:13.5px;color:var(--bg);background:var(--gold);border:0;padding:0 18px;border-radius:var(--r1);cursor:pointer}
+.cform button{font-family:var(--fd);font-weight:600;font-size:13.5px;color:var(--bg);background:var(--gold);border:0;padding:0 18px;border-radius:var(--r1);cursor:pointer;white-space:nowrap}
+@media(max-width:540px){.cform{flex-wrap:wrap}.cform #cauthor{flex:1 1 100%}.cform #cbody{flex:1 1 auto}.cform button{padding:11px 18px}}
 .clist{display:flex;flex-direction:column;gap:14px}
 .citem{display:flex;flex-direction:column;gap:4px;padding-bottom:14px;border-bottom:1px solid var(--line)}
 .citem:last-child{border-bottom:0;padding-bottom:0}
@@ -211,6 +213,104 @@ footer .foot-links a{color:var(--dim);transition:.14s;border-bottom:1px solid tr
 footer .foot-links a:hover{color:var(--gold-ink);border-bottom-color:var(--gold-line)}
 footer .by{font-size:13px;color:var(--faint);margin:4px 0}footer .by b{color:var(--ink2)}
 footer .riot{margin-top:14px;font-size:12px;color:var(--faint);max-width:680px;line-height:1.6}
+
+/* ===== 전적 히어로 ===== */
+.hero{position:relative;margin:22px 0 0;background:linear-gradient(180deg,var(--surface2),var(--surface));border:1px solid var(--line);border-radius:var(--r3);padding:24px 26px 24px 30px;display:grid;grid-template-columns:auto 1fr auto;gap:26px;align-items:center;overflow:hidden}
+.hero.w{border-color:var(--win-line)}.hero.l{border-color:var(--loss-line)}
+.hero::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--gold)}
+.hero.w::before{background:var(--win)}.hero.l::before{background:var(--loss)}
+.hchamp{display:flex;align-items:center;gap:15px}
+.hchamp .ci{position:relative;width:64px;height:64px;flex-shrink:0}
+.hchamp .ci img{width:64px;height:64px;border-radius:16px;border:1px solid var(--line2);background:var(--well)}
+.hchamp .ci .lv{position:absolute;right:-5px;bottom:-5px;font-family:var(--fm);font-size:10.5px;font-weight:600;color:var(--ink);background:var(--bg);border:1px solid var(--line2);border-radius:6px;padding:1px 5px}
+.hchamp .nm{font-family:var(--fs);font-weight:600;font-size:23px;color:var(--ink);line-height:1.04;letter-spacing:-.01em}
+.hchamp .po{font-family:var(--fd);font-weight:600;font-size:12.5px;color:var(--dim);margin-top:5px}
+.hmid{min-width:0}
+.hkda{display:flex;align-items:baseline;gap:11px;flex-wrap:wrap}
+.hkda .v{font-family:var(--fs);font-weight:700;font-size:38px;letter-spacing:-.02em;color:var(--ink);line-height:1;font-variant-numeric:tabular-nums}
+.hkda .v .s{color:var(--faint);font-weight:500;margin:0 3px}
+.hkda .r{font-family:var(--fm);font-size:13px;color:var(--gold-ink);font-weight:500}
+.vsum{font-family:var(--fd);font-size:14px;color:var(--ink2);margin-top:11px;line-height:1.5;max-width:46ch}
+.hside{display:flex;flex-direction:column;align-items:flex-end;gap:13px;white-space:nowrap}
+.wlbadge{font-family:var(--fs);font-weight:700;font-size:21px;letter-spacing:.05em;padding:6px 18px;border-radius:12px}
+.wlbadge.w{color:var(--win);background:var(--win-soft);border:1px solid var(--win-line)}
+.wlbadge.l{color:var(--loss);background:var(--loss-soft);border:1px solid var(--loss-line)}
+.hmeta{display:flex;gap:18px}
+.hmeta .si{text-align:right}
+.hmeta .si .k{font-family:var(--fd);font-size:10.5px;color:var(--dim)}
+.hmeta .si .v{font-family:var(--fm);font-size:13px;color:var(--ink2);font-variant-numeric:tabular-nums;margin-top:2px}
+.hacts{display:flex;gap:8px}
+@media(max-width:780px){
+ .hero{grid-template-columns:1fr;gap:18px;padding:20px 18px 20px 22px}
+ .hside{align-items:flex-start}
+ .hkda .v{font-size:32px}.hchamp .nm{font-size:20px}
+}
+
+/* 영상 아래 점프 */
+.vjumps{margin-top:13px}
+
+/* ===== 복기 분석 격상 ===== */
+.coachhead{display:flex;align-items:baseline;gap:11px;margin:40px 0 16px}
+.coachhead .t{font-family:var(--fs);font-weight:600;font-size:23px;letter-spacing:-.01em;color:var(--ink)}
+.coachhead .s{font-family:var(--fd);font-size:12.5px;color:var(--dim)}
+.coachhead .ln{flex:1;height:1px;background:var(--line)}
+.keyrow{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:10px}
+@media(max-width:560px){.keyrow{grid-template-columns:1fr}}
+.keystat{display:flex;align-items:baseline;gap:11px;flex-wrap:wrap;background:linear-gradient(180deg,var(--surface2),var(--surface));border:1px solid var(--line);border-radius:var(--r2);padding:13px 17px}
+.keystat.up{border-color:var(--win-line)}.keystat.down{border-color:var(--loss-line)}
+.keystat .k{font-family:var(--fd);font-weight:600;font-size:12.5px;color:var(--dim);white-space:nowrap}
+.keystat .v{font-family:var(--fs);font-weight:700;font-size:26px;letter-spacing:-.02em;line-height:1;color:var(--ink);font-variant-numeric:tabular-nums}
+.keystat.up .v{color:var(--win)}.keystat.down .v{color:var(--loss)}
+.keystat .cap{font-family:var(--fd);font-size:12px;color:var(--faint);margin-left:auto}
+.subgrid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}
+.substat{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:10px 15px;flex:1 1 0;min-width:132px}
+.substat .k{font-family:var(--fd);font-weight:600;font-size:12px;color:var(--dim);white-space:nowrap}
+.substat .v{font-family:var(--fs);font-size:17px;font-weight:600;color:var(--ink);margin-left:auto;line-height:1;font-variant-numeric:tabular-nums}
+.substat.up .v{color:var(--win)}.substat.down .v{color:var(--loss)}
+@media(max-width:540px){.substat{flex:1 1 calc(50% - 4px);min-width:calc(50% - 4px)}}
+.evalcols{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}
+@media(max-width:680px){.evalcols{grid-template-columns:1fr}}
+.evalcol .eh{font-family:var(--fd);font-weight:700;font-size:12.5px;margin:0 0 9px;display:flex;align-items:center;gap:7px}
+.evalcol.good .eh{color:var(--gold-ink)}.evalcol.bad .eh{color:var(--loss)}
+.evalcol .eh .dot{width:7px;height:7px;border-radius:2px}
+.evalcol.good .eh .dot{background:var(--gold)}.evalcol.bad .eh .dot{background:var(--loss)}
+
+/* ===== 오브젝트 대결 막대 ===== */
+.objbars{background:var(--surface);border:1px solid var(--line);border-radius:var(--r2);padding:18px 22px;display:flex;flex-direction:column;gap:11px}
+.obar{display:grid;grid-template-columns:30px 1fr 30px;gap:12px;align-items:center}
+.obar .bn{font-family:var(--fm);font-size:14.5px;font-weight:600;font-variant-numeric:tabular-nums}
+.obar .bn.b{color:var(--blue);text-align:right}.obar .bn.r{color:var(--red);text-align:left}
+.obar .track{position:relative;height:28px;background:var(--well);border-radius:7px;overflow:hidden}
+.obar .fb{position:absolute;left:0;top:0;bottom:0;background:var(--blue-soft)}
+.obar .fr{position:absolute;right:0;top:0;bottom:0;background:var(--red-soft)}
+.obar.blead .fb{background:var(--blue-line)}.obar.rlead .fr{background:var(--red-line)}
+.obar .lbl{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:6px;font-family:var(--fd);font-size:11.5px;color:var(--ink2);z-index:2}
+.obar .lbl .ic{width:14px;height:14px;opacity:.75}
+
+/* 측정 지표 등급 */
+.grade{display:flex;align-items:center;gap:18px;background:linear-gradient(180deg,var(--surface2),var(--surface));border:1px solid var(--line);border-radius:var(--r2);padding:16px 20px;margin-bottom:12px}
+.grade .gv{font-family:var(--fs);font-weight:700;font-size:42px;line-height:1;width:54px;text-align:center;letter-spacing:-.02em}
+.grade.g-s .gv{color:var(--gold-ink)}
+.grade.g-a .gv{color:var(--win)}
+.grade.g-b .gv{color:var(--blue)}
+.grade.g-c .gv{color:var(--ink2)}
+.grade.g-d .gv{color:var(--loss)}
+.grade.g-s{border-color:var(--gold-line)}
+.grade.g-a{border-color:var(--win-line)}
+.grade .gx{min-width:0}
+.grade .gs{font-family:var(--fs);font-size:21px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+.grade .gs .gsl{font-family:var(--fm);font-size:13px;color:var(--faint);font-weight:400}
+.grade .gd{font-family:var(--fd);font-size:12px;color:var(--dim);margin-top:4px;line-height:1.45}
+
+/* 체크 질문 / 훈련 과제 */
+.checks{margin-top:18px;background:var(--well);border:1px solid var(--gold-line);border-radius:var(--r2);padding:17px 19px}
+.checks .chead{font-family:var(--fd);font-weight:700;font-size:13px;color:var(--gold-ink);margin-bottom:11px;letter-spacing:-.01em}
+.checks .crq{font-family:var(--fd);font-size:13.5px;color:var(--ink2);padding:6px 0;display:flex;gap:10px;line-height:1.55}
+.checks .crq .qm{flex:0 0 auto;width:19px;height:19px;border-radius:6px;background:var(--gold-soft);color:var(--gold-ink);display:grid;place-items:center;font-family:var(--fm);font-size:11px;font-weight:600;margin-top:1px}
+.drills{margin-top:10px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r2);padding:17px 19px}
+.drills .dhead{font-family:var(--fd);font-weight:700;font-size:13px;color:var(--ink);margin-bottom:10px}
+.drills .drow{font-family:var(--fd);font-size:13.5px;color:var(--dim);padding:5px 0;display:flex;gap:9px;line-height:1.55}
+.drills .drow .dn{flex:0 0 auto;color:var(--gold);font-weight:700}
 </style>
 </head>
 <body>
@@ -315,6 +415,46 @@ footer .riot{margin-top:14px;font-size:12px;color:var(--faint);max-width:680px;l
 
   // 규칙 기반 복기 분석 카드(녹화자 기준). 조언 문구는 여기서 자유롭게 튜닝.
   // 규칙 기반 복기 분석(녹화자 기준). 기준선은 국내외 코칭 데이터 기반 — 문구·수치 자유 튜닝.
+  // 포지션별 코칭 가이드 — 사람이 영상으로 봐야 하는 영역(체크 질문)과 약점별 처방·훈련.
+  // 출처: 코칭 평가 기준 문서(포지션별 리플레이 체크 질문 / 개선방안 / 추천 훈련 과제).
+  var POS_GUIDE = {
+    TOP:{ ko:'탑',
+      checks:['첫 3웨이브를 상성에 맞게 설계했는가?','상대 정글이 안 보일 때 라인 위치를 조정했는가?','텔레포트를 킬 욕심이 아니라 웨이브·오브젝트 손익까지 보고 썼는가?','사이드에서 압박하다 팀이 싸울 수 있을 때 합류했는가?','불리한 매치업에서 CS·경험치 손실을 허용 범위로 제한했는가?'],
+      drills:['상성별 1~4레벨 딜교환 타이밍 표 작성','텔레포트 사용 장면만 모아 성공/실패 원인 분류','14분 이후 사이드 데스 장면을 위치·시야·팀 턴 기준으로 재분류'],
+      fix:{ farm:'첫 3웨이브 푸시/당김 기준을 매치업별로 익히세요. 연습에서 3:30까지 킬 없이 웨이브 위치만 평가합니다.',
+        death:'사이드 진입 전 미드 라인·아군 정글·상대 텔/궁을 체크하세요. 미니맵에 3명 이상 안 보이면 다음 웨이브 욕심을 멈춥니다.',
+        kp:'챔피언별 한타 임무를 한 문장으로 정하세요. 예: 오른은 궁으로 진입각, 잭스는 상대 원딜 점멸 빼기.',
+        vision:'제어와드를 라인 위치와 정글 동선에 맞춰 강가·삼거리·상대 정글 입구 중 골라 박으세요.' } },
+    JUNGLE:{ ko:'정글',
+      checks:['첫 캠프 동선에 명확한 목적이 있었는가?','갱을 간 라인이 실제로 호응 가능한 웨이브였는가?','상대 정글 위치를 캠프 수·라인 반응·와드로 추적했는가?','용/전령 90초 전부터 귀환·시야·라인을 준비했는가?','실패한 갱 이후 손실을 최소화하는 다음 선택을 했는가?'],
+      drills:['첫 6분 동선을 지도 위에 화살표로 기록','상대 정글 위치 예측을 30초 단위로 말하고 VOD로 검증','용/전령 전 90초 체크리스트 반복 훈련'],
+      fix:{ farm:'경기 전 동선 3플랜(풀캠 성장·3캠 갱·상대 버프 카정)을 준비하고, 실패 시 어디로 전환할지 정하세요.',
+        death:'갱 전 5초 규칙 — 미니언 수·라인 위치·아군 체력·상대 점멸을 확인한 뒤 진입하세요.',
+        kp:'오브젝트 1분 30초 전을 기준으로 캠프 중단·귀환·렌즈·제어와드·미드 푸시를 미리 잡으세요. 뜨기 전에 자리를 잡습니다.',
+        vision:'강타 싸움 자체를 줄이는 설계를 — 시야 선점·상대 정글 진입 차단·주도권 확보 후 시작하는 비율을 높이세요.' } },
+    MIDDLE:{ ko:'미드',
+      checks:['라인을 민 뒤 그 시간을 어디에 사용했는가?','우리 정글 위치와 같은 방향으로 움직였는가?','로밍으로 얻은 이득이 미드 웨이브 손실보다 컸는가?','사이드에서 성장하면서도 오브젝트 타이밍에 늦지 않았는가?','한타에서 자신의 역할(딜러·진입·유틸)이 분명했는가?'],
+      drills:['푸시 후 10초 행동을 시야/합류/귀환/무행동으로 분류','미드-정글 2대2 장면만 모아 거리·스킬 쿨 분석','로밍 성공·실패 장면의 웨이브 손익 비교'],
+      fix:{ farm:'푸시 후 행동을 시야·정글 합류·귀환 셋으로 제한하세요. 타워 앞에서 의미 없이 스킬만 쓰는 시간을 줄입니다.',
+        death:'사이드에서 한 웨이브 더 먹기 전 상대 3명 이상을 확인하세요. 바론/용 60초 전에는 미드 복귀를 우선합니다.',
+        kp:'로밍 전 미드 웨이브 상태를 기록하세요. 성공해도 미드 CS·포탑 방패·경험치 손실을 함께 계산합니다.',
+        vision:'제어 와드로 로밍 길목과 강 부쉬를 밝혀 정글 동선과 합류 타이밍을 미리 읽으세요.' } },
+    BOTTOM:{ ko:'원딜',
+      checks:['라인전에서 체력과 CS를 동시에 안정적으로 관리했는가?','한타 전 상대 핵심 진입 스킬과 점멸을 인식했는가?','딜을 위해 앞으로 갈 순간과 참을 순간을 구분했는가?','사이드 파밍 중 잘리지 않고 성장 루트를 확보했는가?','받은 골드 비중에 비해 딜·오브젝트 기여가 충분했는가?'],
+      drills:['한타 시작 전 상대 위협 스킬 3개 말하기 훈련','데스 장면을 욕심/시야/거리/귀환 실패로 분류','2코어 이후 오브젝트 전 포지션 스크린샷 리뷰'],
+      fix:{ farm:'상대 서폿 주요 스킬 쿨을 기준으로 CS를 먹으세요. 체력 30%를 잃고 미니언 하나를 먹는 장면을 따로 교정합니다.',
+        death:'한타 시작 전 상대 위협 스킬 3개를 떠올리고, 그게 빠지기 전까지 앞무빙을 멈추세요. 사이드 파밍 전 미드·서폿 위치를 확인합니다.',
+        kp:'딜의 질을 보세요 — 탱커만 친 딜인지, 오브젝트 전 상대 딜러 체력을 깎은 딜인지 구분합니다.',
+        vision:'시야 없는 정글 입구를 지나는 장면을 줄이고 안전 루트를 반복하세요.' } },
+    UTILITY:{ ko:'서폿',
+      checks:['로밍 시점에 원딜이 혼자 라인을 받을 수 있었는가?','오브젝트 1분 전부터 시야를 선점했는가?','시야를 잡으러 갈 때 미드 라인·정글 위치를 확인했는가?','이니시가 팀이 따라올 수 있는 거리에서 열렸는가?','상대 스펠·궁극기 정보를 팀에 짧고 정확하게 공유했는가?'],
+      drills:['오브젝트 전 90초 시야 동선 설계 훈련','로밍 전후 바텀 웨이브 손익표 작성','이니시 장면을 팀 거리·상대 스펠·후속 딜 가능성으로 재평가'],
+      fix:{ farm:'2대2에서 부쉬 장악과 스킬 압박으로 원딜의 CS·체력을 지키세요.',
+        death:'시야 진입 전 미드 라인·우리 정글·상대 주요 챔피언 위치를 확인하고, 혼자보다 정글과 페어로 움직이세요.',
+        kp:'로밍 전 바텀 웨이브를 확인하세요. 원딜이 큰 웨이브를 놓치거나 다이브 위험이면 로밍을 멈춥니다.',
+        vision:'와드 수보다 목적을 — 방어·진입·오브젝트·낚시로 나누고, 팀 행동과 연결되지 않은 와드를 줄이세요.' } }
+  };
+
   function coachCard(rep){
     var saver=(ROWS[curPov]||{}).saver;
     var players=ANALYSIS.players||[];
@@ -322,6 +462,7 @@ footer .riot{margin-top:14px;font-size:12px;color:var(--faint);max-width:680px;l
     for(i=0;i<players.length;i++){ if(players[i].name===saver){ meIdx=i; break; } }
     if(meIdx<0) return '';
     var me=players[meIdx], pid=meIdx+1, pos=me.position||'', lane=me.lane||{};
+    var guide=POS_GUIDE[pos]||null;
     var isJg=pos==='JUNGLE', isSup=pos==='UTILITY', isLane=!isJg&&!isSup;
     var dur=ANALYSIS.duration||0, durSec=dur>10000?dur/1000:dur, durMin=durSec>0?durSec/60:0;
     var vspm=(durMin&&me.vision!=null)?+(me.vision/durMin).toFixed(2):null;
@@ -330,70 +471,99 @@ footer .riot{margin-top:14px;font-size:12px;color:var(--faint);max-width:680px;l
     var visFloor=isSup?0.9:(isJg?0.8:0.5), visGood=isSup?1.8:(isJg?1.3:1.0);
     var kpB=pos==='TOP'?0.35:((isSup||isJg)?0.55:(pos==='MIDDLE'?0.50:0.48));
 
-    function stat(k,v,cls){ return '<div class="cstat'+(cls?' '+cls:'')+'"><div class="k">'+k+'</div><div class="v">'+v+'</div></div>'; }
-    var g='';
-    if(!isSup) g+=stat('분당 CS', me.cs_per_min!=null?me.cs_per_min:'–', me.cs_per_min!=null?(me.cs_per_min>=csGood?'up':(me.cs_per_min<csFloor?'down':'')):'');
-    if(isLane && lane.mycs10!=null) g+=stat('10분 CS', lane.mycs10, lane.mycs10>=80?'up':(lane.mycs10<60?'down':''));
-    if(lane.cs10!=null) g+=stat('10분 CS차',(lane.cs10>0?'+':'')+lane.cs10, lane.cs10>=10?'up':(lane.cs10<=-10?'down':''));
-    if(lane.gold10!=null) g+=stat('10분 골드차',(lane.gold10>0?'+':'')+P.compact(lane.gold10), lane.gold10>=400?'up':(lane.gold10<=-600?'down':''));
-    g+=stat('KDA', me.kda!=null?me.kda:'–', me.kda!=null?(me.kda>=3?'up':(me.kda<2?'down':'')):'');
-    g+=stat('킬관여', me.kp!=null?Math.round(me.kp*100)+'%':'–', me.kp!=null?(me.kp>=kpB+0.15?'up':(me.kp<kpB-0.15?'down':'')):'');
-    g+=stat('시야/분', vspm!=null?vspm:'–', vspm!=null?(vspm>=visGood?'up':(vspm<visFloor?'down':'')):'');
-    g+=stat('딜/골드', me.dpg!=null?me.dpg:'–');
+    // 핵심 지표 2개(크게) + 보조 지표(작게)
+    var key=[];
+    if(isLane && lane.cs10!=null){
+      key.push({k:'10분 CS 격차', v:(lane.cs10>0?'+':'')+lane.cs10, c:lane.cs10>=10?'up':(lane.cs10<=-10?'down':''), cap:lane.cs10>=10?'상대 라이너를 압박':(lane.cs10<=-10?'라인전 열세':'팽팽한 라인전')});
+    } else if(!isSup && me.cs_per_min!=null){
+      key.push({k:'분당 CS', v:me.cs_per_min, c:me.cs_per_min>=csGood?'up':(me.cs_per_min<csFloor?'down':''), cap:me.cs_per_min>=csGood?'파밍 효율 우수':(me.cs_per_min<csFloor?'파밍 보강 필요':'무난한 파밍')});
+    }
+    if(me.kda!=null){
+      key.push({k:'KDA', v:me.kda, c:me.kda>=3?'up':(me.kda<2?'down':''), cap:(me.deaths!=null?me.deaths+'데스 · ':'')+(me.kda>=3?'안정적 생존':(me.kda<2?'생존 관리 필요':'평이한 교전'))});
+    }
+    if(key.length<2 && me.kp!=null){
+      key.push({k:'킬관여', v:Math.round(me.kp*100)+'%', c:me.kp>=kpB+0.15?'up':(me.kp<kpB-0.15?'down':''), cap:me.kp>=kpB+0.15?'팀 교전 기여 높음':(me.kp<kpB-0.15?'합류 빈도 낮음':'적절한 합류')});
+    }
+    key=key.slice(0,2);
+    var keyNames=key.map(function(s){return s.k;});
+    function sub(k,v,c){ return '<div class="substat '+(c||'')+'"><div class="k">'+k+'</div><div class="v">'+v+'</div></div>'; }
+    var sg='';
+    key.forEach(function(s){ sg+=sub(s.k, s.v, s.c); });
+    if(!isSup && me.cs_per_min!=null && keyNames.indexOf('분당 CS')<0) sg+=sub('분당 CS', me.cs_per_min, me.cs_per_min>=csGood?'up':(me.cs_per_min<csFloor?'down':''));
+    if(isLane && lane.mycs10!=null) sg+=sub('10분 CS', lane.mycs10, lane.mycs10>=80?'up':(lane.mycs10<60?'down':''));
+    if(me.kp!=null && keyNames.indexOf('킬관여')<0) sg+=sub('킬관여', Math.round(me.kp*100)+'%', me.kp>=kpB+0.15?'up':(me.kp<kpB-0.15?'down':''));
+    sg+=sub('시야/분', vspm!=null?vspm:'–', vspm!=null?(vspm>=visGood?'up':(vspm<visFloor?'down':'')):'');
+    if(me.gold!=null) sg+=sub('골드', P.compact(me.gold), '');
+    if(me.dpg!=null) sg+=sub('딜/골드', me.dpg, '');   // 딜 정보는 Riot 연동 시에만
 
     var good=[], bad=[];
+    function rx(k, fallback){ return (guide && guide.fix && guide.fix[k]) ? guide.fix[k] : fallback; }
     if(isLane && lane.mycs10!=null){
       if(lane.mycs10>=80) good.push(['파밍 우수','10분에 CS '+lane.mycs10+'개를 챙겼습니다. 라인 관리가 깔끔합니다.']);
-      else if(lane.mycs10<60) bad.push(['CS 수급 부족','10분 CS '+lane.mycs10+'개. 70개 이상이 목표입니다. 막피 타이밍을 놓치지 말고 웨이브를 끝까지 정리하세요.']);
+      else if(lane.mycs10<60) bad.push(['CS 수급 부족','10분 CS '+lane.mycs10+'개로 70개 목표에 못 미칩니다. '+rx('farm','웨이브를 끝까지 정리하세요.')]);
     }
     if(isLane && lane.cs10!=null){
       if(lane.cs10>=10) good.push(['라인전 우위','10분 CS 격차 +'+lane.cs10+'개. 상대 라이너를 압박했습니다. 이 리드를 로밍이나 다이브로 키우세요.']);
-      else if(lane.cs10<=-10) bad.push(['라인전 열세','10분 CS 격차 '+lane.cs10+'개. 무리한 교환보다 안전하게 파밍해 격차부터 줄이세요.']);
+      else if(lane.cs10<=-10) bad.push(['라인전 열세','10분 CS 격차 '+lane.cs10+'개. '+rx('farm','무리한 교환보다 안전하게 파밍해 격차부터 줄이세요.')]);
     }
     if(isJg && me.cs_per_min!=null && me.cs_per_min>=csGood){
       good.push(['정글 수급 우수','분당 CS '+me.cs_per_min+'개. 정글 동선이 효율적입니다.']);
     }
     if(!isSup && me.cs_per_min!=null && me.cs_per_min<csFloor){
-      bad.push(['파밍 효율 저조','분당 CS '+me.cs_per_min+'개. 한타·이동 사이에 빈 라인을 정리해 분당 '+csGood+'개 이상을 노리세요.']);
+      bad.push(['파밍 효율 저조','분당 CS '+me.cs_per_min+'개. '+rx('farm','빈 라인을 정리해 분당 '+csGood+'개 이상을 노리세요.')]);
     }
     if(me.kda!=null && me.deaths!=null){
-      if(me.deaths>=8) bad.push(['잦은 죽음',me.deaths+'번 사망했습니다. 죽음 하나가 상대 골드와 성장으로 갑니다. 시야 안에서 싸우고 불리하면 빠지세요. 아래 데스 시점을 영상으로 확인하세요.']);
+      if(me.deaths>=8) bad.push(['잦은 죽음',me.deaths+'번 사망했습니다. 죽음 하나가 상대의 골드와 성장이 됩니다. '+rx('death','시야 안에서 싸우고 불리하면 빠지세요.')+' 아래 데스 시점을 영상으로 확인하세요.']);
       else if(me.kda>=3) good.push(['안정적인 생존','KDA '+me.kda+'. 무리 없이 이득을 쌓았습니다.']);
-      else if(me.kda<2) bad.push(['낮은 KDA','KDA '+me.kda+'. 교전에 들어가기 전 이길 수 있는 싸움인지 먼저 판단하세요.']);
+      else if(me.kda<2) bad.push(['낮은 KDA','KDA '+me.kda+'. '+rx('death','교전 전 이길 수 있는 싸움인지 먼저 판단하세요.')]);
     }
     if(me.kp!=null){
       if(me.kp>=kpB+0.15) good.push(['높은 팀 기여','킬관여 '+Math.round(me.kp*100)+'%. 팀 교전에 꾸준히 함께했습니다.']);
-      else if(me.kp<kpB-0.15) bad.push(['낮은 킬관여','킬관여 '+Math.round(me.kp*100)+'%. '+(isLane?'사이드 파밍에만 머물지 말고 ':'')+'미니맵을 보며 교전 타이밍에 합류하세요.']);
+      else if(me.kp<kpB-0.15) bad.push(['낮은 킬관여','킬관여 '+Math.round(me.kp*100)+'%. '+rx('kp','미니맵을 보며 교전 타이밍에 합류하세요.')]);
     }
     if(vspm!=null){
       if(vspm>=visGood) good.push(['시야 장악','분당 시야 '+vspm+'점. 맵 정보를 잘 만들었습니다.']);
-      else if(vspm<visFloor) bad.push(['시야 관리 부족','분당 시야 '+vspm+'점. 제어 와드를 꾸준히 사고'+(isSup?' 오브젝트·위험 지역을 미리 밝히세요.':' 적 동선을 미리 비추세요.')]);
+      else if(vspm<visFloor) bad.push(['시야 관리 부족','분당 시야 '+vspm+'점. '+rx('vision','제어 와드를 꾸준히 사 적 동선을 미리 비추세요.')]);
     }
 
-    var ev='';
-    good.forEach(function(x){ ev+='<div class="crow g"><div class="ico">✓</div><div class="ct"><div class="t">'+esc(x[0])+'</div><div class="a">'+esc(x[1])+'</div></div></div>'; });
-    bad.forEach(function(x){ ev+='<div class="crow b"><div class="ico">!</div><div class="ct"><div class="t">'+esc(x[0])+'</div><div class="a">'+esc(x[1])+'</div></div></div>'; });
-    if(!ev) ev='<div class="crow g"><div class="ico">✓</div><div class="ct"><div class="t">균형 잡힌 플레이</div><div class="a">두드러진 약점이 없습니다. 세부 지표를 보며 다음 목표를 잡아 보세요.</div></div></div>';
-
-    var myDeaths=(ANALYSIS.kills||[]).filter(function(e){ return e.victim===pid; });
-    var jp='';
-    if(myDeaths.length){
-      jp+='<div class="clabel">내 데스 '+myDeaths.length+'회 · 클릭하면 영상으로</div><div class="jumps">';
-      myDeaths.forEach(function(e){ jp+='<button class="jbtn death" data-jump="'+e.t+'">'+fmtT(e.t)+'</button>'; });
-      jp+='</div>';
+    function evcol(title, arr, kind){
+      var head='<div class="eh"><span class="dot"></span>'+title+'</div>';
+      if(!arr.length) return '<div class="evalcol '+kind+'">'+head+'<div class="crow '+(kind==='good'?'g':'b')+'"><div class="ct"><div class="a" style="color:var(--faint)">'+(kind==='good'?'두드러진 강점이 기록되지 않았습니다.':'큰 약점이 없습니다. 좋은 흐름이에요.')+'</div></div></div></div>';
+      var rows=arr.map(function(x){ return '<div class="crow '+(kind==='good'?'g':'b')+'"><div class="ico">'+(kind==='good'?'✓':'!')+'</div><div class="ct"><div class="t">'+esc(x[0])+'</div><div class="a">'+esc(x[1])+'</div></div></div>'; }).join('');
+      return '<div class="evalcol '+kind+'">'+head+'<div class="ceval">'+rows+'</div></div>';
     }
-    var objs=ANALYSIS.objs||[];
-    if(objs.length){
-      jp+='<div class="clabel">주요 오브젝트</div><div class="jumps">';
-      objs.forEach(function(e){
-        var nm=e.kind==='DRAGON'?'용':(e.kind==='BARON_NASHOR'?'바론':(e.kind==='RIFTHERALD'?'전령':(e.kind==='TOWER'?'타워':e.kind)));
-        jp+='<button class="jbtn" data-jump="'+e.t+'">'+fmtT(e.t)+' '+nm+'</button>';
-      });
-      jp+='</div>';
+    // 측정 지표 종합 등급(참고용) — 포지션별 가중치는 Riot 마스터리 등급 기준 참고.
+    function p3(val, lo, hi){ return val==null?null:(val>=hi?2:(val<lo?0:1)); }
+    var gparts=[];
+    if(!isSup) gparts.push([isJg?1:(pos==='BOTTOM'?3:2), p3(me.cs_per_min, csFloor, csGood)]);
+    if(isLane && lane.cs10!=null) gparts.push([1, p3(lane.cs10, -10, 10)]);
+    if(me.kda!=null) gparts.push([pos==='BOTTOM'?3:2, p3(me.kda, 2, 3)]);
+    if(me.kp!=null) gparts.push([(isJg||isSup)?3:(pos==='TOP'?1:2), p3(me.kp, kpB-0.1, kpB+0.1)]);
+    if(vspm!=null) gparts.push([isSup?3:(isJg?2:1), p3(vspm, visFloor, visGood)]);
+    var gws=0, gss=0;
+    gparts.forEach(function(x){ if(x[1]!=null){ gws+=x[0]*2; gss+=x[0]*x[1]; } });
+    var gradeHTML='';
+    if(gws>0){
+      var gscore=Math.round(gss/gws*100);
+      var gl=gscore>=85?'S':(gscore>=70?'A':(gscore>=55?'B':(gscore>=40?'C':'D')));
+      gradeHTML='<div class="grade g-'+gl.toLowerCase()+'"><div class="gv">'+gl+'</div><div class="gx"><div class="gs">'+gscore+'<span class="gsl"> / 100</span></div><div class="gd">측정 지표 종합 등급입니다. 의사결정·시야 활용·웨이브 관리는 아래 체크 질문으로 직접 확인하세요.</div></div></div>';
     }
-
-    return '<h2 class="sec">복기 분석<span class="ln"></span></h2>'
-      +'<div class="coach"><div class="cgrid">'+g+'</div><div class="ceval">'+ev+'</div>'+jp+'</div>';
+    var checksHTML='', drillHTML='';
+    if(guide){
+      checksHTML='<div class="checks"><div class="chead">영상으로 직접 확인할 것 · '+guide.ko+'</div>';
+      guide.checks.forEach(function(q){ checksHTML+='<div class="crq"><span class="qm">?</span><span>'+esc(q)+'</span></div>'; });
+      checksHTML+='</div>';
+      if(bad.length){
+        drillHTML='<div class="drills"><div class="dhead">이번 주 훈련 과제</div>';
+        guide.drills.slice(0,2).forEach(function(d){ drillHTML+='<div class="drow"><span class="dn">▸</span><span>'+esc(d)+'</span></div>'; });
+        drillHTML+='</div>';
+      }
+    }
+    return '<div class="coachhead"><span class="t">복기 분석</span><span class="s">'+(P.posKo(pos)||'내 플레이')+' 기준</span><span class="ln"></span></div>'
+      +gradeHTML
+      +(sg?'<div class="subgrid">'+sg+'</div>':'')
+      +'<div class="evalcols">'+evcol('잘한 점', good, 'good')+evcol('개선할 점', bad, 'bad')+'</div>'
+      +checksHTML+drillHTML;
   }
 
   // 데스/오브젝트 버튼 → 영상 점프(게임 시각 기준이라 영상과 약간 오차 가능)
@@ -430,11 +600,12 @@ footer .riot{margin-top:14px;font-size:12px;color:var(--faint);max-width:680px;l
   }
 
   // 오브젝트 한 줄
-  function objRow(label, b, r, icon){
-    var bl = b>r, rl = r>b;
-    return '<div class="ov b'+(bl?' lead':'')+'">'+icon+'<b>'+b+'</b></div>'
-      + '<div class="ot">'+label+'</div>'
-      + '<div class="ov r'+(rl?' lead':'')+'"><b>'+r+'</b>'+icon+'</div>';
+  function obar(label, b, r, icon){
+    var tot=b+r, bp=tot?Math.round(b/tot*100):50;
+    var lead=b>r?'blead':(r>b?'rlead':'');
+    return '<div class="obar '+lead+'"><div class="bn b">'+b+'</div>'
+      + '<div class="track"><div class="fb" style="width:'+bp+'%"></div><div class="fr" style="width:'+(100-bp)+'%"></div><div class="lbl">'+icon+label+'</div></div>'
+      + '<div class="bn r">'+r+'</div></div>';
   }
   function kills(o,k){ var v=(o||{})[k]; return (v&&typeof v==='object')?(v.kills||0):(v||0); }
 
@@ -446,12 +617,12 @@ footer .riot{margin-top:14px;font-size:12px;color:var(--faint);max-width:680px;l
     var tower='<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 21V9l6-5 6 5v12M9 21v-6h6v6"/></svg>';
     var herald='<svg class="ic" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9"/></svg>';
     var inhib='<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
-    return '<div class="objgrid">'
-      + objRow('드래곤', kills(o100,'dragon'), kills(o200,'dragon'), dragon)
-      + objRow('바론', kills(o100,'baron'), kills(o200,'baron'), baron)
-      + objRow('전령', kills(o100,'riftHerald'), kills(o200,'riftHerald'), herald)
-      + objRow('타워', kills(o100,'tower'), kills(o200,'tower'), tower)
-      + objRow('억제기', kills(o100,'inhibitor'), kills(o200,'inhibitor'), inhib)
+    return '<div class="objbars">'
+      + obar('드래곤', kills(o100,'dragon'), kills(o200,'dragon'), dragon)
+      + obar('바론', kills(o100,'baron'), kills(o200,'baron'), baron)
+      + obar('전령', kills(o100,'riftHerald'), kills(o200,'riftHerald'), herald)
+      + obar('타워', kills(o100,'tower'), kills(o200,'tower'), tower)
+      + obar('억제기', kills(o100,'inhibitor'), kills(o200,'inhibitor'), inhib)
       + '</div>';
   }
 
@@ -571,6 +742,79 @@ footer .riot{margin-top:14px;font-size:12px;color:var(--faint);max-width:680px;l
     }catch(e){ alert('댓글 등록에 실패했습니다.'); }
   }
 
+  function likeBtnHTML(){ return '<button class="actbtn like" id="likebtn"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-4.5-9.5-9C1 9 2.5 5.5 6 5.5c2 0 3.2 1.2 4 2.4.8-1.2 2-2.4 4-2.4 3.5 0 5 3.5 3.5 6.5C19 16.5 12 21 12 21z"/></svg><span class="cnt">'+groupLikes()+'</span></button>'; }
+  function viewHTML(){ return '<div class="actbtn view"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3.2"/><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/></svg>'+P.compact(groupViews())+'</div>'; }
+
+  function verdictLine(me, won){
+    var lane=me.lane||{}, pos=me.position||'';
+    var isLane=pos!=='JUNGLE'&&pos!=='UTILITY';
+    var key;
+    if(isLane && lane.cs10!=null && lane.cs10>=15) key='라인전을 강하게 지배한';
+    else if(isLane && lane.cs10!=null && lane.cs10>=10) key='라인전 우위를 잡은';
+    else if(isLane && lane.cs10!=null && lane.cs10<=-10) key='라인전이 밀린';
+    else if(me.deaths!=null && me.deaths>=8) key='교전에서 자주 끊긴';
+    else if(me.kda!=null && me.kda>=4) key='안정적으로 풀어간';
+    else if(me.kp!=null && me.kp>=0.6) key='팀 교전을 주도한';
+    else key='무난하게 흘러간';
+    var tail = won===true?' 경기입니다. 강점을 유지해 보세요.':(won===false?' 경기입니다. 아래 개선점을 짚어 보세요.':' 경기입니다.');
+    return key+tail;
+  }
+
+  function heroBlock(rep, won){
+    var saver=(ROWS[curPov]||{}).saver;
+    var players=ANALYSIS.players||[];
+    var me=null, i;
+    for(i=0;i<players.length;i++){ if(players[i].name===saver){ me=players[i]; break; } }
+    var verdict = won===true?'승리':(won===false?'패배':'결과');
+    var wl = won===true?'w':(won===false?'l':'');
+    var len = rep.length || P.mmss(ANALYSIS.duration);
+    var queue = P.queueName(rep.type||ANALYSIS.queue);
+    var date = P.ago(rep.uploaded)||'-';
+    var meta = '<div class="hmeta"><div class="si"><div class="k">큐</div><div class="v">'+queue+'</div></div>'
+      +'<div class="si"><div class="k">시간</div><div class="v">'+len+'</div></div>'
+      +'<div class="si"><div class="k">날짜</div><div class="v">'+date+'</div></div></div>';
+    var side = '<div class="hside"><div class="wlbadge '+wl+'">'+verdict+'</div>'+meta+'<div class="hacts">'+likeBtnHTML()+viewHTML()+'</div></div>';
+    if(!me){
+      return '<div class="hero '+wl+'"><div class="hchamp"><div class="ci"></div><div><div class="nm">경기 기록</div></div></div>'
+        +'<div class="hmid"><div class="vsum">분석 정보가 없는 경기입니다. 영상으로 다시 볼 수 있습니다.</div></div>'+side+'</div>';
+    }
+    var champ=me.champion||'', pos=P.posKo(me.position)||'';
+    var kda=P.kdaRatio(me.kills,me.deaths,me.assists);
+    return '<div class="hero '+wl+'">'
+      +'<div class="hchamp"><div class="ci"><img src="'+P.champIcon(ver,champ)+'" alt="'+esc(champ)+'" onerror="this.style.visibility=\'hidden\'"><span class="lv">'+(me.level||'')+'</span></div>'
+        +'<div><div class="nm">'+esc(champ)+'</div>'+(pos?'<div class="po">'+pos+'</div>':'')+'</div></div>'
+      +'<div class="hmid"><div class="hkda"><div class="v">'+(me.kills||0)+'<span class="s">/</span>'+(me.deaths||0)+'<span class="s">/</span>'+(me.assists||0)+'</div><div class="r">KDA '+kda+'</div></div>'
+        +'<div class="vsum">'+verdictLine(me,won)+'</div></div>'
+      +side+'</div>';
+  }
+
+  function jumpsBlock(){
+    var saver=(ROWS[curPov]||{}).saver;
+    var players=ANALYSIS.players||[];
+    var meIdx=-1, i;
+    for(i=0;i<players.length;i++){ if(players[i].name===saver){ meIdx=i; break; } }
+    var jp='';
+    if(meIdx>=0){
+      var pid=meIdx+1;
+      var myDeaths=(ANALYSIS.kills||[]).filter(function(e){ return e.victim===pid; });
+      if(myDeaths.length){
+        jp+='<div class="clabel">내 데스 '+myDeaths.length+'회 · 클릭하면 영상으로</div><div class="jumps">';
+        myDeaths.forEach(function(e){ jp+='<button class="jbtn death" data-jump="'+e.t+'">'+fmtT(e.t)+'</button>'; });
+        jp+='</div>';
+      }
+    }
+    var objs=ANALYSIS.objs||[];
+    if(objs.length){
+      jp+='<div class="clabel">주요 오브젝트</div><div class="jumps">';
+      objs.forEach(function(e){
+        var nm=e.kind==='DRAGON'?'용':(e.kind==='BARON_NASHOR'?'바론':(e.kind==='RIFTHERALD'?'전령':(e.kind==='TOWER'?'타워':e.kind)));
+        jp+='<button class="jbtn" data-jump="'+e.t+'">'+fmtT(e.t)+' '+nm+'</button>';
+      });
+      jp+='</div>';
+    }
+    return jp ? '<div class="vjumps">'+jp+'</div>' : '';
+  }
+
   function renderAll(){
     var rep = ROWS[curPov] || P.pickPrimary(ROWS) || {};
     var won = ANALYSIS.win_team!=null ? (saverWon(rep)) : null;
@@ -579,19 +823,9 @@ footer .riot{margin-top:14px;font-size:12px;color:var(--faint);max-width:680px;l
     var verdict = won===true?'승리':won===false?'패배':'결과';
 
     main.innerHTML =
-      '<div class="player"><div id="stagehost"></div><div class="povbar" id="povhost"></div></div>'
-      + '<div class="summary">'
-        + '<div class="verdict '+(won?'w':'l')+'">'+verdict+'</div>'
-        + '<div class="si"><div class="k">큐</div><div class="v">'+P.queueName(rep.type||ANALYSIS.queue)+'</div></div>'
-        + '<div class="si"><div class="k">시간</div><div class="v">'+len+'</div></div>'
-        + (patch?('<div class="si"><div class="k">패치</div><div class="v">'+patch+'</div></div>'):'')
-        + '<div class="si"><div class="k">날짜</div><div class="v">'+(P.ago(rep.uploaded)||'-')+'</div></div>'
-        + '<div class="sp"></div>'
-        + '<div class="acts">'
-          + '<button class="actbtn like" id="likebtn"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-4.5-9.5-9C1 9 2.5 5.5 6 5.5c2 0 3.2 1.2 4 2.4.8-1.2 2-2.4 4-2.4 3.5 0 5 3.5 3.5 6.5C19 16.5 12 21 12 21z"/></svg><span class="cnt">'+groupLikes()+'</span></button>'
-          + '<div class="actbtn view"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3.2"/><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/></svg>'+P.compact(groupViews())+'</div>'
-        + '</div>'
-      + '</div>'
+      heroBlock(rep, won)
+      + '<div class="player"><div id="stagehost"></div><div class="povbar" id="povhost"></div></div>'
+      + jumpsBlock()
       + coachCard(rep)
       + (ANALYSIS.series ? ('<h2 class="sec">골드 추이<span class="ln"></span></h2>'+goldChart(ANALYSIS.series)) : '')
       + '<h2 class="sec">오브젝트<span class="ln"></span></h2>'+objectivesBlock()

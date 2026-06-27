@@ -298,3 +298,173 @@ def _obj_events(timeline):
                     "team": e.get("teamId"),
                 })
     return out
+
+
+# ===================== Live Client 기반 자체 분석 (Riot API 불필요) =====================
+# 게임 중 Live Client Data API로 모은 스냅샷으로 분석을 만든다. Riot 개발자 키가 없어도 동작한다.
+# 골드/딜량은 Live Client에 없어 비우고(웹이 자동 생략), KDA·CS·킬관여·라인 CS격차·이벤트·승패는 채운다.
+
+def live_snapshot():
+    """게임 중 한 시점의 스냅샷 {t, mode, players, my_gold?}. 게임 중이 아니면 None.
+    주의: Live Client의 creepScore는 10 단위로만 갱신된다(정밀도 한계).
+    my_gold: 활성 플레이어(나)의 현재 보유 골드 — 내 골드 추정 보정용(본인만 제공된다)."""
+    gs = live_get("/gamestats")
+    if not gs:
+        return None
+    pl = live_get("/playerlist") or []
+    snap = {"t": gs.get("gameTime") or 0, "mode": gs.get("gameMode") or "", "players": pl}
+    ap = live_get("/activeplayer")
+    if ap and ap.get("currentGold") is not None:
+        snap["my_gold"] = ap.get("currentGold")
+    return snap
+
+
+def live_events():
+    """게임 이벤트 목록(누적). 게임이 끝나기 전에 받아둬야 한다."""
+    return (live_get("/eventdata") or {}).get("Events") or []
+
+
+def _pname(p):
+    """playerlist 항목의 표시 이름 — riotIdGameName 우선, 없으면 riotId 앞부분/summonerName."""
+    return p.get("riotIdGameName") or (p.get("riotId") or "").split("#")[0] or p.get("summonerName") or ""
+
+
+def _item_gold(items):
+    """playerlist items[]의 price를 합산 → 산 아이템 가치(골드 근사).
+    Live Client는 items 각 항목에 price·count를 준다(완성/부품/소비템 모두).
+    보유(미사용) 골드는 빠지므로 약간 과소하지만, 게임 종료 시점이면 대부분 아이템화돼 근사로 충분하다."""
+    g = 0
+    for it in (items or []):
+        if isinstance(it, dict):
+            g += int(it.get("price") or 0) * int(it.get("count") or 1)
+    return g
+
+
+def analyze_live(snaps, events, my_name):
+    """게임 중 모은 Live Client 스냅샷 → 웹 갤러리 분석 구조(부분).
+    채움: players(KDA/CS/레벨/와드/포지션/킬관여), 라인 CS격차(10분), 킬/오브젝트 이벤트, 승패.
+    비움: 골드/딜량/딜골드비(Live Client 미제공) → 웹이 해당 항목을 자동으로 생략."""
+    snaps = snaps or []
+    events = events or []
+    if not snaps:
+        return {}
+    last = snaps[-1]
+    pl = last.get("players") or []
+    if not pl:
+        return {}
+
+    def _team(p):
+        return 100 if (p.get("team") == "ORDER") else 200
+
+    def _sc(p):
+        return p.get("scores") or {}
+
+    dur_sec = float(last.get("t") or 0)
+    dur_min = dur_sec / 60.0 if dur_sec else 0
+
+    team_kills = {100: 0, 200: 0}
+    for p in pl:
+        team_kills[_team(p)] += (_sc(p).get("kills") or 0)
+
+    my_team = None
+    for p in pl:
+        if _pname(p) == my_name:
+            my_team = _team(p)
+            break
+
+    # 승패: GameEnd 이벤트의 Result(활성 플레이어=나 기준). 못 받으면 None(미확인).
+    win_team = None
+    for e in events:
+        if e.get("EventName") == "GameEnd":
+            res = e.get("Result")
+            if res and my_team:
+                win_team = my_team if res == "Win" else (200 if my_team == 100 else 100)
+            break
+
+    # 큐: ARAM이면 칼바람(450), 그 외는 None → 웹에서 '소환사의 협곡'
+    mode = (last.get("mode") or "").upper()
+    queue = 450 if mode == "ARAM" else None
+
+    # 10분 시점 CS(라인전 격차용) — 600초에 가장 가까운 스냅샷(±75초 이내일 때만)
+    cs10 = {}
+    s10 = min(snaps, key=lambda s: abs(float(s.get("t") or 0) - 600))
+    if abs(float(s10.get("t") or 0) - 600) <= 75:
+        for p in (s10.get("players") or []):
+            cs10[_pname(p)] = (_sc(p).get("creepScore") or 0)
+
+    players = []
+    for p in pl:
+        s = _sc(p)
+        _k = s.get("kills") or 0
+        _d = s.get("deaths") or 0
+        _a = s.get("assists") or 0
+        tm = _team(p)
+        nm = _pname(p)
+        cs = s.get("creepScore") or 0
+        gold = _item_gold(p.get("items"))
+        if nm == my_name and last.get("my_gold"):
+            gold += int(last.get("my_gold") or 0)  # 내 보유(미사용) 골드까지 더해 총획득에 근접
+        win = (win_team == tm) if win_team else None
+        players.append({
+            "name": nm, "tag": p.get("riotIdTagLine"),
+            "champion": p.get("championName"), "champ_id": None,
+            "team": tm,
+            "kills": _k, "deaths": _d, "assists": _a,
+            "cs": cs, "gold": gold, "level": p.get("level"),
+            "dmg": None, "vision": s.get("wardScore"),
+            "items": [(it.get("itemID") if isinstance(it, dict) else it) for it in (p.get("items") or [])][:7],
+            "spells": [], "position": p.get("position") or "",
+            "win": win, "puuid": None,
+            "pentas": 0, "quadras": 0, "triples": 0, "doubles": 0, "multi": 0,
+            "cs_per_min": round(cs / dur_min, 1) if dur_min else 0,
+            "kda": round((_k + _a) / max(1, _d), 2),
+            "kp": round((_k + _a) / max(1, team_kills[tm]), 2) if team_kills.get(tm) else 0,
+            "dpg": None,
+        })
+
+    # 라인전 CS 격차(같은 포지션 반대팀 vs 나) — 10분 CS 기준
+    pos_team = {}
+    for i, p in enumerate(players):
+        pos = (p.get("position") or "").upper()
+        if pos:
+            pos_team[(pos, p["team"])] = i
+    for p in players:
+        pos = (p.get("position") or "").upper()
+        if not pos:
+            continue
+        my_cs10 = cs10.get(p["name"])
+        if my_cs10 is None:
+            continue
+        d = {"mycs10": int(my_cs10)}
+        opp_i = pos_team.get((pos, 200 if p["team"] == 100 else 100))
+        if opp_i is not None:
+            opp_cs10 = cs10.get(players[opp_i]["name"])
+            if opp_cs10 is not None:
+                d["cs10"] = int(my_cs10 - opp_cs10)
+        p["lane"] = d
+
+    # 킬/오브젝트 이벤트 (killer/victim은 players 순서 기반 participant 번호 i+1로 변환)
+    name_to_pid = {p["name"]: i + 1 for i, p in enumerate(players)}
+    kills, objs = [], []
+    _OBJ = {"DragonKill": "DRAGON", "BaronKill": "BARON_NASHOR",
+            "HeraldKill": "RIFTHERALD", "TurretKilled": "TOWER"}
+    for e in events:
+        en = e.get("EventName") or ""
+        t = int(float(e.get("EventTime") or 0))
+        if en == "ChampionKill":
+            kills.append({
+                "t": t,
+                "killer": name_to_pid.get(e.get("KillerName")),
+                "victim": name_to_pid.get(e.get("VictimName")),
+                "assists": [name_to_pid[a] for a in (e.get("Assisters") or []) if a in name_to_pid],
+            })
+        elif en in _OBJ:
+            objs.append({"t": t, "kind": _OBJ[en]})
+
+    return {
+        "players": players, "win_team": win_team,
+        "duration": int(dur_sec), "queue": queue,
+        "patch": None, "objectives": {}, "bans": {},
+        "series": None, "kills": kills, "objs": objs,
+        "source": "live",
+    }

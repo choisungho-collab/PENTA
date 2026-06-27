@@ -70,3 +70,10 @@ create policy g_ins on group_stats  for insert with check (true);
 create policy g_upd on group_stats  for update using (true);
 create policy c_sel on comments     for select using (true);
 create policy c_ins on comments     for insert with check (true);
+
+-- ===== Storage(영상 파일) 업로드 정책 =====
+-- media 버킷은 PUBLIC(읽기는 공개)이지만, 업로드(INSERT)는 아래 정책이 있어야 anon 키로 가능하다.
+-- 이 정책이 없으면 service_key 없이는 영상 파일이 안 올라간다(전적 데이터만 올라가고 영상은 실패).
+-- 이미 만든 적이 있으면 에러 없이 다시 만들도록 drop 후 생성.
+drop policy if exists s_ins on storage.objects;
+create policy s_ins on storage.objects for insert with check (bucket_id = 'media');

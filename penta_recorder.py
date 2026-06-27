@@ -14,7 +14,7 @@ OBS 필요 없음. NVIDIA NVENC 하드웨어 인코딩이라 게임 성능 저�
 
 실행:  penta_recorder.exe 더블클릭
 """
-import os, sys, json, time, socket, subprocess, datetime, traceback, threading
+import os, sys, json, time, socket, subprocess, datetime, traceback, threading, hashlib
 
 # --windowed(콘솔 없는 exe) 실행 시 sys.stdout 이 None → print 크래시 방지
 class _NullIO:
@@ -155,10 +155,34 @@ def open_app(url):
     except Exception: pass
     return False
 
+def _atomic_write_json(path, data):
+    """JSON을 원자적으로 저장 — 쓰는 도중 앱이 종료/크래시/정전이 나도 원본 파일이 깨지지 않는다.
+    임시파일에 완전히 쓰고 fsync 로 디스크에 확정한 뒤 os.replace 로 통째 교체(전부 or 전무)."""
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+        f.flush()
+        try: os.fsync(f.fileno())
+        except Exception: pass
+    os.replace(tmp, path)
+
+
 def load_or_make_config():
+    cfg = None
     if os.path.isfile(CONFIG_PATH):
-        cfg = json.load(open(CONFIG_PATH, encoding="utf-8"))
-    else:
+        try:
+            cfg = json.load(open(CONFIG_PATH, encoding="utf-8"))
+            if not isinstance(cfg, dict):
+                raise ValueError("config.json is not a JSON object")
+        except Exception as e:
+            # config.json 손상 → 망가진 파일은 .broken 으로 백업하고 기본값으로 재생성 (앱이 안 켜지는 것 방지)
+            try: os.replace(CONFIG_PATH, CONFIG_PATH + ".broken")
+            except Exception:
+                try: os.remove(CONFIG_PATH)
+                except Exception: pass
+            log(f"config.json 손상 — 기본값으로 재생성합니다 (기존 파일은 config.json.broken 으로 백업): {e}")
+            cfg = None
+    if cfg is None:
         cfg = {
             "mode": "all",
             "league_process": "League of Legends.exe",
@@ -179,14 +203,14 @@ def load_or_make_config():
             "poll_seconds": 4,
             "autostart": True, "min_game_sec": 300,
         }
-        json.dump(cfg, open(CONFIG_PATH, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+        _atomic_write_json(CONFIG_PATH, cfg)
         log(f"Config created → {CONFIG_PATH}")
     # service_key 영구보관: 한 번 넣으면 data 폴더에 저장 → 이후 zip 통째로 덮어써도 유지
     try:
         _sk = ((cfg.get("supabase") or {}).get("service_key") or "").strip()
         _secret = os.path.join(DATA_DIR, "penta_secret.json")
         if _sk:
-            json.dump({"service_key": _sk}, open(_secret, "w", encoding="utf-8"))
+            _atomic_write_json(_secret, {"service_key": _sk})
         elif os.path.isfile(_secret):
             _v = (json.load(open(_secret, encoding="utf-8")) or {}).get("service_key") or ""
             if _v: cfg.setdefault("supabase", {})["service_key"] = _v
@@ -302,6 +326,7 @@ def count_matches():
 # ===================== Supabase 클라우드 (DB + Storage) =====================
 # config 의 "supabase" 를 채우면 자동으로 켜짐. 비어 있으면 전부 로컬(SQLite)로 동작.
 # Supabase 공개 기본값 — anon_key 는 공개돼도 안전(RLS 가 데이터 보호). config.json 이 없거나 비어 있어도 클라우드 모드로 동작.
+PROXY_DEFAULT = "https://mypenta.netlify.app"   # Riot API 프록시(Netlify Function) — config.json 없어도 분석이 자동 연결되도록 기본값
 SB_DEFAULTS = {
     "url": "https://bsrvmesrygbfeqicquvq.supabase.co",
     "anon_key": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzcnZtZXNyeWdiZmVxaWNxdXZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzNjA2NjQsImV4cCI6MjA5NzkzNjY2NH0.PBnGgLxvMDOK_yUQxTH11EwizEz5oJ1OWp-9I5nG8Ug",
@@ -635,7 +660,8 @@ class Recorder:
         shared = {"buf": None, "wh": None, "n": 0, "err": None}
         stop_ev = threading.Event(); proc_box = {"p": None}
         try:
-            cap = WindowsCapture(cursor_capture=None, draw_border=None, monitor_index=1, window_name=None)
+            # draw_border=False → 녹화 중 노란 테두리 제거(Windows 11에서 적용; Windows 10은 OS에 해당 기능이 없어 무시됨)
+            cap = WindowsCapture(cursor_capture=None, draw_border=False, monitor_index=1, window_name=None)
         except Exception as e:
             log(f"  WGC init failed: {e}"); return False
 
@@ -834,40 +860,96 @@ def _sec_mmss(s):
     s = int(s or 0)
     return f"{s//60}:{s%60:02d}"
 
+def _video_dur(video_path):
+    """ffprobe로 영상 실제 길이(초)를 잰다. 분석을 못 했을 때 길이 판단용. 실패하면 0."""
+    try:
+        fp = os.path.join(HERE, "ffprobe.exe")
+        if not os.path.isfile(fp): fp = "ffprobe"
+        out = subprocess.run([fp, "-v", "error", "-show_entries", "format=duration",
+                              "-of", "default=nw=1:nk=1", video_path],
+                             capture_output=True, text=True, timeout=30).stdout.strip()
+        return float(out) if out else 0.0
+    except Exception:
+        return 0.0
+
 def _discard(video_path, reason):
     log(f"  Discarding (not saving) — {reason}")
     try:
         if video_path and os.path.isfile(video_path): os.remove(video_path)
     except OSError: pass
 
-def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr"):
+def _live_gid(analysis, start_ts):
+    """Live 자체분석 경기의 공통 ID — matchId가 없을 때, 같은 게임을 녹화한 사람끼리 같은 값이 나오게 한다.
+    같은 게임은 참가자 10명과 날짜가 동일하므로 (정렬한 참가자 이름 + 날짜)를 해시한다.
+    (일반 매치메이킹에서 같은 10명이 같은 날 다시 만날 확률은 사실상 0이라 충돌 걱정이 없다.)"""
+    names = sorted([(p.get("name") or "") for p in (analysis.get("players") or []) if p.get("name")])
+    try:
+        day = datetime.datetime.fromtimestamp(start_ts).strftime("%Y%m%d")
+    except Exception:
+        day = datetime.datetime.now().strftime("%Y%m%d")
+    key = "|".join(names) + "|" + day
+    return "live_" + hashlib.sha1(key.encode("utf-8")).hexdigest()[:12]
+
+
+def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr", live_data=None):
     # 화면 녹화 + (게임 종료 후) Riot 매치를 연결해 분석·업로드한다.
+    # Riot 매치 연결이 안 되더라도(개발키 만료/레이트리밋/타이밍 등) 영상은 업로드하고 아카이브에 올린다.
     if not video_path or not os.path.isfile(video_path) or os.path.getsize(video_path) < 10000:
         log("Video is empty → skipping registration."); return
     if not riot_id:
         return _discard(video_path, "Couldn't verify your Riot ID (may not be a game)")
-    if not proxy_url:
-        log("proxy_url not set — keeping the video locally and skipping analysis."); return
-    match, puuid = penta_lol.resolve_match(proxy_url, riot_id, start_ts, end_ts, platform)
-    if not match:
-        return _discard(video_path, "No match found for the recording time")
-    info = match.get("info") or {}
-    mid = (match.get("metadata") or {}).get("matchId") or str(info.get("gameId") or "")
-    if not mid:
-        return _discard(video_path, "No matchId")
-    timeline = penta_lol.proxy_get(proxy_url, "timeline", matchId=mid, platform=platform)
-    analysis = penta_lol.analyze_match(match, timeline)
+
+    # --- Riot 매치 연결 시도 (실패해도 영상은 올린다; 분석만 비움) ---
+    match, puuid, analysis, mid = None, None, {}, ""
+    if proxy_url:
+        try:
+            match, puuid = penta_lol.resolve_match(proxy_url, riot_id, start_ts, end_ts, platform)
+        except Exception as e:
+            log(f"  Match lookup failed ({e}) — uploading the video without analysis.")
+        if match:
+            mid = (match.get("metadata") or {}).get("matchId") or str((match.get("info") or {}).get("gameId") or "")
+            try:
+                timeline = penta_lol.proxy_get(proxy_url, "timeline", matchId=mid, platform=platform)
+                analysis = penta_lol.analyze_match(match, timeline) or {}
+            except Exception as e:
+                log(f"  Analysis failed ({e}) — uploading the video without analysis."); analysis = {}
+        else:
+            log("  No Riot match linked (API key/timing) — uploading the video without analysis.")
+    else:
+        log("  proxy_url not set — Riot analysis skipped.")
+
+    # Riot 분석이 비었으면(키 만료/레이트리밋/타이밍) Live Client 스냅샷으로 자체 분석 — 키 없이 동작
+    if not analysis.get("players") and live_data and live_data.get("snaps"):
+        try:
+            _mn = (riot_id or "").split("#")[0]
+            _la = penta_lol.analyze_live(live_data.get("snaps"), live_data.get("events"), _mn) or {}
+            if _la.get("players"):
+                analysis = _la
+                log(f"  Self-analysis from Live Client ({len(_la['players'])} players, no Riot key needed).")
+        except Exception as e:
+            log(f"  Live self-analysis failed ({e}).")
+
+    # --- 게임 길이: 분석값이 있으면 그걸, 없으면 영상 실제 길이로 ---
     dur = analysis.get("duration") or 0
     if dur and dur > 100000: dur = dur / 1000.0    # 과거 게임은 길이가 ms일 수 있어 보정
+    if not dur:
+        dur = _video_dur(video_path)
     if dur and dur < CFG.get("min_game_sec", 300):
         return _discard(video_path, f"Game too short ({int(dur)}s)")
-    gid = mid
-    row_id = gid + "__" + (puuid or "x").replace("/", "_")   # 시점별 고유 행 id(멀티 POV 충돌 방지)
+
+    # --- ID: 매치ID가 있으면 그걸, 없으면(Live 자체분석) 같은 게임 녹화자끼리 묶이도록 참가자 기반 ID, 그도 없으면 임시 ID ---
+    if mid:
+        gid = mid
+    elif analysis.get("players"):
+        gid = _live_gid(analysis, start_ts)   # 같은 게임을 녹화한 사람끼리 멀티뷰로 묶임
+    else:
+        gid = "local_" + datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    row_id = gid + "__" + (puuid or riot_id.replace("#", "_")).replace("/", "_")   # 시점별 고유 행 id
     safe = row_id.replace("/", "_")
     size = os.path.getsize(video_path)
     base = os.path.join(UPLOAD_DIR, safe); os.makedirs(base, exist_ok=True)
     try:
-        if dur: _trim_lead(video_path, dur)   # 로비/로딩 잘라 게임 시작부터 보이게
+        if dur and analysis: _trim_lead(video_path, dur)   # 분석으로 시점을 아는 경우에만 로비/로딩 컷
     except Exception: pass
     if not sb_writable():
         log("Cloud (Supabase) not configured → keeping locally only."); return
@@ -876,7 +958,10 @@ def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr"):
         video_url = sb_upload(video_path, f"videos/{safe}.mp4", "video/mp4")
         thumb_url = sb_upload(tmp_thumb, f"thumbs/{safe}.jpg", "image/jpeg") if has_thumb else None
         players = analysis.get("players") or []
-        me = next((p for p in players if p.get("puuid") == puuid), None)
+        me = next((p for p in players if puuid and p.get("puuid") == puuid), None)
+        if not me and riot_id:
+            _mn2 = riot_id.split("#")[0]
+            me = next((p for p in players if p.get("name") == _mn2), None)
         won = (me or {}).get("win")
         saver = (me or {}).get("name") or riot_id.split("#")[0]
         sb_insert_match({
@@ -891,15 +976,16 @@ def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr"):
             "np": len(players), "players": players, "won": won,
             "analysis": analysis,
         })
-        log(f"Upload complete — matchId {gid}")
+        log(f"Upload complete — {('matchId ' + gid) if mid else 'video only (no analysis)'}")
     except Exception as e:
         log(f"Upload failed: {e}")
 
 def recorder_loop(cfg):
     proc = cfg.get("league_process", "League of Legends.exe")
-    proxy = cfg.get("proxy_url", ""); platform = cfg.get("platform", "kr")
+    proxy = (cfg.get("proxy_url") or "").strip() or PROXY_DEFAULT; platform = cfg.get("platform", "kr")
     poll = float(cfg.get("poll_seconds", 4)); rec = Recorder(int(cfg.get("fps", FPS)))
     was = False; active = False; riot_id = None; start_ts = None
+    live_snaps = []; live_evts = []; last_snap_t = -999.0   # 게임 중 Live Client 스냅샷 수집용
     try: ensure_audio()
     except Exception: pass
     if not proxy:
@@ -915,18 +1001,27 @@ def recorder_loop(cfg):
                         riot_id = penta_lol.my_riot_id() or riot_id; break
                     time.sleep(1)
                 start_ts = time.time(); active = rec.start()
+                live_snaps = []; live_evts = []; last_snap_t = -999.0
             if run:
                 if not rec._recording():
                     if active: log("Recording stream dropped → restarting automatically.")
                     active = rec.start()
                 if not riot_id and penta_lol.game_active():
                     riot_id = penta_lol.my_riot_id()
+                # Live Client 스냅샷 수집(약 25초 간격) — Riot API가 안 돼도 게임 종료 후 자체 분석할 수 있게
+                try:
+                    snap = penta_lol.live_snapshot()
+                    if snap and (float(snap.get("t") or 0) - last_snap_t) >= 25:
+                        live_snaps.append(snap); last_snap_t = float(snap.get("t") or 0)
+                        _ev = penta_lol.live_events()
+                        if _ev: live_evts = _ev
+                except Exception: pass
             if not run and was:
                 log("Game ended.")
                 vid = rec.stop(); active = False; rec.verified = False
                 end_ts = time.time()
                 if vid and os.path.isfile(vid):
-                    threading.Thread(target=ingest_lol, args=(vid, riot_id, start_ts, end_ts, proxy, platform), daemon=True).start()
+                    threading.Thread(target=ingest_lol, args=(vid, riot_id, start_ts, end_ts, proxy, platform), kwargs={"live_data": {"snaps": list(live_snaps), "events": list(live_evts)}}, daemon=True).start()
                 riot_id = None; start_ts = None; log("Idle.")
             # 웹 표시용 실시간 상태 갱신
             if run and rec._recording():
@@ -1096,7 +1191,7 @@ def run_gui(cfg, url):
         except Exception: pass
         os._exit(0)
     def _save_cfg():
-        try: json.dump(cfg, open(CONFIG_PATH,"w",encoding="utf-8"), ensure_ascii=False, indent=2)
+        try: _atomic_write_json(CONFIG_PATH, cfg)
         except Exception as e: log(f"Failed to save settings: {e}")
 
     # === Settings panel (collapsible) ===
