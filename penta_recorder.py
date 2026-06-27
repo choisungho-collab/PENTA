@@ -59,7 +59,19 @@ def ensure_deps():
         except Exception as e:
             print("[!] 패키지 자동 설치 실패. 수동으로 실행해 주세요:")
             print(f"    {sys.executable} -m pip install {' '.join(need)}")
-            print("상세:", e); _safe_input("\n엔터를 누르면 종료..."); sys.exit(1)
+            print("상세:", e); _safe_input("\n엔터를 누르면 종료...")
+            sys.exit(1)
+    # 선택: 시스템 트레이용(윈도우 전용). 없어도 동작 — ✕가 종료로 폴백. 실패는 조용히 무시.
+    if sys.platform == "win32":
+        for _mod, _pkg in [("pystray", "pystray"), ("PIL", "pillow")]:
+            try:
+                __import__(_mod)
+            except Exception:
+                try:
+                    subprocess.check_call([sys.executable, "-m", "pip", "install", "--quiet", _pkg],
+                                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                except Exception:
+                    pass
 ensure_deps()
 
 import psutil
@@ -110,6 +122,7 @@ def log(m):
     elif ("Recording stopped" in s) or ("Idle" in s) or ("Game ended" in s): REC_STATE["recording"] = False
     if "Ready." in s: REC_STATE["ready"] = True
     if s.startswith("Encoder:"): REC_STATE["encoder"] = s.split("Encoder:", 1)[1].strip()
+    if "Upload complete" in s: REC_STATE["uploaded_at"] = time.time()
     try: GUI_Q.put_nowait(line)
     except Exception: pass
     try:
@@ -1125,7 +1138,7 @@ def run_gui(cfg, url):
     import tkinter.font as _tkfont
     BG="#080A0E"; SURF="#161B23"; CARD="#0F131A"
     INK="#ECE7DD"; INK2="#C2BBAD"; DIM="#867F71"; FAINT="#564F44"
-    GOLD="#DEC79C"; GOLD2="#EFDDBC"; REC="#FF5470"; LINE="#1F252E"; LINE2="#2B323C"
+    GOLD="#DEC79C"; GOLD2="#EFDDBC"; REC="#FF5470"; TEAL="#52C3AC"; LINE="#1F252E"; LINE2="#2B323C"
     W=466
     _load_recorder_fonts()
     root=tk.Tk(); root.title("myPENTA"); root.configure(bg=BG)
@@ -1151,20 +1164,24 @@ def run_gui(cfg, url):
     _ENCLBL={"auto":"Auto","nvenc":"NVENC","x264":"x264"}
     _SCLBL={"auto":"Auto","source":"Source","1080":"1080p","720":"720p","480":"480p"}
 
-    # === Status line: dot + status + sub + cloud (left) | quality preset toggle (right) ===
-    # 앱 이름 'myPENTA'는 OS 타이틀바에 이미 있어 상단 헤더는 제거. Cloud 상태는 상태줄 왼쪽으로 이동.
-    midf=tk.Frame(root,bg=BG); midf.pack(fill="x",padx=17,pady=(11,0))
+    # === Top accent: a thin line turns red while recording (visible even if the window is half-covered) ===
+    topacc=tk.Frame(root,bg=BG,height=2); topacc.pack(fill="x")
+
+    # === Status line: dot + status + sub (left) | quality preset toggle + cloud (right edge) ===
+    # 앱 이름 'myPENTA'는 OS 타이틀바에 이미 있어 상단 헤더는 제거. Cloud 상태는 맨 오른쪽.
+    midf=tk.Frame(root,bg=BG); midf.pack(fill="x",padx=17,pady=(9,0))
     dot=tk.Canvas(midf,width=7,height=7,bg=BG,highlightthickness=0); dot.pack(side="left",pady=(5,0))
     did=dot.create_oval(1,1,6,6,fill=DIM,outline="")
     status_lbl=tk.Label(midf,text="Starting\u2026",bg=BG,fg=INK,font=(SG_M,12)); status_lbl.pack(side="left",padx=(8,0))
-    sub_lbl=tk.Label(midf,text="",bg=BG,fg=DIM,font=(SG,8)); sub_lbl.pack(side="left",anchor="s",padx=(7,0),pady=(0,2))
+    sub_lbl=tk.Label(midf,text="",bg=BG,fg=INK2,font=(SG,8)); sub_lbl.pack(side="left",anchor="s",padx=(7,0),pady=(0,2))
     _cs=cloud_state()
-    _cmap={"cloud":(GOLD2,"\u2601 Cloud"),"readonly":(GOLD,"\u26a0 Key needed"),"local":(DIM,"\u25cf Local")}
+    _cmap={"cloud":(GOLD2,"\u2601 Cloud"),"readonly":(GOLD,"\u26a0 Key needed"),"local":(INK2,"\u25cf Local")}
     _cc,_ct=_cmap.get(_cs,_cmap["local"])
-    cloud_lbl=tk.Label(midf,text=_ct,bg=BG,fg=_cc,font=(SG_M,8)); cloud_lbl.pack(side="left",anchor="s",padx=(11,0),pady=(0,2))
-    opt_lbl=tk.Label(midf,text="",bg=BG,fg=DIM,font=(PLEX,8),cursor="hand2"); opt_lbl.pack(side="right",anchor="s",pady=(0,2))
+    # 맨 오른쪽(side=right를 먼저 pack해 우측 끝에 고정), 그 왼쪽에 프리셋 토글.
+    cloud_lbl=tk.Label(midf,text=_ct,bg=BG,fg=_cc,font=(SG_M,8)); cloud_lbl.pack(side="right",anchor="s",padx=(10,0),pady=(0,2))
+    opt_lbl=tk.Label(midf,text="",bg=BG,fg=INK2,font=(PLEX,8),cursor="hand2"); opt_lbl.pack(side="right",anchor="s",pady=(0,2))
     opt_lbl.bind("<Button-1>",lambda e: toggle_settings())
-    opt_lbl.bind("<Enter>",lambda e: opt_lbl.config(fg=GOLD2 if st["settings"] else INK2)); opt_lbl.bind("<Leave>",lambda e: opt_lbl.config(fg=GOLD if st["settings"] else DIM))
+    opt_lbl.bind("<Enter>",lambda e: opt_lbl.config(fg=GOLD2 if st["settings"] else INK)); opt_lbl.bind("<Leave>",lambda e: opt_lbl.config(fg=GOLD if st["settings"] else INK2))
     tk.Frame(root,bg=LINE,height=1).pack(fill="x",padx=17,pady=(8,0))
 
     # === Log area (hidden until needed) ===
@@ -1180,10 +1197,44 @@ def run_gui(cfg, url):
         try:
             if sys.platform=="win32": os.startfile(REC_DIR)
         except Exception: pass
+    _TRAY={"icon":None,"show":False,"quit":False}
     def do_quit():
+        try:
+            if _TRAY.get("icon"): _TRAY["icon"].stop()
+        except Exception: pass
         try: root.destroy()
         except Exception: pass
         os._exit(0)
+    def _on_close():
+        # ✕ → 트레이로 최소화(트레이 가능할 때). 트레이가 없으면 그냥 종료.
+        if _TRAY.get("icon"):
+            try: root.withdraw()
+            except Exception: pass
+        else:
+            do_quit()
+    def _tray_run(ic):
+        try: ic.run()
+        except Exception as e: log(f"Tray stopped: {e}")
+    def _make_tray():
+        # 시스템 트레이 아이콘(윈도우 전용). pystray/Pillow가 없으면 조용히 비활성 → ✕가 종료.
+        if sys.platform!="win32": return
+        try:
+            import pystray
+            from PIL import Image
+            import io as _io, base64 as _b64
+            img=Image.open(_io.BytesIO(_b64.b64decode(_PENTA_ICON)))
+            def _open(i=None,it=None): _TRAY["show"]=True
+            def _gal(i=None,it=None): _TRAY["show"]=True; _TRAY["gallery"]=True
+            def _qt(i=None,it=None): _TRAY["quit"]=True
+            menu=pystray.Menu(
+                pystray.MenuItem("Open myPENTA", _open, default=True),
+                pystray.MenuItem("Open gallery", _gal),
+                pystray.MenuItem("Quit", _qt))
+            ic=pystray.Icon("myPENTA", img, "myPENTA \u2014 auto-recording", menu)
+            _TRAY["icon"]=ic
+            threading.Thread(target=_tray_run, args=(ic,), daemon=True).start()
+        except Exception as e:
+            log(f"System tray off ({e}); window close will quit instead.")
     def _save_cfg():
         try: _atomic_write_json(CONFIG_PATH, cfg)
         except Exception as e: log(f"Failed to save settings: {e}")
@@ -1224,52 +1275,64 @@ def run_gui(cfg, url):
             logwrap.pack(fill="both",expand=True,padx=12,pady=(0,8))
             if LAST_ERR.get("msg"): errbar.config(text="\u26a0 "+LAST_ERR["msg"]); errbar.pack(fill="x",pady=(0,5))
             else: errbar.pack_forget()
-            logtxt.pack(fill="both",expand=True); logtog.config(text="Log \u25b4")
+            logtxt.pack(fill="both",expand=True)
         else:
-            logwrap.pack_forget(); logtog.config(text="Log \u25be")
+            logwrap.pack_forget()
+        log_btn.config(fg=GOLD if open_ else ICON_FG, highlightbackground=ICON_ON if open_ else ICON_BORD)
         _resize()
     def set_settings(open_):
         if open_ and st["log"]: set_log(False)
         st["settings"]=open_
-        if open_: optwrap.pack(fill="x",padx=13,pady=(3,2)); settog.config(text="\u2699 Settings \u25b4",fg=GOLD); opt_lbl.config(fg=GOLD)
-        else: optwrap.pack_forget(); settog.config(text="\u2699 Settings",fg=DIM); opt_lbl.config(fg=DIM)
+        if open_: optwrap.pack(fill="x",padx=13,pady=(3,2)); opt_lbl.config(fg=GOLD)
+        else: optwrap.pack_forget(); opt_lbl.config(fg=INK2)
+        set_btn.config(fg=GOLD if open_ else ICON_FG, highlightbackground=ICON_ON if open_ else ICON_BORD)
         _resize()
     def toggle_log(): set_log(not st["log"])
     def toggle_settings(): set_settings(not st["settings"])
 
-    # === Button helpers ===
-    def btn(parent, text, cmd, primary=False):
-        base=GOLD if primary else "#181B21"; hov=GOLD2 if primary else "#23272F"; fg="#080A0E" if primary else INK
-        bord=GOLD if primary else LINE2
-        b=tk.Label(parent,text=text,bg=base,fg=fg,font=(SEMI,10,"bold"),padx=16,pady=9,cursor="hand2",highlightthickness=1,highlightbackground=bord,highlightcolor=bord)
+    # === Toolbar: primary actions (Gallery / Open folder) + secondary icons (Settings / Log). Quit = window close (X). ===
+    ICON_FG="#9A9282"; ICON_BORD="#232A34"; ICON_ON="#4A4131"
+    def add_tip(widget, text):
+        tip={"w":None}
+        def show(_e):
+            if tip["w"] or not text: return
+            try:
+                x=widget.winfo_rootx()+widget.winfo_width()//2-len(text)*3
+                y=widget.winfo_rooty()-23
+                w=tk.Toplevel(widget); w.wm_overrideredirect(True); w.configure(bg=LINE2)
+                tk.Label(w,text=text,bg="#1B2129",fg=INK,font=(SG,8),padx=7,pady=2).pack(padx=1,pady=1)
+                w.wm_geometry("+%d+%d"%(max(0,x),max(0,y))); tip["w"]=w
+            except Exception: pass
+        def hide(_e):
+            if tip["w"]:
+                try: tip["w"].destroy()
+                except Exception: pass
+                tip["w"]=None
+        widget.bind("<Enter>",show,add="+"); widget.bind("<Leave>",hide,add="+")
+    def tbtn(parent, text, cmd, gold=False):
+        fg=GOLD if gold else INK2; fgh=GOLD2 if gold else INK
+        bord=ICON_ON if gold else LINE2; bordh="#6A5C44" if gold else "#3A434F"
+        b=tk.Label(parent,text=text,bg=BG,fg=fg,font=(SG_M,9),padx=12,pady=6,cursor="hand2",
+                   highlightthickness=1,highlightbackground=bord,highlightcolor=bord)
         b.bind("<Button-1>",lambda e: cmd())
-        b.bind("<Enter>",lambda e: b.config(bg=hov)); b.bind("<Leave>",lambda e: b.config(bg=base))
+        b.bind("<Enter>",lambda e: b.config(fg=fgh,highlightbackground=bordh))
+        b.bind("<Leave>",lambda e: b.config(fg=fg,highlightbackground=bord))
         return b
-    def link(parent, text, cmd, color=DIM):
-        l=tk.Label(parent,text=text,bg=BG,fg=color,font=(SG,8),cursor="hand2")
-        l.bind("<Button-1>",lambda e: cmd())
-        l.bind("<Enter>",lambda e: l.config(fg=INK)); l.bind("<Leave>",lambda e: l.config(fg=color))
-        return l
-
-    # === Action buttons (slim line-split) ===
-    acts=tk.Frame(root,bg=BG); acts.pack(fill="x")
-    _g=tk.Label(acts,text="Gallery",bg=BG,fg=GOLD,font=(SG_M,10),pady=7,cursor="hand2")
-    _g.pack(side="left",fill="both",expand=True)
-    _g.bind("<Button-1>",lambda e: open_gallery())
-    _g.bind("<Enter>",lambda e: _g.config(fg=GOLD2)); _g.bind("<Leave>",lambda e: _g.config(fg=GOLD))
-    tk.Frame(acts,bg=LINE,width=1).pack(side="left",fill="y")
-    _o=tk.Label(acts,text="Open folder",bg=BG,fg=INK2,font=(SG_M,10),pady=7,cursor="hand2")
-    _o.pack(side="left",fill="both",expand=True)
-    _o.bind("<Button-1>",lambda e: open_folder())
-    _o.bind("<Enter>",lambda e: _o.config(fg=INK)); _o.bind("<Leave>",lambda e: _o.config(fg=INK2))
-    tk.Frame(root,bg=LINE,height=1).pack(fill="x")
-
-    # === Footer (toggles + quit) ===
-    foot=tk.Frame(root,bg=BG); foot.pack(side="bottom",fill="x",padx=16,pady=(7,9))
-    settog=link(foot,"\u2699 Settings",toggle_settings,GOLD); settog.pack(side="left")
-    logtog=link(foot,"Log \u25be",toggle_log,DIM); logtog.pack(side="left",padx=(17,0))
-    link(foot,"Quit",do_quit,DIM).pack(side="right")
-    root.protocol("WM_DELETE_WINDOW",do_quit)
+    def ibtn(parent, glyph, cmd, statekey, tip):
+        b=tk.Label(parent,text=glyph,bg=BG,fg=ICON_FG,font=(SG_M,12),padx=8,pady=3,cursor="hand2",
+                   highlightthickness=1,highlightbackground=ICON_BORD,highlightcolor=ICON_BORD)
+        def _act(): return st.get(statekey)
+        b.bind("<Button-1>",lambda e: cmd())
+        b.bind("<Enter>",lambda e: b.config(fg=GOLD2 if _act() else GOLD,highlightbackground="#3A434F"))
+        b.bind("<Leave>",lambda e: b.config(fg=GOLD if _act() else ICON_FG,highlightbackground=ICON_ON if _act() else ICON_BORD))
+        add_tip(b,tip)
+        return b
+    bar=tk.Frame(root,bg=BG); bar.pack(fill="x",padx=15,pady=(9,11))
+    tbtn(bar,"Gallery",open_gallery,gold=True).pack(side="left")
+    tbtn(bar,"Open folder",open_folder).pack(side="left",padx=(8,0))
+    log_btn=ibtn(bar,"\u25A4",toggle_log,"log","Log"); log_btn.pack(side="right")
+    set_btn=ibtn(bar,"\u2699",toggle_settings,"settings","Settings"); set_btn.pack(side="right",padx=(0,8))
+    root.protocol("WM_DELETE_WINDOW",_on_close); _make_tray()
 
     def _prep_and_run():
         global FFMPEG
@@ -1282,6 +1345,7 @@ def run_gui(cfg, url):
         recorder_loop(cfg)
     threading.Thread(target=_prep_and_run,daemon=True).start()
 
+    _rec={"since":None,"blink":False}
     def poll():
         appended=False
         for _ in range(150):
@@ -1293,12 +1357,31 @@ def run_gui(cfg, url):
             n=int(logtxt.index("end-1c").split(".")[0])
             if n>300: logtxt.delete("1.0",f"{n-300}.0")
             logtxt.see("end"); logtxt.config(state="disabled")
-        if REC_STATE.get("recording"):
-            dot.itemconfig(did,fill=REC); status_lbl.config(text="Recording",fg=REC); sub_lbl.config(text="\u00b7 recording your game")
-        elif REC_STATE.get("ready"):
-            dot.itemconfig(did,fill=GOLD); status_lbl.config(text="Ready",fg=INK); sub_lbl.config(text="\u00b7 auto-records")
+        # 트레이 메뉴(다른 스레드)에서 온 요청을 tkinter 스레드인 여기서 안전하게 처리
+        if _TRAY.get("quit"): do_quit()
+        if _TRAY.get("show"):
+            _TRAY["show"]=False
+            try: root.deiconify(); root.lift()
+            except Exception: pass
+            if _TRAY.pop("gallery", False): open_gallery()
+        _rng=REC_STATE.get("recording"); _now=time.time(); _up=REC_STATE.get("uploaded_at",0)
+        topacc.config(bg=REC if _rng else BG)   # 녹화 중 상단 빨간 라인
+        if _rng:
+            if _rec["since"] is None: _rec["since"]=_now
+            _rec["blink"]=not _rec["blink"]
+            dot.itemconfig(did,fill=(REC if _rec["blink"] else BG))
+            _el=int(_now-_rec["since"]); _mm,_ss=divmod(_el,60)
+            status_lbl.config(text="Recording",fg=REC); sub_lbl.config(text="%d:%02d"%(_mm,_ss),fg=INK2)
+        elif _up and (_now-_up < 5):   # 업로드 완료 토스트(5초)
+            _rec["since"]=None; _rec["blink"]=False
+            dot.itemconfig(did,fill=TEAL); status_lbl.config(text="Uploaded \u2713",fg=TEAL); sub_lbl.config(text="\u00b7 added to your gallery",fg=INK2)
         else:
-            dot.itemconfig(did,fill=GOLD); status_lbl.config(text="Preparing\u2026",fg=INK); sub_lbl.config(text="\u00b7 setting up tools")
+            _rec["since"]=None; _rec["blink"]=False
+            dot.itemconfig(did,fill=GOLD)
+            if REC_STATE.get("ready"):
+                status_lbl.config(text="Ready",fg=INK); sub_lbl.config(text="\u00b7 auto-records",fg=INK2)
+            else:
+                status_lbl.config(text="Preparing\u2026",fg=INK); sub_lbl.config(text="\u00b7 setting up tools",fg=INK2)
         ea=(REC_STATE.get("encoder") or "").lower()
         if "nvenc" in ea: enc="NVENC"; is_sw=False
         elif ("x264" in ea) or ("264" in ea): enc="x264"; is_sw=True

@@ -2,3 +2,5 @@ psutil
 requests
 windows-capture
 pyaudiowpatch
+pystray
+pillow
