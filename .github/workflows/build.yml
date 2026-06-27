@@ -9,12 +9,19 @@ on:
 permissions:
   contents: write
 
+# 같은 시점에 푸시가 겹쳐도 버전 번호가 꼬이지 않게 직렬화
+concurrency:
+  group: penta-release
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: windows-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # 기존 태그를 모두 가져와 다음 버전 계산에 사용
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -34,7 +41,7 @@ jobs:
           --add-data "fonts;fonts"
           --hidden-import psutil --hidden-import requests --hidden-import tkinter
           --hidden-import windows_capture --hidden-import pyaudiowpatch
-          --hidden-import pystray --hidden-import pystray._win32 --hidden-import PIL.Image
+         
           --collect-all windows_capture
           --exclude-module cv2 --exclude-module opencv-python --exclude-module matplotlib
           penta_recorder.py
@@ -48,12 +55,34 @@ jobs:
           name: penta_recorder-windows
           path: penta_recorder.zip
 
-      - name: Publish Release (only on version tag)
-        if: startsWith(github.ref, 'refs/tags/v')
+      # 다음 버전 자동 계산: 태그를 직접 밀면 그 태그를, 아니면 최신 vX.Y.Z의 패치 +1
+      - name: Compute release tag
+        id: ver
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            tag="${GITHUB_REF#refs/tags/}"
+          else
+            latest=$(git tag -l | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)
+            if [[ -z "$latest" ]]; then
+              tag="v1.0.0"
+            else
+              v="${latest#v}"; IFS='.' read -r MA MI PA <<< "$v"
+              tag="v${MA}.${MI}.$((PA+1))"
+            fi
+          fi
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "→ release tag: ${tag}"
+
+      # 자동 릴리즈. 커밋 메시지에 [skip release] 가 있으면 빌드만 하고 릴리즈는 건너뜀.
+      - name: Publish Release (auto)
+        if: ${{ github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip release]') }}
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.ver.outputs.tag }}
+          name: myPENTA ${{ steps.ver.outputs.tag }}
           files: penta_recorder.zip
           make_latest: true
           body: |
-            penta_recorder.zip 을 받아 압축을 풀면 penta_recorder.exe 파일 하나만 나옵니다(폴더 없음). 그 exe 를 더블클릭하세요 — 파이썬 설치 불필요.
+            자동 빌드입니다. penta_recorder.zip 을 받아 압축을 풀면 penta_recorder.exe 파일 하나만 나옵니다(폴더 없음). 그 exe 를 더블클릭하세요 — 파이썬 설치 불필요.
             최초 실행 시 영상 도구(ffmpeg)를 한 번 자동으로 내려받습니다(1~2분). 클라우드 연결·전적 분석·업로드는 기본 설정으로 자동 동작합니다.
