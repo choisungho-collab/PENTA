@@ -27,18 +27,20 @@ jobs:
           pip install -r requirements-recorder.txt
           pip install pyinstaller
 
-      - name: Build (onedir)
+      - name: Build (onefile)
         run: >
-          pyinstaller --onedir --windowed --name penta_recorder --noupx
+          pyinstaller --onefile --windowed --name penta_recorder --noupx
           --add-data "web;web"
+          --add-data "fonts;fonts"
           --hidden-import psutil --hidden-import requests --hidden-import tkinter
           --hidden-import windows_capture --hidden-import pyaudiowpatch
+          --hidden-import pystray --hidden-import pystray._win32 --hidden-import PIL.Image
           --collect-all windows_capture
-          --hidden-import boto3 --hidden-import botocore --collect-data botocore
+          --exclude-module cv2 --exclude-module opencv-python --exclude-module matplotlib
           penta_recorder.py
 
-      - name: Package as zip
-        run: Compress-Archive -Path dist\penta_recorder -DestinationPath penta_recorder.zip -Force
+      - name: Package exe as zip
+        run: Compress-Archive -Path dist\penta_recorder.exe -DestinationPath penta_recorder.zip -Force
 
       - name: Upload zip artifact
         uses: actions/upload-artifact@v4
@@ -53,6 +55,5 @@ jobs:
           files: penta_recorder.zip
           make_latest: true
           body: |
-            penta_recorder.zip 을 받아 압축을 풀고, penta_recorder 폴더 안의 penta_recorder.exe 를 더블클릭하세요 — 파이썬 설치 불필요.
-            같은 폴더의 _internal 폴더는 지우지 마세요. config.json 을 exe 옆에 넣어야 분석·업로드가 연결됩니다.
-            최초 실행 시 영상 도구(ffmpeg)를 한 번 자동으로 내려받습니다(1~2분).
+            penta_recorder.zip 을 받아 압축을 풀면 penta_recorder.exe 파일 하나만 나옵니다(폴더 없음). 그 exe 를 더블클릭하세요 — 파이썬 설치 불필요.
+            최초 실행 시 영상 도구(ffmpeg)를 한 번 자동으로 내려받습니다(1~2분). 클라우드 연결·전적 분석·업로드는 기본 설정으로 자동 동작합니다.
