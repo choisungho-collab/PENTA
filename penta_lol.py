@@ -1,10 +1,9 @@
 # PENTA — LoL 데이터 레이어
 # 게임 감지(Live Client Data API) + Riot API 프록시 호출 + 매치 매핑 + 분석 변환.
-# 녹화/업로드/GUI는 메인 녹화기(penta_recorder.py)가 담당하고, 이 모듈은 "무슨 게임이고 결과가 무엇인지"만 책임진다.
+# 녹화/업로드/GUI는 메인 레코더(penta_recorder.py)가 담당하고, 이 모듈은 "무슨 게임이고 결과가 무엇인지"만 책임진다.
 
 import json
 import ssl
-import time
 import urllib.request
 import urllib.parse
 
@@ -46,7 +45,7 @@ def my_riot_id():
 
 
 # ===================== Riot API 프록시 =====================
-# 키는 프록시(Netlify Function)에만 있다. 녹화기는 키를 모른다.
+# 키는 프록시(Netlify Function)에만 있다. 레코더는 키를 모른다.
 
 def proxy_get(proxy_url, action, timeout=12, **params):
     if not proxy_url:

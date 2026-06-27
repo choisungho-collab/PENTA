@@ -5,7 +5,7 @@ myPENTA — 리그 오브 레전드 자동 녹화 (한 번 실행하면 다 됨)
 =====================================================
 이 파일 하나만 실행하면:
   · 필요한 파이썬 패키지 자동 설치
-  · ffmpeg(녹화기) 자동 다운로드 (처음 한 번)
+  · ffmpeg(레코더) 자동 다운로드 (처음 한 번)
   · 게임을 감지해 판마다 자동 녹화, Riot 공식 기록으로 전적 분석
   · 영상+전적을 Supabase에 업로드 → 웹 갤러리에 자동 등록, 브라우저 자동 오픈
 
@@ -371,7 +371,7 @@ def _sb_bucket(): return sb_cfg().get("bucket") or "media"
 def sb_upload(local, path, ctype):
     """Supabase Storage 업로드 → 공개 URL (버킷이 public 이어야 함)."""
     import requests
-    base = _sb_base(); bk = _sb_bucket(); k = _sb_key(write=True)
+    base = _sb_base(); bk = _sb_bucket()
     _hh = _sb_h(write=True, body_json=False); _hh["Content-Type"] = ctype; _hh["x-upsert"] = "true"
     with open(local, "rb") as f:
         r = requests.post("%s/storage/v1/object/%s/%s" % (base, bk, path), data=f,
@@ -434,7 +434,7 @@ def make_thumb(video, out, at=None):
     return False
 
 
-# ===================== 6. 녹화기 (ffmpeg) =====================
+# ===================== 6. 레코더 (ffmpeg) =====================
 _ENC_CACHE = None
 _ENC_IS_SW = False   # 소프트웨어(libx264) 인코딩 여부 → 다운스케일 판단에 사용
 def _encoder_args():
@@ -1136,7 +1136,7 @@ def run_gui(cfg, url):
     """Compact status bar. Shows status only; expands the log when something needs attention."""
     import tkinter as tk
     import tkinter.font as _tkfont
-    BG="#080A0E"; SURF="#161B23"; CARD="#0F131A"
+    BG="#080A0E"; SURF="#161B23"
     INK="#ECE7DD"; INK2="#C2BBAD"; DIM="#867F71"; FAINT="#564F44"
     GOLD="#DEC79C"; GOLD2="#EFDDBC"; REC="#FF5470"; TEAL="#52C3AC"; LINE="#1F252E"; LINE2="#2B323C"
     W=466
@@ -1160,9 +1160,6 @@ def run_gui(cfg, url):
     BASE_H, SET_H, LOG_H = 160, 156, 210
     root.geometry(f"{W}x{BASE_H}"); root.resizable(False, True)
     st={"log":False,"settings":False}
-    _CAPLBL={"auto":"Auto","wgc":"WGC","ddagrab":"DXGI","gdigrab":"GDI"}
-    _ENCLBL={"auto":"Auto","nvenc":"NVENC","x264":"x264"}
-    _SCLBL={"auto":"Auto","source":"Source","1080":"1080p","720":"720p","480":"480p"}
 
     # === Top accent: a thin line turns red while recording (visible even if the window is half-covered) ===
     topacc=tk.Frame(root,bg=BG,height=2); topacc.pack(fill="x")
@@ -1198,6 +1195,7 @@ def run_gui(cfg, url):
             if sys.platform=="win32": os.startfile(REC_DIR)
         except Exception: pass
     _TRAY={"icon":None,"show":False,"quit":False}
+    _uimap={"ready":False}   # 창이 완전히 뜬 뒤에만 최소화→트레이 허용(시작 중 숨김 방지)
     def do_quit():
         try:
             if _TRAY.get("icon"): _TRAY["icon"].stop()
@@ -1212,6 +1210,17 @@ def run_gui(cfg, url):
             except Exception: pass
         else:
             do_quit()
+    def _on_unmap(e=None):
+        # 최소화(_) 버튼 → 작업표시줄이 아니라 트레이로 숨김(트레이 가능할 때). 트레이가 없으면 일반 최소화 유지.
+        # 시작 중에는 절대 숨기지 않음(_uimap.ready) — 창이 먼저 보여야 한다.
+        if e is not None and getattr(e, "widget", None) is not root: return
+        if not _uimap.get("ready"): return
+        def _hide():
+            try:
+                if _TRAY.get("icon") and root.state() == "iconic": root.withdraw()
+            except Exception: pass
+        try: root.after(10, _hide)
+        except Exception: pass
     def _tray_run(ic):
         try: ic.run()
         except Exception as e: log(f"Tray stopped: {e}")
@@ -1245,8 +1254,6 @@ def run_gui(cfg, url):
     tk.Label(optwrap,text="RECORDING SETTINGS",bg=PANEL,fg=INK2,font=(SEMI,8,"bold")).pack(anchor="w",padx=15,pady=(12,6))
     SCALE_OPTS=[("Auto (best)","auto"),("Source","source"),("1080p","1080"),("720p","720"),("480p","480")]
     ENC_OPTS=[("Auto (GPU first)","auto"),("GPU \u00b7 NVENC","nvenc"),("CPU \u00b7 x264","x264")]
-    CAP_OPTS=[("Auto","auto"),("WGC (fullscreen)","wgc"),("DXGI","ddagrab"),("GDI","gdigrab")]
-    MON_OPTS=[("Auto","auto"),("Monitor 1","0"),("Monitor 2","1"),("Monitor 3","2")]
     def opt_row(label, opts, key):
         row=tk.Frame(optwrap,bg=PANEL); row.pack(fill="x",padx=15,pady=3)
         tk.Label(row,text=label,bg=PANEL,fg=DIM,font=(UI,9),width=8,anchor="w").pack(side="left")
@@ -1332,7 +1339,7 @@ def run_gui(cfg, url):
     tbtn(bar,"Open folder",open_folder).pack(side="left",padx=(8,0))
     log_btn=ibtn(bar,"\u25A4",toggle_log,"log","Log"); log_btn.pack(side="right")
     set_btn=ibtn(bar,"\u2699",toggle_settings,"settings","Settings"); set_btn.pack(side="right",padx=(0,8))
-    root.protocol("WM_DELETE_WINDOW",_on_close); _make_tray()
+    root.protocol("WM_DELETE_WINDOW",_on_close); root.bind("<Unmap>", _on_unmap); _make_tray()
 
     def _prep_and_run():
         global FFMPEG
@@ -1409,6 +1416,8 @@ def run_gui(cfg, url):
         if _rh>=60: BASE_H=_rh; root.geometry(f"{W}x{BASE_H}")
     except Exception: pass
     if sys.platform=="win32": _hide_console()
+    try: root.after(1200, lambda: _uimap.update(ready=True))   # 1.2초 뒤부터 최소화→트레이 활성(시작 중 숨김 방지)
+    except Exception: pass
     poll()
     try: root.mainloop()
     except Exception as ex: log(f"GUI closed: {ex}")

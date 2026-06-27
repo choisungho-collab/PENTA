@@ -1,6 +1,6 @@
 # PENTA — 최성호님이 하실 일
 
-제가 만든 것: Riot 프록시, 녹화기(penta_recorder.py + penta_lol.py), 빌드 설정, DB 스키마, 설정 예시.
+제가 만든 것: Riot 프록시, 레코더(penta_recorder.py + penta_lol.py), 빌드 설정, DB 스키마, 설정 예시.
 아래는 키·계정처럼 제가 대신 못 하는 것만 모았습니다. 위에서부터 순서대로.
 
 ## 1. Riot 개발 키 (5분)
@@ -26,7 +26,7 @@
 - `.../api/riot?action=match&matchId=<matchId>` → 상세 JSON
 → 이 JSON을 저에게 보여주시면 penta_lol.py 필드명(길이가 초/ms 등)을 실제에 맞게 확정합니다.
 
-## 5. 녹화기 설정
+## 5. 레코더 설정
 - 빌드된 exe 옆에 `config.json`을 두고 `config.example.json`처럼 채우기: `proxy_url`(3번 주소), `supabase`(2번 키들)
 - GitHub에 push하면 자동 빌드 → Actions에서 `penta_recorder.zip` 다운로드
 
