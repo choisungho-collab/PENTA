@@ -1228,7 +1228,7 @@ def run_gui(cfg, url):
             def _qt(i=None,it=None): _TRAY["quit"]=True
             menu=pystray.Menu(
                 pystray.MenuItem("Open myPENTA", _open, default=True),
-                pystray.MenuItem("Open gallery", _gal),
+                pystray.MenuItem("Open archive", _gal),
                 pystray.MenuItem("Quit", _qt))
             ic=pystray.Icon("myPENTA", img, "myPENTA \u2014 auto-recording", menu)
             _TRAY["icon"]=ic
@@ -1290,7 +1290,7 @@ def run_gui(cfg, url):
     def toggle_log(): set_log(not st["log"])
     def toggle_settings(): set_settings(not st["settings"])
 
-    # === Toolbar: primary actions (Gallery / Open folder) + secondary icons (Settings / Log). Quit = window close (X). ===
+    # === Toolbar: primary actions (Archive / Open folder) + secondary icons (Settings / Log). Quit = window close (X). ===
     ICON_FG="#9A9282"; ICON_BORD="#232A34"; ICON_ON="#4A4131"
     def add_tip(widget, text):
         tip={"w":None}
@@ -1328,7 +1328,7 @@ def run_gui(cfg, url):
         add_tip(b,tip)
         return b
     bar=tk.Frame(root,bg=BG); bar.pack(fill="x",padx=15,pady=(9,11))
-    tbtn(bar,"Gallery",open_gallery,gold=True).pack(side="left")
+    tbtn(bar,"Archive",open_gallery,gold=True).pack(side="left")
     tbtn(bar,"Open folder",open_folder).pack(side="left",padx=(8,0))
     log_btn=ibtn(bar,"\u25A4",toggle_log,"log","Log"); log_btn.pack(side="right")
     set_btn=ibtn(bar,"\u2699",toggle_settings,"settings","Settings"); set_btn.pack(side="right",padx=(0,8))
@@ -1374,7 +1374,7 @@ def run_gui(cfg, url):
             status_lbl.config(text="Recording",fg=REC); sub_lbl.config(text="%d:%02d"%(_mm,_ss),fg=INK2)
         elif _up and (_now-_up < 5):   # 업로드 완료 토스트(5초)
             _rec["since"]=None; _rec["blink"]=False
-            dot.itemconfig(did,fill=TEAL); status_lbl.config(text="Uploaded \u2713",fg=TEAL); sub_lbl.config(text="\u00b7 added to your gallery",fg=INK2)
+            dot.itemconfig(did,fill=TEAL); status_lbl.config(text="Uploaded \u2713",fg=TEAL); sub_lbl.config(text="\u00b7 added to your archive",fg=INK2)
         else:
             _rec["since"]=None; _rec["blink"]=False
             dot.itemconfig(did,fill=GOLD)
@@ -1492,9 +1492,8 @@ def main():
         if not FFMPEG: FFMPEG = ensure_ffmpeg()
     url = (cfg.get("gallery_url") or "https://mypenta.netlify.app/").rstrip("/")
     if mode == "all":
-        log(f"Gallery → {url}")
-        try: open_app(url)
-        except Exception: pass
+        log(f"Archive → {url}")
+        # 시작 시 브라우저로 아카이브를 자동으로 열지 않음(번잡함). 아카이브는 GUI 버튼/트레이 메뉴로만 연다.
         # 보기 좋은 상태창(GUI). 윈도우 + tkinter 가능하면 GUI로, 아니면 콘솔로.
         if sys.platform == "win32" and (cfg.get("ui", "window") != "console"):
             try:
