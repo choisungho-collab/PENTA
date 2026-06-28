@@ -934,7 +934,7 @@ def load_or_make_config():
             "gallery_url": "",
             "encoder": "auto",   # auto | nvenc | x264
             "ui": "window",      # window | console  (window=보기 좋은 상태창, console=검은 cmd창)
-            "scale": "auto",     # auto | source | 1080 | 720 | 480  (소프트웨어 인코딩이면 auto가 720p로 낮춰 게임 끊김 방지)
+            "scale": "auto",     # auto | source | 1080 | 720 | 480  (auto: NVENC면 1080p, 소프트웨어면 720p로 낮춰 끊김 방지. 원본 그대로는 "source")
             "preset": "auto",    # auto | ultrafast | superfast | veryfast | fast ...  (libx264 속도/품질)
             "output_idx": "auto",   # auto | 0 | 1 | 2  (멀티모니터면 게임 있는 모니터 번호)
             "capture": "auto",   # auto | wgc | ddagrab | gdigrab   (wgc=OBS식, 전체화면도 잡힘)
@@ -1095,13 +1095,29 @@ def _sb_h(write=False, body_json=True):
     if body_json: h["Content-Type"] = "application/json"
     return h
 def _sb_bucket(): return sb_cfg().get("bucket") or "media"
-def sb_upload(local, path, ctype):
-    """Supabase Storage 업로드 → 공개 URL (버킷이 public 이어야 함)."""
+class _ProgressReader:
+    """업로드되는 동안 read마다 진행률 콜백 호출. requests가 Content-Length를 잡도록 __len__ 제공."""
+    def __init__(self, f, total, cb):
+        self._f = f; self._total = total; self._read = 0; self._cb = cb
+    def read(self, n=-1):
+        chunk = self._f.read(n)
+        if chunk:
+            self._read += len(chunk)
+            try: self._cb(self._read, self._total)
+            except Exception: pass
+        return chunk
+    def __len__(self):
+        return self._total
+
+def sb_upload(local, path, ctype, on_progress=None):
+    """Supabase Storage 업로드 → 공개 URL (버킷이 public 이어야 함). on_progress(done,total)로 진행률 통지."""
     import requests
     base = _sb_base(); bk = _sb_bucket()
     _hh = _sb_h(write=True, body_json=False); _hh["Content-Type"] = ctype; _hh["x-upsert"] = "true"
+    total = os.path.getsize(local)
     with open(local, "rb") as f:
-        r = requests.post("%s/storage/v1/object/%s/%s" % (base, bk, path), data=f,
+        body = _ProgressReader(f, total, on_progress) if (on_progress and total) else f
+        r = requests.post("%s/storage/v1/object/%s/%s" % (base, bk, path), data=body,
                           headers=_hh, timeout=(10, 3600))
     if r.status_code not in (200, 201):
         raise RuntimeError("storage %s: %s" % (r.status_code, r.text[:200]))
@@ -1217,8 +1233,8 @@ def _target_height(src_h=0):
     elif pref in ("720", "720p"): th = 720
     elif pref in ("480", "480p"): th = 480
     elif pref in ("1440", "1440p"): th = 1440
-    else:  # auto: 소프트웨어면 720p로, 하드웨어(NVENC)면 원본
-        th = 720 if _ENC_IS_SW else None
+    else:  # auto: 소프트웨어면 720p, 하드웨어(NVENC)면 1080p (클라우드 업로드·대역폭 절감; 원본 원하면 scale="source")
+        th = 720 if _ENC_IS_SW else 1080
     if th is None: return None
     if src_h and src_h <= th: return None   # 업스케일 금지
     return th
@@ -1382,6 +1398,14 @@ class Recorder:
 
     def _start_wgc(self, verify=True):
         """WGC(OBS식)로 프레임을 받아 ffmpeg로 인코딩. 정지화면이어도 직전 프레임을 고정 fps로 계속 먹임(전체화면 게임도 잡힘)."""
+        # windows_capture는 import 시 cv2(OpenCV)를 부르지만, 우리는 frame.frame_buffer(numpy)만 쓰고 cv2는 안 쓴다.
+        # OpenCV(수십 MB) 번들을 피하려고, 진짜 cv2가 없으면 빈 스텁을 끼워 import만 통과시킨다(→ GPU 캡처로 CPU 절감).
+        if "cv2" not in sys.modules:
+            try:
+                import cv2  # noqa: F401  (진짜 OpenCV가 있으면 그대로 사용)
+            except Exception:
+                import types as _types
+                sys.modules["cv2"] = _types.ModuleType("cv2")
         try:
             from windows_capture import WindowsCapture
         except ImportError:
@@ -1697,8 +1721,13 @@ def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr", 
     if not sb_writable():
         log("Cloud (Supabase) not configured → keeping locally only."); return
     tmp_thumb = os.path.join(base, "thumb.jpg"); has_thumb = make_thumb(video_path, tmp_thumb)
+    REC_STATE["uploading"] = True; REC_STATE["upload_pct"] = 0
+    def _up_cb(done, total):
+        p = int(done * 100 / total) if total else 0
+        if p != REC_STATE.get("upload_pct"): REC_STATE["upload_pct"] = p
     try:
-        video_url = sb_upload(video_path, f"videos/{safe}.mp4", "video/mp4")
+        log("Uploading video to cloud\u2026 (%s)" % (("%.1f GB" % (size / 1073741824)) if size >= 1073741824 else ("%d MB" % (size // 1048576))))
+        video_url = sb_upload(video_path, f"videos/{safe}.mp4", "video/mp4", on_progress=_up_cb)
         thumb_url = sb_upload(tmp_thumb, f"thumbs/{safe}.jpg", "image/jpeg") if has_thumb else None
         players = analysis.get("players") or []
         me = next((p for p in players if puuid and p.get("puuid") == puuid), None)
@@ -1721,7 +1750,13 @@ def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr", 
         })
         log(f"Upload complete — {('matchId ' + gid) if mid else 'video only (no analysis)'}")
     except Exception as e:
-        log(f"Upload failed: {e}")
+        _em = str(e)
+        if ("row-level security" in _em) or ("Unauthorized" in _em) or (" 403" in _em) or ("403:" in _em):
+            log("Upload failed: cloud storage blocked the file (RLS). Fix in Supabase → make a PUBLIC bucket named 'media' and apply the storage insert/update policy from supabase_schema.sql, OR set supabase.service_key in config.json. The video is kept locally.")
+        else:
+            log(f"Upload failed: {e}")
+    finally:
+        REC_STATE["uploading"] = False; REC_STATE["upload_pct"] = 0
 
 def recorder_loop(cfg):
     proc = cfg.get("league_process", "League of Legends.exe")
@@ -1868,7 +1903,7 @@ def run_gui(cfg, url):
     import tkinter.font as _tkfont
     BG="#080A0E"; SURF="#161B23"
     INK="#ECE7DD"; INK2="#C2BBAD"; DIM="#867F71"; FAINT="#564F44"
-    GOLD="#DEC79C"; GOLD2="#EFDDBC"; REC="#FF5470"; TEAL="#52C3AC"; LINE="#1F252E"; LINE2="#2B323C"
+    GOLD="#DEC79C"; GOLD2="#EFDDBC"; REC="#FF5470"; TEAL="#52C3AC"; BLUE="#6BA6FF"; LINE="#1F252E"; LINE2="#2B323C"
     W=466
     _load_recorder_fonts()
     root=tk.Tk(); root.title("myPENTA"); root.configure(bg=BG)
@@ -1908,7 +1943,7 @@ def run_gui(cfg, url):
     _ICONS={}                                  # filled when the toolbar icons are built (open-state highlight)
 
     # status line drawn on the canvas: light + status + sub (left) | preset toggle + cloud (right)
-    _LY=24
+    _LY=30
     did=cv.create_oval(18,_LY-4,26,_LY+4,fill=GOLD,outline="")
     status_lbl=cv.create_text(33,_LY,anchor="w",text="Starting\u2026",fill=INK,font=(SG_S,13))
     sub_lbl=cv.create_text(120,_LY+1,anchor="w",text="",fill=INK2,font=(SG,9))
@@ -2083,16 +2118,23 @@ def run_gui(cfg, url):
             cv.itemconfig(did,fill=(REC if _rec["blink"] else "#3a2230"))
             _el=int(_now-_rec["since"]); _mm,_ss=divmod(_el,60)
             cv.itemconfig(status_lbl,text="Recording",fill=REC); cv.itemconfig(sub_lbl,text="%d:%02d"%(_mm,_ss),fill=INK)
+        elif REC_STATE.get("uploading"):   # 업로드 중 — 진행률(파란 점멸)
+            _rec["since"]=None
+            _rec["blink"]=not _rec["blink"]
+            cv.itemconfig(did,fill=(BLUE if _rec["blink"] else "#22344f"))
+            _pct=REC_STATE.get("upload_pct") or 0
+            cv.itemconfig(status_lbl,text=("Uploading\u2026 %d%%"%_pct) if _pct>0 else "Uploading\u2026",fill=BLUE)
+            cv.itemconfig(sub_lbl,text="sending to cloud",fill=INK2)
         elif _up and (_now-_up < 5):   # 업로드 완료 토스트(5초)
             _rec["since"]=None; _rec["blink"]=False
-            cv.itemconfig(did,fill=TEAL); cv.itemconfig(status_lbl,text="Uploaded \u2713",fill=TEAL); cv.itemconfig(sub_lbl,text="\u00b7 added to your archive",fill=INK2)
+            cv.itemconfig(did,fill=TEAL); cv.itemconfig(status_lbl,text="Uploaded \u2713",fill=TEAL); cv.itemconfig(sub_lbl,text="added to your archive",fill=INK2)
         else:
             _rec["since"]=None; _rec["blink"]=False
             cv.itemconfig(did,fill=GOLD)
             if REC_STATE.get("ready"):
-                cv.itemconfig(status_lbl,text="Ready",fill=INK); cv.itemconfig(sub_lbl,text="\u00b7 auto-records",fill=INK2)
+                cv.itemconfig(status_lbl,text="Ready",fill=INK); cv.itemconfig(sub_lbl,text="auto-records",fill=INK2)
             else:
-                cv.itemconfig(status_lbl,text="Preparing\u2026",fill=INK); cv.itemconfig(sub_lbl,text="\u00b7 setting up tools",fill=INK2)
+                cv.itemconfig(status_lbl,text="Preparing\u2026",fill=INK); cv.itemconfig(sub_lbl,text="setting up tools",fill=INK2)
         try:
             _b=cv.bbox(status_lbl)
             if _b: cv.coords(sub_lbl,_b[2]+7,_LY+1)
