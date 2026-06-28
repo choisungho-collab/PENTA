@@ -47,6 +47,12 @@ a{color:inherit;text-decoration:none}svg{display:block}img{display:block;max-wid
 .stage.empty{display:grid;place-items:center}
 .stage .novid{text-align:center;color:var(--faint);font-family:var(--fd);font-size:14px;padding:24px}
 .stage .novid .mk{width:46px;height:46px;color:var(--line2);margin:0 auto 14px}
+/* 시점 풀(즉시 전환) */
+.stage.pool{position:relative}
+.stage.pool .pvid{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#05080b;display:none}
+.stage.pool .pvid.on{display:block}
+.stage.pool .poolempty{position:absolute;inset:0;display:none;place-items:center;background:#05080b;z-index:2}
+.stage.pool .poolempty.on{display:grid}
 /* 분할 레이아웃 */
 .stage.grid{display:grid;gap:2px;background:var(--line)}
 .stage.mv-2{grid-template-columns:1fr 1fr}
@@ -57,19 +63,32 @@ a{color:inherit;text-decoration:none}svg{display:block}img{display:block;max-wid
 .stage .cell video{width:100%;height:100%}
 .stage .cell .tag{position:absolute;left:8px;top:8px;font-family:var(--fd);font-size:11px;font-weight:600;color:#fff;background:rgba(5,8,11,.78);padding:3px 8px;border-radius:6px;display:flex;align-items:center;gap:5px;z-index:2}
 .stage .cell .tag i{width:8px;height:8px;border-radius:50%}
+/* 포커스(메인+PiP) */
+.piprow{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-top:8px}
+.pipcell{position:relative;aspect-ratio:16/9;background:#05080b;border:1px solid var(--line);border-radius:var(--r1);overflow:hidden;cursor:pointer;transition:.14s}
+.pipcell:hover{border-color:var(--gold-line)}
+.pipcell video{width:100%;height:100%;object-fit:cover}
+.pipcell .tag{font-size:10px;padding:2px 6px}
+.pipcell .promote{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(5,8,11,.42);opacity:0;transition:.14s;color:var(--gold-ink)}
+.pipcell .promote svg{width:22px;height:22px}
+.pipcell:hover .promote{opacity:1}
+/* 분할 레이아웃 토글 */
+.lmode{display:inline-flex;gap:3px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r1);padding:3px}
+.lmode button{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;font-family:var(--fd);font-weight:600;font-size:12.5px;color:var(--dim);background:none;border:0;border-radius:8px;padding:6px 11px;cursor:pointer;transition:.14s}
+.lmode button:hover{color:var(--ink)} .lmode button.on{background:var(--gold-soft);color:var(--gold-ink)}
+.lmode button svg{width:14px;height:14px}
 
-/* POV 바 */
-.povbar{display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap}
-.povtabs{display:flex;gap:7px;flex-wrap:wrap;flex:1}
-.povtab{display:flex;align-items:center;gap:9px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r1);padding:7px 12px 7px 8px;cursor:pointer;transition:.14s}
-.povtab:hover{border-color:var(--line2)}
-.povtab.on{border-color:var(--gold-line);background:var(--gold-soft)}
-.povtab.sel{outline:2px solid var(--gold-line);outline-offset:1px}
-.povtab img{width:30px;height:30px;border-radius:7px;border:1px solid var(--line2);background:var(--well)}
-.povtab .who{min-width:0}
-.povtab .who .nm{font-family:var(--fd);font-weight:600;font-size:13px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px}
-.povtab .who .ch{font-family:var(--fd);font-size:11px;color:var(--dim);white-space:nowrap}
-.splitbtn{display:inline-flex;align-items:center;gap:8px;font-family:var(--fd);font-weight:600;font-size:13px;color:var(--ink2);background:var(--surface);border:1px solid var(--line);padding:9px 14px;border-radius:var(--r1);cursor:pointer;transition:.14s;white-space:nowrap}
+/* POV 바 (얼굴만) */
+.povbar{display:flex;align-items:center;gap:12px;margin-top:14px;flex-wrap:wrap}
+.povlab{font-family:var(--fm);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);flex:0 0 auto}
+.povtabs{display:flex;gap:11px;flex-wrap:wrap}
+.povtab{position:relative;display:block;padding:0;border:0;background:none;cursor:pointer;line-height:0}
+.povtab img,.povtab .ph{display:block;width:46px;height:46px;border-radius:12px;border:1px solid var(--line2);background:var(--well);object-fit:cover;opacity:.42;filter:grayscale(.55);transition:.16s}
+.povtab:hover img,.povtab:hover .ph{opacity:.82}
+.povtab.on img,.povtab.sel img,.povtab.on .ph,.povtab.sel .ph{opacity:1;filter:none;border-color:var(--tc);box-shadow:0 0 0 2px var(--tc),0 8px 18px -10px color-mix(in srgb,var(--tc) 55%,transparent)}
+.povtab.novid{cursor:default}
+.povtab .nov{position:absolute;left:50%;bottom:-7px;transform:translateX(-50%);font-family:var(--fm);font-size:8px;font-weight:600;color:var(--dim);background:var(--well);border:1px solid var(--line);border-radius:5px;padding:1px 5px;white-space:nowrap;line-height:1.3}
+.splitbtn{display:inline-flex;align-items:center;gap:8px;font-family:var(--fd);font-weight:600;font-size:13px;color:var(--ink2);background:var(--surface);border:1px solid var(--line);padding:9px 14px;border-radius:var(--r1);cursor:pointer;transition:.14s;white-space:nowrap;margin-left:auto}
 .splitbtn:hover{border-color:var(--line2);color:var(--ink)}
 .splitbtn.on{color:var(--bg);background:var(--gold);border-color:var(--gold)}
 .splitbtn .ic{width:15px;height:15px}
@@ -207,12 +226,13 @@ h2.sec .ln{flex:1;height:1px;background:var(--line)}
 .jbtn.death{border-color:rgba(232,90,90,.32);color:#e8a0a0}
 .jbtn.death:hover{background:rgba(232,90,90,.1);color:#ffbcbc}
 .brand b .my,.fbrand b .my,.l b .my{font-weight:300;color:var(--ink);letter-spacing:.01em}
-footer{max-width:1160px;margin:60px auto 0;padding:26px 24px 60px;border-top:1px solid var(--line)}
-footer .foot-links{display:flex;gap:16px;font-size:13px;margin-bottom:11px}
-footer .foot-links a{color:var(--dim);transition:.14s;border-bottom:1px solid transparent}
-footer .foot-links a:hover{color:var(--gold-ink);border-bottom-color:var(--gold-line)}
-footer .by{font-size:13px;color:var(--faint);margin:4px 0}footer .by b{color:var(--ink2)}
-footer .riot{margin-top:14px;font-size:12px;color:var(--faint);max-width:680px;line-height:1.6}
+footer{border-top:1px solid var(--line);margin-top:70px}
+.foot-in{max-width:1160px;margin:0 auto;padding:28px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.foot-in .fnav{display:flex;gap:16px;font-size:13px}
+.foot-in .fnav a{color:var(--dim);transition:.14s;border-bottom:1px solid transparent}
+.foot-in .fnav a:hover{color:var(--gold-ink);border-bottom-color:var(--gold-line)}
+.foot-in .r{font-family:var(--fd);font-size:12px;color:var(--faint);max-width:520px;text-align:right;line-height:1.6}
+@media(max-width:640px){.foot-in .r{text-align:left}}
 
 /* ===== 전적 히어로 ===== */
 .hero{position:relative;margin:22px 0 0;background:linear-gradient(180deg,var(--surface2),var(--surface));border:1px solid var(--line);border-radius:var(--r3);padding:24px 26px 24px 30px;display:grid;grid-template-columns:auto 1fr auto;gap:26px;align-items:center;overflow:hidden}
@@ -311,6 +331,16 @@ footer .riot{margin-top:14px;font-size:12px;color:var(--faint);max-width:680px;l
 .drills .dhead{font-family:var(--fd);font-weight:700;font-size:13px;color:var(--ink);margin-bottom:10px}
 .drills .drow{font-family:var(--fd);font-size:13.5px;color:var(--dim);padding:5px 0;display:flex;gap:9px;line-height:1.55}
 .drills .drow .dn{flex:0 0 auto;color:var(--gold);font-weight:700}
+
+/* 이번 게임 핵심 하나 (콜아웃) + 데스 흐름 스트립 */
+.cfocus{display:flex;flex-direction:column;gap:5px;background:linear-gradient(180deg,var(--gold-soft),var(--surface));border:1px solid var(--gold-line);border-left:3px solid var(--gold);border-radius:var(--r2);padding:14px 18px;margin-bottom:12px}
+.cfocus .cfl{font-family:var(--fm);font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--gold-ink)}
+.cfocus .cft{font-family:var(--fd);font-size:14px;color:var(--ink2);line-height:1.55}
+.cfocus .cft b{color:var(--ink);font-weight:700}
+.dflow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 14px}
+.dflow .dfl{font-family:var(--fm);font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--dim)}
+.dflow .dfseg{display:inline-flex;align-items:baseline;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:5px 11px;font-family:var(--fd);font-size:12.5px;color:var(--dim)}
+.dflow .dfseg b{font-family:var(--fs);font-size:16px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
 </style>
 </head>
 <body>
@@ -332,9 +362,10 @@ footer .riot{margin-top:14px;font-size:12px;color:var(--faint);max-width:680px;l
  </div>
 </main>
 <footer>
- <div class="foot-links"><a href="terms.html">이용약관</a><a href="privacy.html">개인정보처리방침</a></div>
- <p class="by">만든이 <b>최성호</b> · veatbox</p>
- <p class="riot">myPENTA isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing League of Legends. League of Legends and Riot Games are trademarks or registered trademarks of Riot Games, Inc.</p>
+ <div class="foot-in">
+  <nav class="fnav"><a href="terms.html">이용약관</a><a href="privacy.html">개인정보처리방침</a></nav>
+  <div class="r">myPENTA isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing League of Legends.</div>
+ </div>
 </footer>
 
 <script src="penta-common.js"></script>
@@ -351,6 +382,8 @@ footer .riot{margin-top:14px;font-size:12px;color:var(--faint);max-width:680px;l
   var split = false;
   var selected = [];      // 분할 선택 인덱스
   var syncRAF = null;
+  var splitMode = 'grid';   // 'grid' | 'focus'
+  var resumeAt = 0;         // 레이아웃 전환 시 영상 시각 유지
 
   function qs(name){ return new URLSearchParams(location.search).get(name); }
   function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
@@ -455,68 +488,126 @@ footer .riot{margin-top:14px;font-size:12px;color:var(--faint);max-width:680px;l
         vision:'와드 수보다 목적을 — 방어·진입·오브젝트·낚시로 나누고, 팀 행동과 연결되지 않은 와드를 줄이세요.' } }
   };
 
+  // ===== 고급 복기 엔진 (데스 패턴·15분 골드 체크포인트·딜 비중·오브젝트/템포·핵심 하나) =====
+  // 프로 코칭 자료 기반: 남 탓 아닌 내 반복 실수에 집중, KDA/딜량/시야보다 골드@15·CS·오브젝트·데스 패턴을 우선.
+  function _phaseOf(t){ return t<840?'early':(t<1500?'mid':'late'); }
+  function deathInsights(me,pid,players,durSec){
+    var kills=(ANALYSIS.kills)||[]; var myTeam=me.team;
+    var my=kills.filter(function(e){return e.victim===pid;}).sort(function(a,b){return a.t-b.t;});
+    var n=my.length; var out={good:[],bad:[],flow:null,deaths:n};
+    if(!kills.length && me.deaths!=null) n=me.deaths;
+    var tdp={}; players.forEach(function(p,i){ if(p.team===myTeam) tdp[i+1]=0; });
+    kills.forEach(function(e){ if(e.victim in tdp) tdp[e.victim]++; });
+    var tv=Object.keys(tdp).map(function(k){return tdp[k];});
+    var tMax=tv.length?Math.max.apply(null,tv):0, tAvg=tv.length?tv.reduce(function(a,b){return a+b;},0)/tv.length:0;
+    var dpm10=(durSec/60)?(my.length/(durSec/60)*10):0;
+    var iLeak=kills.length&&my.length>0&&my.length===tMax&&my.length>=Math.ceil(tAvg+1.5)&&tv.length>=3&&(my.length>=6||dpm10>=3.0);
+    var ph={early:0,mid:0,late:0}; my.forEach(function(e){ ph[_phaseOf(e.t)]++; });
+    var clu=0; for(var i=1;i<my.length;i++){ if(my[i].t-my[i-1].t<=100) clu++; }
+    var deep=0,havePos=false; my.forEach(function(e){ var p=e.pos; if(!p||p.x==null)return; havePos=true; var s=p.x+p.y; if(myTeam===100?s>16500:s<13000) deep++; });
+    var role=me.position||'', isCarry=role==='BOTTOM'||role==='MIDDLE';
+    if(kills.length&&n>0) out.flow='<div class="dflow"><span class="dfl">데스 흐름</span><span class="dfseg"><b>'+ph.early+'</b> 라인전(~14분)</span><span class="dfseg"><b>'+ph.mid+'</b> 중반(14~25분)</span><span class="dfseg"><b>'+ph.late+'</b> 후반(25분~)</span></div>';
+    if(n<=3&&dpm10<=2) out.good.push(['죽지 않는 플레이',n+'데스로 깔끔했습니다. 데스 관리가 곧 골드·템포 관리예요 — 이 절제력이 가장 저평가된 실력입니다.']);
+    if(iLeak) out.bad.push(['팀 내 최다 데스','팀에서 가장 많이('+n+'회) 죽었습니다. 내 데스 하나가 상대에겐 골드+사형선고 타이밍이 됩니다. "이 죽음으로 상대가 뭘 얻었나?"를 매 데스마다 자문하세요.']);
+    if(ph.early>=3&&role!=='JUNGLE') out.bad.push(['라인전 단계 사망 과다','14분 전에 '+ph.early+'번 죽었습니다. 초반 데스는 상대 라이너에게 리드를 그대로 헌납합니다. 상대 정글 동선을 의식하고, 매치업이 불리하면 손해 교환보다 안전 파밍을 택하세요.']);
+    else if(ph.early>=2&&role==='JUNGLE') out.bad.push(['초반 동선 사망','14분 전 '+ph.early+'번 사망 — 갱·카정 동선이 읽혔거나 무리한 인베이드입니다. 상대 정글 시작 위치를 역산하고 시야 없는 적 정글 진입을 줄이세요.']);
+    if(clu>=2) out.bad.push(['연속으로 끊김','짧은 간격에 '+(clu+1)+'번 연달아 죽은 장면이 있습니다 — 이미 진 한타에 다시 들어갔거나 같은 자리에서 반복해 잘렸습니다. 죽은 직후엔 한 박자 리셋하고, 방금 죽은 그 위치로 다시 걸어 들어가지 마세요.']);
+    if(havePos&&deep>=2&&deep>=Math.ceil(n*0.4)) out.bad.push(['적 진영에서 잘림','데스 '+n+'회 중 '+deep+'회가 적 진영 깊숙한 곳에서 나왔습니다. 들어가기 전에 와드로 길목을 먼저 밝히고 혼자 무리하게 들어가지 마세요. 시야 없는 곳의 욕심이 가장 비싼 실수입니다.']);
+    if(isCarry&&ph.late>=2) out.bad.push(['후반 캐리 사망','캐리 역할인데 25분 이후 '+ph.late+'번 죽었습니다. 후반엔 캐리의 데스 한 번이 게임을 끝냅니다. 시야를 깔고 본인 프론트라인 뒤에서 딜만 넣고, 한타 시작 전 상대 진입기·점멸을 먼저 확인하세요.']);
+    return out;
+  }
+  function fifteenInsights(me){
+    var lane=me.lane||{}, g15=lane.gold15,c15=lane.cs15,g10=lane.gold10,c10=lane.cs10; var out={good:[],bad:[],key:null};
+    if(g15!=null){
+      out.key={k:'15분 골드차',v:(g15>0?'+':'')+P.compact(g15),c:g15>=800?'up':(g15<=-800?'down':''),cap:g15>=800?'초반을 가져옴':(g15<=-800?'초반 열세':'팽팽한 초반')};
+      if(g15>=800) out.good.push(['초반 우위 확보','15분 기준 상대 라이너보다 골드 +'+P.compact(g15)+'. 초반을 이겼습니다. 핵심은 "이 리드를 오브젝트·로밍·다이브로 바꿨는가"입니다 — 리드는 굴려야 의미가 있어요.']);
+      else if(g15<=-1000) out.bad.push(['초반에 벌어진 격차','15분에 골드 '+P.compact(g15)+'. 게임은 사실상 라인전에서 갈렸습니다. 죽지 않고 CS 격차를 줄이는 것부터 — 한 번 죽을 때마다 격차가 더 벌어집니다.']);
+    } else if(g10!=null){
+      out.key={k:'10분 골드차',v:(g10>0?'+':'')+P.compact(g10),c:g10>=500?'up':(g10<=-500?'down':''),cap:g10>=500?'초반 리드':(g10<=-500?'초반 열세':'팽팽')};
+    } else if(c10!=null){
+      out.key={k:'10분 CS 격차',v:(c10>0?'+':'')+c10,c:c10>=10?'up':(c10<=-10?'down':''),cap:c10>=10?'상대 라이너 압박':(c10<=-10?'라인전 열세':'팽팽한 라인전')};
+      if(c10>=12) out.good.push(['라인전 우위','10분 CS 격차 +'+c10+'개. 상대 라이너를 눌렀습니다. 이 리드를 로밍·다이브·오브젝트로 키우세요.']);
+      else if(c10<=-15) out.bad.push(['라인전 크게 밀림','10분 CS 격차 '+c10+'개. 라인전에서 크게 졌습니다. 무리한 만회 교환보다 죽지 않고 CS부터 따라가며 정글 도움받을 그림을 만드세요.']);
+    }
+    return out;
+  }
+  function damageInsights(me,players){
+    var out={good:[],bad:[],key:null}; if(me.dmg==null) return out;
+    var role=me.position||'', isCarry=role==='BOTTOM'||role==='MIDDLE', team=me.team, td=0;
+    players.forEach(function(p){ if(p.team===team) td+=(p.dmg||0); }); if(!td) return out;
+    var sh=Math.round(me.dmg/td*100); out.key={k:'팀 딜 비중',v:sh+'%',c:isCarry?(sh>=28?'up':(sh<20?'down':'')):''};
+    if(isCarry){
+      if(sh>=30) out.good.push(['딜 캐리','팀 딜의 '+sh+'%를 책임졌습니다. 받은 골드값을 딜로 확실히 돌려줬어요.']);
+      else if(sh<20) out.bad.push(['낮은 딜 비중','캐리 역할인데 팀 딜의 '+sh+'%뿐입니다. 죽거나 안전만 보다 한타에서 빠졌을 가능성 — 죽지 않는 선에서 더 오래, 더 앞에서 딜을 넣어야 합니다.']);
+    }
+    if(me.dpg!=null&&me.dpg>=2.2&&!isCarry) out.good.push(['효율적인 딜','딜/골드 '+me.dpg+'. 적은 골드로 큰 값을 냈습니다.']);
+    return out;
+  }
+  function macroInsights(me,players,won){
+    var out={good:[],bad:[]}; var objs=(ANALYSIS.objs)||[], series=(ANALYSIS.series)||[], team=me.team;
+    if(objs.some(function(o){return o.team!=null;})&&objs.length){
+      var md=0,fd=0; objs.forEach(function(o){ if(o.kind==='DRAGON'){ (o.team===team)?md++:fd++; } });
+      if(fd>=3&&fd>md+1) out.bad.push(['오브젝트를 내줌','상대가 용을 '+fd+'마리 가져갔습니다(우리 '+md+'). 용·바론은 한타 전 시야 선점과 라인 정리에서 갈립니다 — 스폰 1분 전 동선을 팀과 맞추세요.']);
+      else if(md>=3&&md>fd) out.good.push(['오브젝트 장악','용 '+md+'마리를 확보했습니다. 오브젝트 중심으로 게임을 굴렸어요.']);
+    }
+    if(series.length>=4){
+      var k1=team===100,ml=0,mdf=0; series.forEach(function(s){ var d=k1?s.g100-s.g200:s.g200-s.g100; if(d>ml)ml=d; if(d<mdf)mdf=d; });
+      if(won===false&&ml>=3000) out.bad.push(['리드를 굳히지 못함','한때 팀 골드 +'+P.compact(ml)+'까지 앞섰지만 패배했습니다. 보통 바론·장로 한타나 무리한 분산에서 리드가 새어 나갑니다. 이길 때일수록 시야를 깔고 한 번에 끝낼 한타만 여세요.']);
+      else if(won===true&&mdf<=-3000) out.good.push(['뒤집은 경기','한때 -'+P.compact(-mdf)+'까지 밀렸지만 역전승했습니다. 후반 집중력이 좋았어요.']);
+    }
+    return out;
+  }
+  function pickFocus(bad){
+    if(!bad.length) return null;
+    var order=['팀 내 최다 데스','라인전 단계 사망 과다','초반 동선 사망','연속으로 끊김','적 진영에서 잘림','후반 캐리 사망','초반에 벌어진 격차','라인전 크게 밀림','낮은 딜 비중','리드를 굳히지 못함','오브젝트를 내줌','시야 관리 부족','파밍 효율 저조','CS 수급 부족','낮은 킬관여'];
+    for(var i=0;i<order.length;i++) for(var j=0;j<bad.length;j++) if(bad[j][0]===order[i]) return bad[j];
+    return bad[0];
+  }
+
+  // ===== NEW coachCard =====
   function coachCard(rep){
     var saver=(ROWS[curPov]||{}).saver;
     var players=ANALYSIS.players||[];
-    var meIdx=-1, i;
-    for(i=0;i<players.length;i++){ if(players[i].name===saver){ meIdx=i; break; } }
+    var meIdx=-1,i; for(i=0;i<players.length;i++){ if(players[i].name===saver){ meIdx=i; break; } }
     if(meIdx<0) return '';
     var me=players[meIdx], pid=meIdx+1, pos=me.position||'', lane=me.lane||{};
     var guide=POS_GUIDE[pos]||null;
     var isJg=pos==='JUNGLE', isSup=pos==='UTILITY', isLane=!isJg&&!isSup;
     var dur=ANALYSIS.duration||0, durSec=dur>10000?dur/1000:dur, durMin=durSec>0?durSec/60:0;
     var vspm=(durMin&&me.vision!=null)?+(me.vision/durMin).toFixed(2):null;
-    // 기준선: floor=부족 경고, good=우수 칭찬 (CS/min 7+우수·5미만부족, 정글 -1.5 / VSPM 서폿2.0·정글1.5·라인1.0 / KP 탑35·정글서폿55·미드50·원딜48)
+    var won=me.win;
     var csFloor=isJg?4:5, csGood=isJg?5.5:7;
     var visFloor=isSup?0.9:(isJg?0.8:0.5), visGood=isSup?1.8:(isJg?1.3:1.0);
     var kpB=pos==='TOP'?0.35:((isSup||isJg)?0.55:(pos==='MIDDLE'?0.50:0.48));
 
-    // 핵심 지표 2개(크게) + 보조 지표(작게)
+    var DI=deathInsights(me,pid,players,durSec), FI=fifteenInsights(me), DMI=damageInsights(me,players), MA=macroInsights(me,players,won);
+
+    // key metrics (lead with 15-min gold diff)
     var key=[];
-    if(isLane && lane.cs10!=null){
-      key.push({k:'10분 CS 격차', v:(lane.cs10>0?'+':'')+lane.cs10, c:lane.cs10>=10?'up':(lane.cs10<=-10?'down':''), cap:lane.cs10>=10?'상대 라이너를 압박':(lane.cs10<=-10?'라인전 열세':'팽팽한 라인전')});
-    } else if(!isSup && me.cs_per_min!=null){
-      key.push({k:'분당 CS', v:me.cs_per_min, c:me.cs_per_min>=csGood?'up':(me.cs_per_min<csFloor?'down':''), cap:me.cs_per_min>=csGood?'파밍 효율 우수':(me.cs_per_min<csFloor?'파밍 보강 필요':'무난한 파밍')});
-    }
-    if(me.kda!=null){
-      key.push({k:'KDA', v:me.kda, c:me.kda>=3?'up':(me.kda<2?'down':''), cap:(me.deaths!=null?me.deaths+'데스 · ':'')+(me.kda>=3?'안정적 생존':(me.kda<2?'생존 관리 필요':'평이한 교전'))});
-    }
-    if(key.length<2 && me.kp!=null){
-      key.push({k:'킬관여', v:Math.round(me.kp*100)+'%', c:me.kp>=kpB+0.15?'up':(me.kp<kpB-0.15?'down':''), cap:me.kp>=kpB+0.15?'팀 교전 기여 높음':(me.kp<kpB-0.15?'합류 빈도 낮음':'적절한 합류')});
-    }
-    key=key.slice(0,2);
+    if(FI.key) key.push(FI.key);
+    if(me.kda!=null) key.push({k:'KDA',v:me.kda,c:me.kda>=3?'up':(me.kda<2?'down':''),cap:(me.deaths!=null?me.deaths+'데스 · ':'')+(me.kda>=3?'안정적 생존':(me.kda<2?'생존 관리 필요':'평이한 교전'))});
+    if(DMI.key) key.push(DMI.key);
+    else if(!isSup && me.cs_per_min!=null && !FI.key) key.push({k:'분당 CS',v:me.cs_per_min,c:me.cs_per_min>=csGood?'up':(me.cs_per_min<csFloor?'down':''),cap:''});
+    key=key.slice(0,3);
     var keyNames=key.map(function(s){return s.k;});
     function sub(k,v,c){ return '<div class="substat '+(c||'')+'"><div class="k">'+k+'</div><div class="v">'+v+'</div></div>'; }
-    var sg='';
-    key.forEach(function(s){ sg+=sub(s.k, s.v, s.c); });
-    if(!isSup && me.cs_per_min!=null && keyNames.indexOf('분당 CS')<0) sg+=sub('분당 CS', me.cs_per_min, me.cs_per_min>=csGood?'up':(me.cs_per_min<csFloor?'down':''));
-    if(isLane && lane.mycs10!=null) sg+=sub('10분 CS', lane.mycs10, lane.mycs10>=80?'up':(lane.mycs10<60?'down':''));
-    if(me.kp!=null && keyNames.indexOf('킬관여')<0) sg+=sub('킬관여', Math.round(me.kp*100)+'%', me.kp>=kpB+0.15?'up':(me.kp<kpB-0.15?'down':''));
-    sg+=sub('시야/분', vspm!=null?vspm:'–', vspm!=null?(vspm>=visGood?'up':(vspm<visFloor?'down':'')):'');
-    if(me.gold!=null) sg+=sub('골드', P.compact(me.gold), '');
-    if(me.dpg!=null) sg+=sub('딜/골드', me.dpg, '');   // 딜 정보는 Riot 연동 시에만
+    var sg=''; key.forEach(function(s){ sg+=sub(s.k,s.v,s.c); });
+    if(!isSup && me.cs_per_min!=null && keyNames.indexOf('분당 CS')<0) sg+=sub('분당 CS',me.cs_per_min,me.cs_per_min>=csGood?'up':(me.cs_per_min<csFloor?'down':''));
+    if(isLane && lane.mycs10!=null) sg+=sub('10분 CS',lane.mycs10,lane.mycs10>=80?'up':(lane.mycs10<60?'down':''));
+    if(me.kp!=null && keyNames.indexOf('킬관여')<0) sg+=sub('킬관여',Math.round(me.kp*100)+'%',me.kp>=kpB+0.15?'up':(me.kp<kpB-0.15?'down':''));
+    sg+=sub('시야/분',vspm!=null?vspm:'–',vspm!=null?(vspm>=visGood?'up':(vspm<visFloor?'down':'')):'');
+    if(me.gold!=null && keyNames.indexOf('팀 딜 비중')<0 && me.gold>0) sg+=sub('골드',P.compact(me.gold),'');
 
+    // good / bad
     var good=[], bad=[];
-    function rx(k, fallback){ return (guide && guide.fix && guide.fix[k]) ? guide.fix[k] : fallback; }
+    function rx(k,fb){ return (guide&&guide.fix&&guide.fix[k])?guide.fix[k]:fb; }
     if(isLane && lane.mycs10!=null){
       if(lane.mycs10>=80) good.push(['파밍 우수','10분에 CS '+lane.mycs10+'개를 챙겼습니다. 라인 관리가 깔끔합니다.']);
       else if(lane.mycs10<60) bad.push(['CS 수급 부족','10분 CS '+lane.mycs10+'개로 70개 목표에 못 미칩니다. '+rx('farm','웨이브를 끝까지 정리하세요.')]);
     }
-    if(isLane && lane.cs10!=null){
-      if(lane.cs10>=10) good.push(['라인전 우위','10분 CS 격차 +'+lane.cs10+'개. 상대 라이너를 압박했습니다. 이 리드를 로밍이나 다이브로 키우세요.']);
-      else if(lane.cs10<=-10) bad.push(['라인전 열세','10분 CS 격차 '+lane.cs10+'개. '+rx('farm','무리한 교환보다 안전하게 파밍해 격차부터 줄이세요.')]);
-    }
-    if(isJg && me.cs_per_min!=null && me.cs_per_min>=csGood){
-      good.push(['정글 수급 우수','분당 CS '+me.cs_per_min+'개. 정글 동선이 효율적입니다.']);
-    }
-    if(!isSup && me.cs_per_min!=null && me.cs_per_min<csFloor){
-      bad.push(['파밍 효율 저조','분당 CS '+me.cs_per_min+'개. '+rx('farm','빈 라인을 정리해 분당 '+csGood+'개 이상을 노리세요.')]);
-    }
-    if(me.kda!=null && me.deaths!=null){
-      if(me.deaths>=8) bad.push(['잦은 죽음',me.deaths+'번 사망했습니다. 죽음 하나가 상대의 골드와 성장이 됩니다. '+rx('death','시야 안에서 싸우고 불리하면 빠지세요.')+' 아래 데스 시점을 영상으로 확인하세요.']);
-      else if(me.kda>=3) good.push(['안정적인 생존','KDA '+me.kda+'. 무리 없이 이득을 쌓았습니다.']);
-      else if(me.kda<2) bad.push(['낮은 KDA','KDA '+me.kda+'. '+rx('death','교전 전 이길 수 있는 싸움인지 먼저 판단하세요.')]);
-    }
+    if(isJg && me.cs_per_min!=null && me.cs_per_min>=csGood) good.push(['정글 수급 우수','분당 CS '+me.cs_per_min+'개. 정글 동선이 효율적입니다.']);
+    if(!isSup && me.cs_per_min!=null && me.cs_per_min<csFloor) bad.push(['파밍 효율 저조','분당 CS '+me.cs_per_min+'개. '+rx('farm','빈 라인을 정리해 분당 '+csGood+'개 이상을 노리세요.')]);
+    if(me.kda!=null && me.kda>=3 && (me.deaths==null||me.deaths<=4)) good.push(['안정적인 생존','KDA '+me.kda+'. 무리 없이 이득을 쌓았습니다.']);
     if(me.kp!=null){
       if(me.kp>=kpB+0.15) good.push(['높은 팀 기여','킬관여 '+Math.round(me.kp*100)+'%. 팀 교전에 꾸준히 함께했습니다.']);
       else if(me.kp<kpB-0.15) bad.push(['낮은 킬관여','킬관여 '+Math.round(me.kp*100)+'%. '+rx('kp','미니맵을 보며 교전 타이밍에 합류하세요.')]);
@@ -525,30 +616,37 @@ footer .riot{margin-top:14px;font-size:12px;color:var(--faint);max-width:680px;l
       if(vspm>=visGood) good.push(['시야 장악','분당 시야 '+vspm+'점. 맵 정보를 잘 만들었습니다.']);
       else if(vspm<visFloor) bad.push(['시야 관리 부족','분당 시야 '+vspm+'점. '+rx('vision','제어 와드를 꾸준히 사 적 동선을 미리 비추세요.')]);
     }
+    good=good.concat(FI.good,DI.good,DMI.good,MA.good);
+    bad=bad.concat(FI.bad,DI.bad,DMI.bad,MA.bad);
+    function dedupe(a){ var s={},o=[]; a.forEach(function(x){ if(!s[x[0]]){s[x[0]]=1;o.push(x);} }); return o; }
+    good=dedupe(good); bad=dedupe(bad);
+    var PRI=['팀 내 최다 데스','라인전 단계 사망 과다','초반 동선 사망','연속으로 끊김','적 진영에서 잘림','후반 캐리 사망','초반에 벌어진 격차','라인전 크게 밀림','낮은 딜 비중','리드를 굳히지 못함','오브젝트를 내줌','시야 관리 부족','파밍 효율 저조','CS 수급 부족','낮은 킬관여'];
+    bad.sort(function(a,b){ var ia=PRI.indexOf(a[0]); var ib=PRI.indexOf(b[0]); if(ia<0)ia=99; if(ib<0)ib=99; return ia-ib; });
+    var focus=pickFocus(bad);
+    good=good.slice(0,4); bad=bad.slice(0,5);
 
-    function evcol(title, arr, kind){
+    function evcol(title,arr,kind){
       var head='<div class="eh"><span class="dot"></span>'+title+'</div>';
       if(!arr.length) return '<div class="evalcol '+kind+'">'+head+'<div class="crow '+(kind==='good'?'g':'b')+'"><div class="ct"><div class="a" style="color:var(--faint)">'+(kind==='good'?'두드러진 강점이 기록되지 않았습니다.':'큰 약점이 없습니다. 좋은 흐름이에요.')+'</div></div></div></div>';
       var rows=arr.map(function(x){ return '<div class="crow '+(kind==='good'?'g':'b')+'"><div class="ico">'+(kind==='good'?'✓':'!')+'</div><div class="ct"><div class="t">'+esc(x[0])+'</div><div class="a">'+esc(x[1])+'</div></div></div>'; }).join('');
       return '<div class="evalcol '+kind+'">'+head+'<div class="ceval">'+rows+'</div></div>';
     }
-    // 측정 지표 종합 등급(참고용) — 포지션별 가중치는 Riot 마스터리 등급 기준 참고.
-    function p3(val, lo, hi){ return val==null?null:(val>=hi?2:(val<lo?0:1)); }
-    var gparts=[];
-    if(!isSup) gparts.push([isJg?1:(pos==='BOTTOM'?3:2), p3(me.cs_per_min, csFloor, csGood)]);
-    if(isLane && lane.cs10!=null) gparts.push([1, p3(lane.cs10, -10, 10)]);
-    if(me.kda!=null) gparts.push([pos==='BOTTOM'?3:2, p3(me.kda, 2, 3)]);
-    if(me.kp!=null) gparts.push([(isJg||isSup)?3:(pos==='TOP'?1:2), p3(me.kp, kpB-0.1, kpB+0.1)]);
-    if(vspm!=null) gparts.push([isSup?3:(isJg?2:1), p3(vspm, visFloor, visGood)]);
-    var gws=0, gss=0;
-    gparts.forEach(function(x){ if(x[1]!=null){ gws+=x[0]*2; gss+=x[0]*x[1]; } });
+    function p3(val,lo,hi){ return val==null?null:(val>=hi?2:(val<lo?0:1)); }
+    var gp=[];
+    if(!isSup) gp.push([isJg?1:(pos==='BOTTOM'?3:2),p3(me.cs_per_min,csFloor,csGood)]);
+    if(isLane && lane.cs10!=null) gp.push([1,p3(lane.cs10,-10,10)]);
+    if(me.kda!=null) gp.push([pos==='BOTTOM'?3:2,p3(me.kda,2,3)]);
+    if(me.kp!=null) gp.push([(isJg||isSup)?3:(pos==='TOP'?1:2),p3(me.kp,kpB-0.1,kpB+0.1)]);
+    if(vspm!=null) gp.push([isSup?3:(isJg?2:1),p3(vspm,visFloor,visGood)]);
+    var gws=0,gss=0; gp.forEach(function(x){ if(x[1]!=null){ gws+=x[0]*2; gss+=x[0]*x[1]; } });
     var gradeHTML='';
     if(gws>0){
       var gscore=Math.round(gss/gws*100);
       var gl=gscore>=85?'S':(gscore>=70?'A':(gscore>=55?'B':(gscore>=40?'C':'D')));
-      gradeHTML='<div class="grade g-'+gl.toLowerCase()+'"><div class="gv">'+gl+'</div><div class="gx"><div class="gs">'+gscore+'<span class="gsl"> / 100</span></div><div class="gd">측정 지표 종합 등급입니다. 의사결정·시야 활용·웨이브 관리는 아래 체크 질문으로 직접 확인하세요.</div></div></div>';
+      gradeHTML='<div class="grade g-'+gl.toLowerCase()+'"><div class="gv">'+gl+'</div><div class="gx"><div class="gs">'+gscore+'<span class="gsl"> / 100</span></div><div class="gd">측정 지표 종합 등급입니다. 의사결정·시야·웨이브 관리는 아래 항목으로 직접 확인하세요.</div></div></div>';
     }
-    var checksHTML='', drillHTML='';
+    var focusHTML = focus ? '<div class="cfocus"><div class="cfl">이번 게임, 딱 하나만 고친다면</div><div class="cft"><b>'+esc(focus[0])+'</b> · '+esc(focus[1])+'</div></div>' : '';
+    var checksHTML='',drillHTML='';
     if(guide){
       checksHTML='<div class="checks"><div class="chead">영상으로 직접 확인할 것 · '+guide.ko+'</div>';
       guide.checks.forEach(function(q){ checksHTML+='<div class="crq"><span class="qm">?</span><span>'+esc(q)+'</span></div>'; });
@@ -560,9 +658,10 @@ footer .riot{margin-top:14px;font-size:12px;color:var(--faint);max-width:680px;l
       }
     }
     return '<div class="coachhead"><span class="t">복기 분석</span><span class="s">'+(P.posKo(pos)||'내 플레이')+' 기준</span><span class="ln"></span></div>'
-      +gradeHTML
+      +gradeHTML+focusHTML
+      +(DI.flow||'')
       +(sg?'<div class="subgrid">'+sg+'</div>':'')
-      +'<div class="evalcols">'+evcol('잘한 점', good, 'good')+evcol('개선할 점', bad, 'bad')+'</div>'
+      +'<div class="evalcols">'+evcol('잘한 점',good,'good')+evcol('개선할 점',bad,'bad')+'</div>'
       +checksHTML+drillHTML;
   }
 
@@ -571,7 +670,7 @@ footer .riot{margin-top:14px;font-size:12px;color:var(--faint);max-width:680px;l
     var b=e.target.closest?e.target.closest('.jbtn[data-jump]'):null;
     if(!b) return;
     var t=parseInt(b.getAttribute('data-jump'),10)||0;
-    var v=document.getElementById('vmain')||document.querySelector('.stage video')||document.querySelector('video');
+    var v=document.querySelector('#stagehost .pvid.on')||document.querySelector('#stagehost video')||document.querySelector('.stage video')||document.querySelector('video');
     if(!v) return;
     try{ v.currentTime=Math.max(0,t); }catch(_){}
     if(v.play){ var pr=v.play(); if(pr&&pr.catch) pr.catch(function(){}); }
@@ -628,28 +727,76 @@ footer .riot{margin-top:14px;font-size:12px;color:var(--faint);max-width:680px;l
 
   // ── 영상(POV/분할) ──
   function stageSingle(){
-    var r = ROWS[curPov] || {};
-    if(!r.video){
+    var anyVid = ROWS.some(function(r){ return r.video; });
+    if(!anyVid){
       return '<div class="stage empty"><div class="novid"><svg class="mk" viewBox="0 0 24 24"><path d="M12 2 L15 9 L22 9 L16.5 13.5 L18.5 21 L12 16.5 L5.5 21 L7.5 13.5 L2 9 L9 9 Z" fill="currentColor"/></svg>이 시점의 영상이 아직 없습니다</div></div>';
     }
-    return '<div class="stage"><video id="vmain" controls playsinline preload="metadata" poster="'+(r.thumb||'')+'" src="'+r.video+'"></video></div>';
+    var vids = ROWS.map(function(r,i){
+      if(!r.video) return '';
+      var on = i===curPov;
+      return '<video data-pv="'+i+'" class="pvid'+(on?' on':'')+'" '+(on?'controls':'muted')+' playsinline preload="metadata" poster="'+(r.thumb||'')+'" src="'+r.video+'"></video>';
+    }).join('');
+    var noCur = !(ROWS[curPov] && ROWS[curPov].video);
+    var ov = '<div class="poolempty'+(noCur?' on':'')+'"><div class="novid"><svg class="mk" viewBox="0 0 24 24"><path d="M12 2 L15 9 L22 9 L16.5 13.5 L18.5 21 L12 16.5 L5.5 21 L7.5 13.5 L2 9 L9 9 Z" fill="currentColor"/></svg>이 시점의 영상이 아직 없습니다</div></div>';
+    return '<div class="stage pool">'+vids+ov+'</div>';
   }
+  function cellTag(r){ return '<span class="tag"><i style="background:'+(r._team===100?'var(--blue)':'var(--red)')+'"></i>'+esc(r.saver||'시점')+'</span>'; }
+  function cellVideo(idx,ctrl){ var r=ROWS[idx]||{}; return '<video data-idx="'+idx+'" '+(ctrl?'controls':'muted')+' playsinline preload="metadata" poster="'+(r.thumb||'')+'" src="'+(r.video||'')+'"></video>'; }
   function stageSplit(){
     var cells = selected.map(function(idx){
-      var r = ROWS[idx]; var me = saverCardName(r);
-      return '<div class="cell"><span class="tag"><i style="background:'+(r._team===100?'var(--blue)':'var(--red)')+'"></i>'+esc(r.saver||'시점')+'</span>'
-        + '<video data-idx="'+idx+'" '+(idx===selected[0]?'controls':'muted')+' playsinline preload="metadata" poster="'+(r.thumb||'')+'" src="'+(r.video||'')+'"></video></div>';
+      var r = ROWS[idx];
+      return '<div class="cell">'+cellTag(r)+cellVideo(idx, idx===selected[0])+'</div>';
     }).join('');
     return '<div class="stage grid mv-'+selected.length+'">'+cells+'</div>';
   }
-  function saverCardName(r){ var c=P.saverCard(r); return c?c.champion:''; }
+  function stageFocus(){
+    var mainIdx = selected[0], r = ROWS[mainIdx];
+    var pips = selected.slice(1).map(function(idx){
+      var rr = ROWS[idx];
+      return '<div class="pipcell" data-promote="'+idx+'" title="크게 보기">'+cellTag(rr)+cellVideo(idx,false)
+        +'<span class="promote"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H3v6M21 9V3h-6M3 15v6h6M15 21h6v-6"/></svg></span></div>';
+    }).join('');
+    return '<div class="stage">'+cellTag(r)+cellVideo(mainIdx,true)+'</div><div class="piprow">'+pips+'</div>';
+  }
+  function curT(){ var v=document.querySelector('#stagehost video'); return v?(v.currentTime||0):0; }
 
   function renderStage(){
     var host = document.getElementById('stagehost');
     if(!host) return;
     if(syncRAF){ cancelAnimationFrame(syncRAF); syncRAF=null; }
-    host.innerHTML = (split && selected.length>=2) ? stageSplit() : stageSingle();
-    if(split && selected.length>=2) startSync();
+    var multi = split && selected.length>=2;
+    host.innerHTML = multi ? (splitMode==='focus'?stageFocus():stageSplit()) : stageSingle();
+    if(multi){
+      startSync();
+      host.querySelectorAll('.pipcell[data-promote]').forEach(function(c){
+        c.addEventListener('click', function(){
+          var idx=+c.dataset.promote, pos=selected.indexOf(idx);
+          if(pos>0){ resumeAt=curT(); selected.splice(pos,1); selected.unshift(idx); renderPovBar(); renderStage(); }
+        });
+      });
+    }
+    if(resumeAt>0){
+      var mv=document.querySelector('#stagehost video');
+      if(mv){ var rt=resumeAt, seek=function(){ try{mv.currentTime=rt;}catch(_){} }; if(mv.readyState>=1) seek(); else mv.addEventListener('loadedmetadata',seek,{once:true}); }
+      resumeAt=0;
+    }
+  }
+  function switchPovInstant(i){
+    var host=document.getElementById('stagehost'); if(!host) return;
+    var pool=host.querySelector('.stage.pool'); if(!pool){ curPov=i; renderStage(); return; }
+    var vids=pool.querySelectorAll('.pvid');
+    var cur=pool.querySelector('.pvid.on');
+    var t=cur?(cur.currentTime||0):0, playing=cur?!cur.paused:false;
+    curPov=i;
+    var target=pool.querySelector('.pvid[data-pv="'+i+'"]');
+    for(var k=0;k<vids.length;k++){ var v=vids[k]; if(v!==target){ try{v.pause();}catch(_){} v.classList.remove('on'); v.removeAttribute('controls'); v.muted=true; } }
+    var ov=pool.querySelector('.poolempty');
+    if(target){
+      if(ov) ov.classList.remove('on');
+      target.classList.add('on'); target.setAttribute('controls',''); target.muted=false;
+      try{ target.currentTime=t; }catch(_){}
+      if(playing){ var pr=target.play(); if(pr&&pr.catch) pr.catch(function(){}); }
+    } else if(ov){ ov.classList.add('on'); }
   }
   function startSync(){
     var vids = Array.prototype.slice.call(document.querySelectorAll('#stagehost video'));
@@ -674,20 +821,27 @@ footer .riot{margin-top:14px;font-size:12px;color:var(--faint);max-width:680px;l
       var sel = split && selected.indexOf(i)>=0;
       var on = !split && i===curPov;
       var icon = c.champion ? P.champIcon(ver,c.champion) : '';
-      return '<div class="povtab'+(on?' on':'')+(sel?' sel':'')+'" data-idx="'+i+'">'
-        + (icon?'<img src="'+icon+'" alt="" onerror="this.style.visibility=\'hidden\'">':'<span style="width:30px;height:30px"></span>')
-        + '<div class="who"><div class="nm">'+esc(r.saver||('시점 '+(i+1)))+'</div><div class="ch">'+esc(c.champion||'')+(P.posKo(c.position)?(' · '+P.posKo(c.position)):'')+'</div></div></div>';
+      var tc = r._team===200 ? 'var(--red)' : 'var(--blue)';
+      var novid = !r.video;
+      var title = esc(r.saver||('시점 '+(i+1))) + (c.champion?(' · '+esc(c.champion)):'') + (P.posKo(c.position)?(' · '+P.posKo(c.position)):'') + (novid?' · 영상 없음':'');
+      return '<button class="povtab'+(on?' on':'')+(sel?' sel':'')+(novid?' novid':'')+'" data-idx="'+i+'" style="--tc:'+tc+'" title="'+title+'">'
+        + (icon?'<img src="'+icon+'" alt="" onerror="this.style.visibility=\'hidden\'">':'<span class="ph"></span>')
+        + (novid?'<span class="nov">분석만</span>':'')
+        + '</button>';
     }).join('');
     var canSplit = ROWS.filter(function(r){return r.video;}).length>=2;
-    host.innerHTML = '<div class="povtabs">'+tabs+'</div>'
-      + (canSplit?('<button class="splitbtn'+(split?' on':'')+'" id="splitbtn"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="8" height="16" rx="1"/><rect x="13" y="4" width="8" height="16" rx="1"/></svg>'+(split?'분할 보기 끄기':'시점 비교')+'</button>'):'')
-      + (split?'<div class="splithint">최대 4개까지 시점을 골라 같은 순간을 나란히 볼 수 있습니다. 첫 번째 영상으로 모두 동기화됩니다.</div>':'');
+    host.innerHTML = '<span class="povlab">시점</span><div class="povtabs">'+tabs+'</div>'
+      + (canSplit?('<button class="splitbtn'+(split?' on':'')+'" id="splitbtn"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="8" height="16" rx="1"/><rect x="13" y="4" width="8" height="16" rx="1"/></svg>'+(split?'분할 끄기':'시점 비교')+'</button>'):'')
+      + (split?('<div class="lmode"><button data-lm="grid" class="'+(splitMode==='grid'?'on':'')+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="8" height="16" rx="1"/><rect x="13" y="4" width="8" height="16" rx="1"/></svg>나란히</button><button data-lm="focus" class="'+(splitMode==='focus'?'on':'')+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="11" rx="1"/><rect x="3" y="17.5" width="5" height="3" rx="1"/><rect x="9.5" y="17.5" width="5" height="3" rx="1"/><rect x="16" y="17.5" width="5" height="3" rx="1"/></svg>포커스</button></div>'):'')
+      + (split?'<div class="splithint">최대 4개 시점 · 나란히 또는 포커스(메인+작은 화면) · 첫 영상에 동기화됩니다.</div>':'');
   }
 
   function bindPov(){
     var host = document.getElementById('povhost');
     if(!host) return;
     host.addEventListener('click', function(e){
+      var lm = e.target.closest('[data-lm]');
+      if(lm){ resumeAt = curT(); splitMode = lm.dataset.lm; renderPovBar(); renderStage(); return; }
       var sb = e.target.closest('#splitbtn');
       if(sb){
         split = !split;
@@ -703,7 +857,7 @@ footer .riot{margin-top:14px;font-size:12px;color:var(--faint);max-width:680px;l
         else if(selected.length<4 && ROWS[i].video){ selected.push(i); }
         renderPovBar(); renderStage();
       } else {
-        curPov = i; renderPovBar(); renderStage();
+        switchPovInstant(i); renderPovBar(); renderAnalysis();
       }
     });
   }
@@ -823,21 +977,49 @@ footer .riot{margin-top:14px;font-size:12px;color:var(--faint);max-width:680px;l
     var verdict = won===true?'승리':won===false?'패배':'결과';
 
     main.innerHTML =
-      heroBlock(rep, won)
+      '<div id="herohost">'+heroBlock(rep, won)+'</div>'
+      + '<h2 class="sec">다시 보기<span class="ln"></span></h2>'
       + '<div class="player"><div id="stagehost"></div><div class="povbar" id="povhost"></div></div>'
-      + jumpsBlock()
-      + coachCard(rep)
+      + '<div id="anahost">'+jumpsBlock()+coachCard(rep)+'</div>'
       + (ANALYSIS.series ? ('<h2 class="sec">골드 추이<span class="ln"></span></h2>'+goldChart(ANALYSIS.series)) : '')
       + '<h2 class="sec">오브젝트<span class="ln"></span></h2>'+objectivesBlock()
       + '<h2 class="sec">스코어보드<span class="ln"></span></h2><div class="board">'+teamBlock(100)+teamBlock(200)+'</div>'
       + '<h2 class="sec">댓글<span class="ln"></span></h2>'
       + '<div class="cmts"><div class="cform"><input id="cauthor" placeholder="이름(선택)" maxlength="24"><input id="cbody" placeholder="댓글을 입력하세요" maxlength="300"><button id="cpost">등록</button></div><div class="clist" id="clist"></div></div>';
 
-    renderStage(); renderPovBar(); bindPov();
+    renderStage(); renderPovBar(); bindPov(); runCounts();
     document.getElementById('likebtn').addEventListener('click', function(){ toggleLike(this); });
     document.getElementById('cpost').addEventListener('click', postComment);
     document.getElementById('cbody').addEventListener('keydown', function(e){ if(e.key==='Enter') postComment(); });
     loadComments();
+  }
+
+  function renderAnalysis(){
+    var rep = ROWS[curPov] || P.pickPrimary(ROWS) || {};
+    var won = (ANALYSIS && ANALYSIS.win_team!=null) ? saverWon(rep) : null;
+    var hh = document.getElementById('herohost'); if(hh) hh.innerHTML = heroBlock(rep, won);
+    var ah = document.getElementById('anahost'); if(ah) ah.innerHTML = jumpsBlock() + coachCard(rep);
+    var lb = document.getElementById('likebtn'); if(lb){ if(liked) lb.classList.add('liked'); lb.addEventListener('click', function(){ toggleLike(this); }); }
+    runCounts();
+  }
+
+  var _countObs = null;
+  function countUp(el){
+    var txt = (el.textContent||'').trim();
+    var m = txt.match(/^([^\d]*)([\d][\d,]*(?:\.\d+)?)(.*)$/);
+    if(!m) return;
+    var pre=m[1], numS=m[2], suf=m[3], hasC=numS.indexOf(',')>=0, dec=(numS.split('.')[1]||'').length, target=parseFloat(numS.replace(/,/g,''));
+    if(!isFinite(target)) return;
+    function fmt(v){ var s; if(hasC){ s=Number(dec?v.toFixed(dec):Math.round(v)).toLocaleString(undefined,{minimumFractionDigits:dec,maximumFractionDigits:dec}); } else { s=dec?v.toFixed(dec):String(Math.round(v)); } return pre+s+suf; }
+    var st=null;
+    function step(ts){ if(st==null) st=ts; var p=Math.min(1,(ts-st)/850), e=1-Math.pow(1-p,3); if(p<1){ el.textContent=fmt(target*e); requestAnimationFrame(step); } else { el.textContent=pre+numS+suf; } }
+    el.textContent=fmt(0); requestAnimationFrame(step);
+  }
+  function runCounts(){
+    if(typeof IntersectionObserver==='undefined') return;
+    if(_countObs) _countObs.disconnect();
+    _countObs = new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting){ countUp(e.target); _countObs.unobserve(e.target); } }); }, {threshold:.4});
+    var els = document.querySelectorAll('#anahost .substat .v'); for(var i=0;i<els.length;i++) _countObs.observe(els[i]);
   }
 
   function saverWon(rep){

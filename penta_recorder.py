@@ -53,13 +53,13 @@ def ensure_deps():
         try: __import__(mod)
         except ImportError: need.append(pkg)
     if need:
-        print(f"[준비] 파이썬 패키지 설치 중: {', '.join(need)} …")
+        print(f"[setup] Installing Python packages: {', '.join(need)} …")
         try:
             subprocess.check_call([sys.executable, "-m", "pip", "install", "--quiet", *need])
         except Exception as e:
-            print("[!] 패키지 자동 설치 실패. 수동으로 실행해 주세요:")
+            print("[!] Automatic package install failed. Please run this manually:")
             print(f"    {sys.executable} -m pip install {' '.join(need)}")
-            print("상세:", e); _safe_input("\n엔터를 누르면 종료...")
+            print("Details:", e); _safe_input("\nPress Enter to exit...")
             sys.exit(1)
 ensure_deps()
 
@@ -920,7 +920,7 @@ def load_or_make_config():
             except Exception:
                 try: os.remove(CONFIG_PATH)
                 except Exception: pass
-            log(f"config.json 손상 — 기본값으로 재생성합니다 (기존 파일은 config.json.broken 으로 백업): {e}")
+            log(f"config.json was corrupt — recreating with defaults (old file backed up as config.json.broken): {e}")
             cfg = None
     if cfg is None:
         cfg = {
@@ -999,7 +999,7 @@ def ensure_ffmpeg():
                         if not chunk: break
                         buf.write(chunk); got += len(chunk)
                     if total and got < int(total * 0.99):
-                        raise IOError(f"불완전 다운로드 {got}/{total} bytes")
+                        raise IOError(f"Incomplete download {got}/{total} bytes")
                     return buf.getvalue()
             except Exception as e:
                 last = e
@@ -1305,7 +1305,7 @@ class Recorder:
                     spk = p.get_device_info_by_index(wi["defaultOutputDevice"]); dev = None
                     for lb in p.get_loopback_device_info_generator():
                         if spk.get("name","") in lb.get("name",""): dev = lb; break
-                    if dev is None: raise RuntimeError("WASAPI 루프백 장치를 찾지 못함")
+                    if dev is None: raise RuntimeError("WASAPI loopback device not found")
                 ch = int(dev.get("maxInputChannels") or 2) or 2
                 rate = int(dev.get("defaultSampleRate") or 48000) or 48000
                 wf = wave.open(box["path"], "wb"); wf.setnchannels(ch); wf.setsampwidth(2); wf.setframerate(rate)
@@ -1399,11 +1399,14 @@ class Recorder:
         enc = _encoder_args(); pathx = self.path; fps = self.fps
         shared = {"buf": None, "wh": None, "n": 0, "err": None}
         stop_ev = threading.Event(); proc_box = {"p": None}
+        # Pick the monitor from config.output_idx (ddagrab is 0-based; windows-capture is 1-based → +1). "auto" → primary (1).
+        _ci = CFG.get("output_idx", "auto")
+        midx = (int(_ci) + 1) if (isinstance(_ci, int) or (isinstance(_ci, str) and _ci.isdigit())) else 1
         try:
             # draw_border=False → 녹화 중 노란 테두리 제거(Windows 11에서 적용; Windows 10은 OS에 해당 기능이 없어 무시됨)
-            cap = WindowsCapture(cursor_capture=None, draw_border=False, monitor_index=1, window_name=None)
+            cap = WindowsCapture(cursor_capture=None, draw_border=False, monitor_index=midx, window_name=None)
         except Exception as e:
-            log(f"  WGC init failed: {e}"); return False
+            log(f"  WGC init failed (monitor {midx}): {e}"); return False
 
         @cap.event
         def on_frame_arrived(frame, capture_control):
@@ -1469,7 +1472,7 @@ class Recorder:
         self._wgc_state = {"stop": stop_ev, "feeder": ft, "proc_box": proc_box}
         self.backend = "wgc"
         if not verify:
-            log("● Recording started (WGC)"); return True
+            log(f"● Recording started (WGC · Monitor {midx})"); return True
         # --- WGC 검증 ---
         # WGC는 프레임 카운터로 '화면 잡힘'을 직접 확인할 수 있다. 파일 크기는 ffmpeg가 쓰는 중인지 확인용.
         # (NVENC는 첫 키프레임을 측정 전에 쓰고 정적 화면에선 이후 증가가 작아, '델타 40KB' 방식은 오판함 → 절대 크기로 판단)
@@ -1490,11 +1493,11 @@ class Recorder:
         ferr = _fflog()
         ok = (n1 >= 15) and alive and (not ferr)   # 프레임 들어옴 + ffmpeg 정상 동작
         if ok and _sz() >= 8000:
-            log("● Recording started (WGC — capture verified)"); return True
+            log(f"● Recording started (WGC · Monitor {midx} — capture verified)"); return True
         if ok:                                       # 파일이 아직 작으면(정적 화면) 잠깐 더 대기 후 재확인
             time.sleep(2.5)
             if _sz() >= 8000:
-                log("● Recording started (WGC — capture verified)"); return True
+                log(f"● Recording started (WGC · Monitor {midx} — capture verified)"); return True
         stop_ev.set()
         try: control.stop()
         except Exception: pass
@@ -2133,43 +2136,43 @@ def run_gui(cfg, url):
 def _print_status():
     s = sb_cfg(); st = cloud_state()
     print("\n" + "=" * 50)
-    print("  myPENTA 상태 점검")
+    print("  myPENTA status check")
     print("=" * 50)
-    print(f"  데이터 폴더 : {DATA_DIR}")
+    print(f"  Data folder  : {DATA_DIR}")
     print("-" * 50)
-    print(f"  Supabase URL : {s.get('url') or '(없음)'}")
-    print(f"  anon_key     : {'있음' if s.get('anon_key') else '없음'}")
-    print(f"  service_key  : {'있음' if s.get('service_key') else '없음  ← 업로드하려면 필요'}")
+    print(f"  Supabase URL : {s.get('url') or '(none)'}")
+    print(f"  anon_key     : {'set' if s.get('anon_key') else 'missing'}")
+    print(f"  service_key  : {'set' if s.get('service_key') else 'missing  ← needed for uploads'}")
     print(f"  bucket       : {s.get('bucket') or 'media'}")
-    verdict = {"cloud": "☁ 클라우드 ON (업로드 가능)",
-               "readonly": "⚠ 읽기전용 (service_key 입력 필요)",
-               "local": "● 로컬 전용"}[st]
+    verdict = {"cloud": "\u2601 Cloud ON (uploads enabled)",
+               "readonly": "\u26a0 Read-only (service_key needed)",
+               "local": "\u25cf Local only"}[st]
     print(f"\n  → {verdict}")
     if s.get("url") and (s.get("service_key") or s.get("anon_key")):
-        print("\n  Supabase 연결 테스트 중...")
+        print("\n  Testing Supabase connection...")
         try:
             import requests
             r = requests.get(_sb_base() + "/rest/v1/matches?select=id&limit=1", headers=_sb_h(), timeout=12)
             if r.status_code < 300:
-                print("  ✓ 연결 OK — matches 테이블 읽기 성공")
+                print("  \u2713 Connected — read from 'matches' table OK")
                 try:
                     r2 = requests.get(_sb_base() + "/rest/v1/matches?select=id",
                                       headers={**_sb_h(), "Prefer": "count=exact", "Range": "0-0"}, timeout=12)
                     cr = r2.headers.get("content-range", "")
-                    if "/" in cr: print(f"    ☁ 클라우드 저장된 경기: {cr.split('/')[-1]}개")
+                    if "/" in cr: print(f"    \u2601 Matches stored in the cloud: {cr.split('/')[-1]}")
                 except Exception: pass
                 if s.get("service_key"):
                     try:
                         rb = requests.get(_sb_base() + "/storage/v1/bucket/" + (_sb_bucket()),
                                           headers=_sb_h(write=True), timeout=12)
-                        if rb.status_code < 300: print(f"  ✓ Storage 버킷 '{_sb_bucket()}' 접근 OK (업로드 준비됨)")
-                        else: print(f"  ✗ 버킷 접근 실패: HTTP {rb.status_code} — 버킷 이름/키 확인")
-                    except Exception as e: print(f"  ✗ 버킷 테스트 오류: {e}")
+                        if rb.status_code < 300: print(f"  \u2713 Storage bucket '{_sb_bucket()}' reachable (uploads ready)")
+                        else: print(f"  \u2717 Bucket access failed: HTTP {rb.status_code} — check bucket name/key")
+                    except Exception as e: print(f"  \u2717 Bucket test error: {e}")
             else:
-                print(f"  ✗ 연결 실패: HTTP {r.status_code} — {r.text[:140]}")
-                print("    (키가 틀렸거나 테이블이 없을 수 있어요. schema.sql 실행했는지 확인)")
+                print(f"  \u2717 Connection failed: HTTP {r.status_code} — {r.text[:140]}")
+                print("    (Key may be wrong or the table may be missing. Make sure schema.sql has been run.)")
         except Exception as e:
-            print(f"  ✗ 연결 테스트 오류: {e}")
+            print(f"  \u2717 Connection test error: {e}")
     print("=" * 50)
 
 def main():
@@ -2179,7 +2182,7 @@ def main():
     except Exception: pass
     if "--status" in sys.argv or "--check" in sys.argv:
         _print_status()
-        try: input("\n엔터로 종료...")
+        try: input("\nPress Enter to exit...")
         except Exception: pass
         return
     # 이미 실행 중이면(자동 실행 + 수동 실행 겹침) 갤러리만 열고 종료
@@ -2191,7 +2194,7 @@ def main():
     except Exception: pass
     mode = cfg.get("mode", "all")
     use_gui = (mode == "all" and sys.platform == "win32" and cfg.get("ui", "window") != "console")
-    print("=" * 56); print(f"  myPENTA — 리그 오브 레전드 자동 녹화 — 모드: {mode}"); print("=" * 56)
+    print("=" * 56); print(f"  myPENTA — League of Legends auto-recorder — mode: {mode}"); print("=" * 56)
     _cst = cloud_state()
     if _cst == "cloud":
         log(f"☁ Cloud ON — saving & sharing via Supabase({_sb_base()}).")
@@ -2203,7 +2206,7 @@ def main():
         if not use_gui:               # GUI면 창부터 띄우고 백그라운드에서 받음(첫 실행이 멈춘 듯 안 보이게)
             FFMPEG = ensure_ffmpeg()
             if not FFMPEG:
-                _safe_input("\nffmpeg가 없어 녹화를 할 수 없어요. 엔터로 종료..."); return
+                _safe_input("\nCan't record without ffmpeg. Press Enter to exit..."); return
     if mode in ("all", "server") and not use_gui:
         if not FFMPEG: FFMPEG = ensure_ffmpeg()
     url = (cfg.get("gallery_url") or "https://mypenta.netlify.app/").rstrip("/")

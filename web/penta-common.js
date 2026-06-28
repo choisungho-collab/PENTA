@@ -171,6 +171,32 @@
     } catch (e) { return { likes: 0, views: 0 }; }
   }
 
+  // 측정 지표 종합 등급 (매치 코칭 카드와 동일 기준)
+  function grade(me, durSec) {
+    if (!me) return null;
+    var pos = me.position || '', lane = me.lane || {};
+    var isJg = pos === 'JUNGLE', isSup = pos === 'UTILITY', isLane = !isJg && !isSup;
+    durSec = +durSec || 0; if (durSec > 10000) durSec = durSec / 1000;
+    var durMin = durSec > 0 ? durSec / 60 : 0;
+    var vspm = (durMin && me.vision != null) ? (me.vision / durMin) : null;
+    var csFloor = isJg ? 4 : 5, csGood = isJg ? 5.5 : 7;
+    var visFloor = isSup ? 0.9 : (isJg ? 0.8 : 0.5), visGood = isSup ? 1.8 : (isJg ? 1.3 : 1.0);
+    var kpB = pos === 'TOP' ? 0.35 : ((isSup || isJg) ? 0.55 : (pos === 'MIDDLE' ? 0.50 : 0.48));
+    function p3(val, lo, hi) { return val == null ? null : (val >= hi ? 2 : (val < lo ? 0 : 1)); }
+    var gp = [];
+    if (!isSup) gp.push([isJg ? 1 : (pos === 'BOTTOM' ? 3 : 2), p3(me.cs_per_min, csFloor, csGood)]);
+    if (isLane && lane.cs10 != null) gp.push([1, p3(lane.cs10, -10, 10)]);
+    if (me.kda != null) gp.push([pos === 'BOTTOM' ? 3 : 2, p3(me.kda, 2, 3)]);
+    if (me.kp != null) gp.push([(isJg || isSup) ? 3 : (pos === 'TOP' ? 1 : 2), p3(me.kp, kpB - 0.1, kpB + 0.1)]);
+    if (vspm != null) gp.push([isSup ? 3 : (isJg ? 2 : 1), p3(vspm, visFloor, visGood)]);
+    var gws = 0, gss = 0;
+    gp.forEach(function (x) { if (x[1] != null) { gws += x[0] * 2; gss += x[0] * x[1]; } });
+    if (gws <= 0) return null;
+    var score = Math.round(gss / gws * 100);
+    var letter = score >= 85 ? 'S' : (score >= 70 ? 'A' : (score >= 55 ? 'B' : (score >= 40 ? 'C' : 'D')));
+    return { score: score, letter: letter };
+  }
+
   global.PENTA = {
     SB_URL: SB_URL, SB_ANON: SB_ANON,
     sbSelect: sbSelect, sbInsert: sbInsert, sbRpc: sbRpc,
@@ -180,7 +206,7 @@
     posKo: posKo, posRank: posRank,
     queueName: queueName, mmss: mmss, kdaRatio: kdaRatio, compact: compact, ago: ago,
     groupKeyOf: groupKeyOf, clusterByMatch: clusterByMatch, pickPrimary: pickPrimary,
-    saverCard: saverCard, heroCard: heroCard, bestMulti: bestMulti,
+    saverCard: saverCard, heroCard: heroCard, bestMulti: bestMulti, grade: grade,
     likeGroup: likeGroup, viewGroup: viewGroup, statsAll: statsAll, statsOne: statsOne
   };
 })(typeof window !== 'undefined' ? window : globalThis);
