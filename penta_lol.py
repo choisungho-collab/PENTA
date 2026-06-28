@@ -444,9 +444,22 @@ def analyze_live(snaps, events, my_name):
 
     # 킬/오브젝트 이벤트 (killer/victim은 players 순서 기반 participant 번호 i+1로 변환)
     name_to_pid = {p["name"]: i + 1 for i, p in enumerate(players)}
+    name_to_team = {p["name"]: p["team"] for p in players}
     kills, objs = [], []
-    _OBJ = {"DragonKill": "DRAGON", "BaronKill": "BARON_NASHOR",
-            "HeraldKill": "RIFTHERALD", "TurretKilled": "TOWER"}
+    objectives = {100: {}, 200: {}}
+    for _tt in (100, 200):
+        for _kk in ("dragon", "baron", "riftHerald", "tower", "inhibitor"):
+            objectives[_tt][_kk] = {"kills": 0}
+    # 이벤트명 → (objs용 kind, objectives dict 키)
+    _OBJ = {"DragonKill": ("DRAGON", "dragon"), "BaronKill": ("BARON_NASHOR", "baron"),
+            "HeraldKill": ("RIFTHERALD", "riftHerald"), "TurretKilled": ("TOWER", "tower"),
+            "InhibKilled": ("INHIBITOR", "inhibitor")}
+    def _struct_credit(structname):   # 구조물 이름의 팀(T1=100/T2=200) → 파괴한 건 반대 팀
+        ps = (structname or "").split("_")
+        side = ps[1] if len(ps) > 1 else ""
+        if side == "T1": return 200
+        if side == "T2": return 100
+        return None
     for e in events:
         en = e.get("EventName") or ""
         t = int(float(e.get("EventTime") or 0))
@@ -458,12 +471,17 @@ def analyze_live(snaps, events, my_name):
                 "assists": [name_to_pid[a] for a in (e.get("Assisters") or []) if a in name_to_pid],
             })
         elif en in _OBJ:
-            objs.append({"t": t, "kind": _OBJ[en]})
+            _kind, _okey = _OBJ[en]
+            if en == "TurretKilled":   _ct = _struct_credit(e.get("TurretKilled"))
+            elif en == "InhibKilled":  _ct = _struct_credit(e.get("InhibKilled"))
+            else:                       _ct = name_to_team.get(e.get("KillerName"))
+            objs.append({"t": t, "kind": _kind, "team": _ct})
+            if _ct in (100, 200): objectives[_ct][_okey]["kills"] += 1
 
     return {
         "players": players, "win_team": win_team,
         "duration": int(dur_sec), "queue": queue,
-        "patch": None, "objectives": {}, "bans": {},
+        "patch": None, "objectives": objectives, "bans": {},
         "series": None, "kills": kills, "objs": objs,
         "source": "live",
     }

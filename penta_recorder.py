@@ -940,6 +940,8 @@ def load_or_make_config():
             "preset": "auto",    # auto | ultrafast | superfast | veryfast | fast ...  (libx264 속도/품질)
             "output_idx": "auto",   # auto | 0 | 1 | 2  (멀티모니터면 게임 있는 모니터 번호)
             "capture": "auto",   # auto | wgc | ddagrab | gdigrab   (wgc=OBS식, 전체화면도 잡힘)
+            "postgame_tail": 6,  # 넥서스 터진 뒤 결과 화면을 몇 초 더 녹화할지(초)
+            "audio": "system",   # system = 시스템 전체 소리 | game-only = 롤 소리만(실험적, 실패 시 시스템으로 폴백)
             "port": free_port(8000),
             "fps": FPS,
             "poll_seconds": 4,
@@ -1233,16 +1235,37 @@ def _encoder_args():
             log("  NVENC is listed but failed to encode → switching to software (libx264)")
     if use_nvenc:
         _ENC_IS_SW = False
-        _ENC_CACHE = ["-c:v", "h264_nvenc", "-preset", "p5", "-cq", "20"]; name = "NVENC"
+        _ENC_CACHE = ["-c:v", "h264_nvenc", "-preset", "p6", "-rc", "vbr", "-cq", "18", "-b:v", "0"]; name = "NVENC"
     else:
         _ENC_IS_SW = True
         preset = (CFG.get("preset") or "auto").lower()
         if preset in ("auto", ""): preset = "superfast"   # 소프트웨어는 게임 끊김 방지 위해 가벼운 프리셋
-        _ENC_CACHE = ["-c:v", "libx264", "-preset", preset, "-crf", "25"]; name = f"x264 ({preset})"
+        _ENC_CACHE = ["-c:v", "libx264", "-preset", preset, "-crf", "21"]; name = f"x264 ({preset})"
     log(f"Encoder: {name}")
     return _ENC_CACHE
 
-def _target_height(src_h=0):
+def make_preview(src, dst, height=720):
+    """원본을 720p 경량본으로 변환(갤러리 빠른 재생용). 성공 시 dst 경로, 실패 시 None."""
+    if not (FFMPEG and src and os.path.isfile(src)): return None
+    enc = _encoder_args() or []
+    if "h264_nvenc" in enc:
+        venc = ["-c:v", "h264_nvenc", "-preset", "p4", "-cq", "25"]
+    else:
+        venc = ["-c:v", "libx264", "-preset", "veryfast", "-crf", "26"]
+    try:
+        log("Building fast-play preview (720p)\u2026")
+        r = _run([FFMPEG, "-y", "-loglevel", "error", "-i", src,
+                  "-vf", "scale=-2:%d" % height, *venc,
+                  "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", dst],
+                 timeout=3600)
+        if r.returncode == 0 and os.path.isfile(dst) and os.path.getsize(dst) > 0:
+            return dst
+        log("Preview transcode returned code %s \u2014 uploading original instead." % r.returncode)
+    except Exception as e:
+        log("Preview transcode failed (%s) \u2014 uploading original instead." % e)
+    return None
+
+
     """소프트웨어 인코딩이면 부하를 줄이려 다운스케일할 목표 높이. None이면 원본 유지."""
     _encoder_args()  # _ENC_IS_SW 확정
     pref = str(CFG.get("scale") or "auto").lower()
@@ -1323,12 +1346,24 @@ class Recorder:
         실패하면 무음으로 진행(영상 녹화는 영향 없음)."""
         self._stop_audio(discard=True); self._vt0 = None
         self.audio_path = os.path.join(REC_DIR, f"audio_{datetime.datetime.now():%Y%m%d_%H%M%S}.wav")
-        box = {"stop": threading.Event(), "t0": None, "thread": None, "ok": False, "path": self.audio_path}
+        _gameonly = str(CFG.get("audio", "system")).lower() in ("game-only", "game", "gameonly", "game_only", "lol", "\ub86c\ub9cc")
+        box = {"stop": threading.Event(), "t0": None, "thread": None, "ok": False, "path": self.audio_path,
+               "pid": (_lol_game_pid() if _gameonly else None)}
         def worker():
+            if box.get("pid"):
+                try:
+                    _capture_process_audio(box["pid"], box); return   # 게임 소리만 캡처 성공 → 끝까지 녹음
+                except Exception as e:
+                    log(f"  (audio) game-only capture failed \u2192 using system sound ({e})")
+                    box["ok"] = False; box["t0"] = None
+                    try:
+                        if os.path.isfile(box["path"]): os.remove(box["path"])
+                    except Exception: pass
+                    # ↓ 시스템 사운드(디바이스 루프백)로 폴백
             try:
                 import pyaudiowpatch as pa, wave
             except Exception as e:
-                log(f"  (audio) pyaudiowpatch not installed → recording without sound. Install: pip install pyaudiowpatch ({e})"); return
+                log(f"  (audio) pyaudiowpatch not installed \u2192 recording without sound. Install: pip install pyaudiowpatch ({e})"); return
             p = stream = wf = None
             try:
                 p = pa.PyAudio()
@@ -1637,6 +1672,138 @@ class Recorder:
         log("■ Recording stopped")
         return self._finalize()
 
+def _lol_game_pid():
+    """League of Legends.exe(게임 인스턴스) PID. 없으면 None."""
+    try:
+        for p in psutil.process_iter(["name", "pid"]):
+            try:
+                if (p.info["name"] or "").lower() == "league of legends.exe":
+                    return int(p.info["pid"])
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                pass
+    except Exception:
+        pass
+    return None
+
+
+def _capture_process_audio(pid, box):
+    """Win10(2004+) 프로세스 루프백 API로 특정 PID 오디오만 box['path'] WAV에 녹음.
+    성공 시 box['ok']=True 로 두고 box['stop'] 까지 녹음. 실패하면 예외를 던져
+    호출부가 시스템 사운드(디바이스 루프백)로 폴백하게 한다. (실험적)"""
+    import ctypes, wave, time as _t
+    import ctypes.wintypes as wt
+    from ctypes import (POINTER, byref, c_void_p, c_uint32, c_int32, c_uint64,
+                        Structure, HRESULT, c_wchar_p, c_byte, c_uint16, c_ulong, cast, WINFUNCTYPE, sizeof)
+
+    ole32 = ctypes.windll.ole32
+    mmd = ctypes.windll.mmdevapi
+    ole32.CoInitializeEx(None, 0)   # MTA
+    try:
+        class GUID(Structure):
+            _fields_ = [("a", c_uint32), ("b", c_uint16), ("c", c_uint16), ("d", c_byte * 8)]
+        def G(sg):
+            g = GUID(); ole32.CLSIDFromString(c_wchar_p(sg), byref(g)); return g
+        IID_AC  = G("{1CB9AD4C-DBFA-4c32-B178-C2F568A703B2}")   # IAudioClient
+        IID_CAP = G("{C8ADBD64-E71E-48a0-A4DE-185C395CD317}")   # IAudioCaptureClient
+
+        def call(p, idx, rest, argt, *a):   # vtable 인덱스로 COM 호출
+            vt = cast(p, POINTER(c_void_p))[0]
+            fn = cast(vt, POINTER(c_void_p))[idx]
+            return WINFUNCTYPE(rest, c_void_p, *argt)(fn)(p, *a)
+
+        class PROC_LB(Structure):
+            _fields_ = [("pid", wt.DWORD), ("mode", c_int32)]
+        class ACTP(Structure):
+            _fields_ = [("atype", c_int32), ("plb", PROC_LB)]
+        class BLOB(Structure):
+            _fields_ = [("cb", c_uint32), ("p", c_void_p)]
+        class PROPV(Structure):
+            _fields_ = [("vt", c_uint16), ("r1", c_uint16), ("r2", c_uint16), ("r3", c_uint16),
+                        ("blob", BLOB), ("pad", c_byte * 8)]
+        class WFX(Structure):
+            _fields_ = [("tag", c_uint16), ("ch", c_uint16), ("sps", c_uint32),
+                        ("abps", c_uint32), ("ba", c_uint16), ("bps", c_uint16), ("cb", c_uint16)]
+
+        # 완료 핸들러 (IActivateAudioInterfaceCompletionHandler): QI/AddRef/Release/ActivateCompleted
+        done = {"f": False}
+        QIp = WINFUNCTYPE(HRESULT, c_void_p, POINTER(GUID), POINTER(c_void_p))
+        ULp = WINFUNCTYPE(c_ulong, c_void_p)
+        ACp = WINFUNCTYPE(HRESULT, c_void_p, c_void_p)
+        def _qi(this, riid, ppv): ppv[0] = this; return 0
+        def _au(this): return 1
+        def _re(this): return 1
+        def _ac(this, op): done["f"] = True; return 0
+        _f = (QIp(_qi), ULp(_au), ULp(_re), ACp(_ac))   # 참조 유지
+        VT = (c_void_p * 4)(cast(_f[0], c_void_p), cast(_f[1], c_void_p), cast(_f[2], c_void_p), cast(_f[3], c_void_p))
+        class HOBJ(Structure):
+            _fields_ = [("vtbl", c_void_p)]
+        hobj = HOBJ(); hobj.vtbl = cast(byref(VT), c_void_p)
+
+        ap = ACTP(); ap.atype = 1   # PROCESS_LOOPBACK
+        ap.plb.pid = pid; ap.plb.mode = 0   # INCLUDE_TARGET_PROCESS_TREE
+        pv = PROPV(); pv.vt = 65   # VT_BLOB
+        pv.blob.cb = sizeof(ACTP); pv.blob.p = cast(byref(ap), c_void_p)
+
+        op = c_void_p()
+        hr = mmd.ActivateAudioInterfaceAsync(c_wchar_p("VAD\\Process_Loopback"),
+                                             byref(IID_AC), byref(pv), cast(byref(hobj), c_void_p), byref(op))
+        if hr != 0: raise RuntimeError("Activate 0x%X" % (hr & 0xffffffff))
+        for _ in range(600):
+            if done["f"]: break
+            _t.sleep(0.005)
+        if not done["f"]: raise RuntimeError("activation timeout")
+
+        hres = HRESULT(); iface = c_void_p()
+        call(op, 3, HRESULT, [POINTER(HRESULT), POINTER(c_void_p)], byref(hres), byref(iface))   # GetActivateResult
+        if (hres.value & 0xffffffff) != 0 or not iface.value: raise RuntimeError("GetActivateResult 0x%X" % (hres.value & 0xffffffff))
+        acl = iface
+
+        SPS = 48000
+        fmt = WFX(1, 2, SPS, SPS * 4, 4, 16, 0)   # PCM 48k 2ch 16bit
+        hr = call(acl, 3, HRESULT,
+                  [c_int32, c_uint32, c_uint64, c_uint64, c_void_p, c_void_p],
+                  0, 0x00020000, c_uint64(3000000), c_uint64(0), cast(byref(fmt), c_void_p), None)   # Initialize(SHARED, LOOPBACK)
+        if hr != 0: raise RuntimeError("Initialize 0x%X" % (hr & 0xffffffff))
+
+        cap = c_void_p()
+        hr = call(acl, 14, HRESULT, [POINTER(GUID), POINTER(c_void_p)], byref(IID_CAP), byref(cap))   # GetService
+        if hr != 0 or not cap.value: raise RuntimeError("GetService 0x%X" % (hr & 0xffffffff))
+        hr = call(acl, 10, HRESULT, [])   # Start
+        if hr != 0: raise RuntimeError("Start 0x%X" % (hr & 0xffffffff))
+
+        wf = wave.open(box["path"], "wb"); wf.setnchannels(2); wf.setsampwidth(2); wf.setframerate(SPS)
+        box["t0"] = _t.time(); box["ok"] = True
+        log("  \u266a Audio (game only) started \u2014 League of Legends \u00b7 48000Hz 2ch")
+        BPF = 4
+        try:
+            while not box["stop"].is_set():
+                pkt = c_uint32(0); call(cap, 5, HRESULT, [POINTER(c_uint32)], byref(pkt))   # GetNextPacketSize
+                if pkt.value == 0:
+                    _t.sleep(0.008); continue
+                while pkt.value > 0:
+                    pdata = c_void_p(); nfr = c_uint32(); fl = c_uint32()
+                    hr = call(cap, 3, HRESULT,
+                              [POINTER(c_void_p), POINTER(c_uint32), POINTER(c_uint32), POINTER(c_uint64), POINTER(c_uint64)],
+                              byref(pdata), byref(nfr), byref(fl), None, None)   # GetBuffer
+                    if hr != 0: break
+                    n = nfr.value
+                    if n:
+                        if fl.value & 0x2:   # SILENT
+                            wf.writeframes(b"\x00" * (n * BPF))
+                        elif pdata.value:
+                            wf.writeframes(bytes((c_byte * (n * BPF)).from_address(pdata.value)))
+                    call(cap, 4, HRESULT, [c_uint32], nfr)   # ReleaseBuffer
+                    pkt = c_uint32(0); call(cap, 5, HRESULT, [POINTER(c_uint32)], byref(pkt))
+        finally:
+            try: call(acl, 11, HRESULT, [])   # Stop
+            except Exception: pass
+            try: wf.close()
+            except Exception: pass
+    finally:
+        try: ole32.CoUninitialize()
+        except Exception: pass
+
+
 def sc_running(name):
     n = name.lower()
     for p in psutil.process_iter(["name"]):
@@ -1644,6 +1811,43 @@ def sc_running(name):
             if (p.info["name"] or "").lower() == n: return True
         except (psutil.NoSuchProcess, psutil.AccessDenied): pass
     return False
+
+
+_LCU = {"port": None, "token": None, "t": 0.0, "warned": False}
+def _lcu_creds():
+    """LeagueClientUx.exe 명령줄에서 LCU 포트/토큰을 읽는다(30초 캐시). 실패하면 (None, None)."""
+    now = time.time()
+    if _LCU["port"] and (now - _LCU["t"] < 30): return _LCU["port"], _LCU["token"]
+    try:
+        for p in psutil.process_iter(["name"]):
+            try:
+                if (p.info["name"] or "").lower() != "leagueclientux.exe": continue
+                cl = p.cmdline()
+            except (psutil.NoSuchProcess, psutil.AccessDenied): continue
+            port = token = None
+            for a in cl:
+                if a.startswith("--app-port="): port = a.split("=", 1)[1]
+                elif a.startswith("--remoting-auth-token="): token = a.split("=", 1)[1]
+            if port and token:
+                _LCU.update(port=port, token=token, t=now); return port, token
+    except Exception: pass
+    _LCU.update(port=None, token=None, t=now); return None, None
+
+def lcu_in_champ_select():
+    """LCU API로 챔피언 선택 중인지 확인. 실패/아니면 False (→ 게임 프로세스 감지로 폴백)."""
+    port, token = _lcu_creds()
+    if not (port and token): return False
+    try:
+        import requests, base64
+        try:
+            requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
+        except Exception: pass
+        auth = base64.b64encode(("riot:" + token).encode()).decode()
+        r = requests.get("https://127.0.0.1:%s/lol-champ-select/v1/session" % port,
+                         headers={"Authorization": "Basic " + auth}, verify=False, timeout=2)
+        return r.status_code == 200   # 챔프셀럭이면 200, 아니면 404
+    except Exception:
+        return False
 
 
 def _sec_mmss(s):
@@ -1681,7 +1885,7 @@ def _live_gid(analysis, start_ts):
     return "live_" + hashlib.sha1(key.encode("utf-8")).hexdigest()[:12]
 
 
-def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr", live_data=None):
+def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr", live_data=None, started_cs=False):
     # 화면 녹화 + (게임 종료 후) Riot 매치를 연결해 분석·업로드한다.
     # Riot 매치 연결이 안 되더라도(개발키 만료/레이트리밋/타이밍 등) 영상은 업로드하고 아카이브에 올린다.
     if not video_path or not os.path.isfile(video_path) or os.path.getsize(video_path) < 10000:
@@ -1739,18 +1943,24 @@ def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr", 
     size = os.path.getsize(video_path)
     base = os.path.join(UPLOAD_DIR, safe); os.makedirs(base, exist_ok=True)
     try:
-        if dur and analysis: _trim_lead(video_path, dur)   # 분석으로 시점을 아는 경우에만 로비/로딩 컷
+        if dur and analysis and not started_cs: _trim_lead(video_path, dur)   # 분석으로 시점을 아는 경우에만 로비/로딩 컷(챔프셀럭부터면 유지)
     except Exception: pass
     if not sb_writable():
         log("Cloud (Supabase) not configured → keeping locally only."); return
     tmp_thumb = os.path.join(base, "thumb.jpg"); has_thumb = make_thumb(video_path, tmp_thumb)
+    # 갤러리 빠른 재생용 720p 프리뷰만 업로드. 원본(고화질)은 PC에 그대로 보관(다운로드 없음).
+    preview = os.path.join(base, "preview.mp4")
+    up_src = make_preview(video_path, preview) or video_path
+    up_size = os.path.getsize(up_src)
+    if up_src != video_path:
+        log("Preview ready \u2014 %d MB (full quality stays on your PC)." % (up_size // 1048576))
     REC_STATE["uploading"] = True; REC_STATE["upload_pct"] = 0
     def _up_cb(done, total):
         p = int(done * 100 / total) if total else 0
         if p != REC_STATE.get("upload_pct"): REC_STATE["upload_pct"] = p
     try:
-        log("Uploading video to cloud\u2026 (%s)" % (("%.1f GB" % (size / 1073741824)) if size >= 1073741824 else ("%d MB" % (size // 1048576))))
-        video_url = sb_upload(video_path, f"videos/{safe}.mp4", "video/mp4", on_progress=_up_cb)
+        log("Uploading video to cloud\u2026 (%s)" % (("%.1f GB" % (up_size / 1073741824)) if up_size >= 1073741824 else ("%d MB" % (up_size // 1048576))))
+        video_url = sb_upload(up_src, f"videos/{safe}.mp4", "video/mp4", on_progress=_up_cb)
         thumb_url = sb_upload(tmp_thumb, f"thumbs/{safe}.jpg", "image/jpeg") if has_thumb else None
         players = analysis.get("players") or []
         me = next((p for p in players if puuid and p.get("puuid") == puuid), None)
@@ -1763,7 +1973,7 @@ def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr", 
             "id": row_id, "match_id": gid, "uploader": saver,
             "uploaded": datetime.datetime.now().isoformat(timespec="seconds"),
             "video": video_url, "thumb": thumb_url, "replay": None,
-            "video_size": size or 0,
+            "video_size": up_size or 0,
             "map": "Summoner's Rift", "matchup": None,
             "length": _sec_mmss(dur), "length_sec": int(dur or 0),
             "type": str(analysis.get("queue") or ""),
@@ -1771,7 +1981,7 @@ def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr", 
             "np": len(players), "players": players, "won": won,
             "analysis": analysis,
         })
-        log(f"Upload complete — {('matchId ' + gid) if mid else 'video only (no analysis)'}")
+        log(f"Upload complete \u2713 \u2014 now in your gallery. ({('matchId ' + gid) if mid else 'video only, no analysis'})")
     except Exception as e:
         _em = str(e)
         log(f"Upload failed: {e}")          # ← 원본 Supabase 응답을 항상 표시(진단용; 더 이상 가리지 않음)
@@ -1784,7 +1994,7 @@ def recorder_loop(cfg):
     proc = cfg.get("league_process", "League of Legends.exe")
     proxy = (cfg.get("proxy_url") or "").strip() or PROXY_DEFAULT; platform = cfg.get("platform", "kr")
     poll = float(cfg.get("poll_seconds", 4)); rec = Recorder(int(cfg.get("fps", FPS)))
-    was = False; active = False; riot_id = None; start_ts = None
+    active = False; riot_id = None; start_ts = None; last_hb = 0.0; saw_game = False; cs_grace = 0.0; started_cs = False
     live_snaps = []; live_evts = []; last_snap_t = -999.0   # 게임 중 Live Client 스냅샷 수집용
     try: ensure_audio()
     except Exception: pass
@@ -1794,43 +2004,81 @@ def recorder_loop(cfg):
     while True:
         try:
             run = sc_running(proc)   # 게임 인스턴스(League of Legends.exe) = 인게임
-            if run and not was:
-                log("Game detected. Checking your info…")
-                for _ in range(20):
-                    if penta_lol.game_active():
-                        riot_id = penta_lol.my_riot_id() or riot_id; break
-                    time.sleep(1)
-                start_ts = time.time(); active = rec.start()
+            try: in_cs = lcu_in_champ_select()   # LCU: 챔피언 선택 중? (실패하면 False → 게임 감지로 폴백)
+            except Exception: in_cs = False
+
+            # ── 녹화 시작: 게임 또는 (게임 전이면) 챔피언 선택 ──
+            if (run or in_cs) and not active:
+                if run:
+                    log("Game detected. Checking your info\u2026")
+                    for _ in range(20):
+                        if penta_lol.game_active():
+                            riot_id = penta_lol.my_riot_id() or riot_id; break
+                        time.sleep(1)
+                    started_cs = False
+                else:
+                    log("Champion select detected \u2014 recording from draft.")
+                    started_cs = True
+                start_ts = time.time(); active = rec.start(); last_hb = time.time()
+                saw_game = run; cs_grace = 0.0
                 live_snaps = []; live_evts = []; last_snap_t = -999.0
-            if run:
+
+            if active and run:
+                saw_game = True; cs_grace = 0.0
                 if not rec._recording():
-                    if active: log("Recording stream dropped → restarting automatically.")
+                    log("Recording stream dropped \u2192 restarting automatically.")
                     active = rec.start()
                 if not riot_id and penta_lol.game_active():
                     riot_id = penta_lol.my_riot_id()
-                # Live Client 스냅샷 수집(약 25초 간격) — Riot API가 안 돼도 게임 종료 후 자체 분석할 수 있게
+                # Live Client 스냅샷(약 25초 간격) + 이벤트(매 루프) 수집
                 try:
                     snap = penta_lol.live_snapshot()
                     if snap and (float(snap.get("t") or 0) - last_snap_t) >= 25:
                         live_snaps.append(snap); last_snap_t = float(snap.get("t") or 0)
-                        _ev = penta_lol.live_events()
-                        if _ev: live_evts = _ev
+                    _ev = penta_lol.live_events()      # 매 루프(4초) 폴링 → 게임 끝 GameEnd(승패) 안 놓침
+                    if _ev: live_evts = _ev
                 except Exception: pass
-            if not run and was:
-                log("Game ended.")
-                vid = rec.stop(); active = False; rec.verified = False
+
+            elif active and not run and saw_game:
+                # 게임을 봤는데 이제 프로세스 없음 = 게임 종료
+                _tail = float(cfg.get("postgame_tail", 6))   # 넥서스 터진 뒤 결과 화면을 몇 초 더 담기
+                if _tail > 0:
+                    log("Game over \u2014 capturing post-game screen\u2026")   # (매직 문자열 없음 → 녹화 상태 유지)
+                    time.sleep(_tail)
+                log("Game ended \u2014 recorded %d:%02d." % divmod(int(time.time()-(start_ts or time.time())),60))
+                vid = rec.stop(); active = False; rec.verified = False; saw_game = False; cs_grace = 0.0
                 end_ts = time.time()
                 if vid and os.path.isfile(vid):
-                    threading.Thread(target=ingest_lol, args=(vid, riot_id, start_ts, end_ts, proxy, platform), kwargs={"live_data": {"snaps": list(live_snaps), "events": list(live_evts)}}, daemon=True).start()
-                riot_id = None; start_ts = None; log("Idle.")
-            # 웹 표시용 실시간 상태 갱신
-            if run and rec._recording():
-                REC_STATE.update(rec=True, text="Recording")
-            elif run:
+                    threading.Thread(target=ingest_lol, args=(vid, riot_id, start_ts, end_ts, proxy, platform), kwargs={"live_data": {"snaps": list(live_snaps), "events": list(live_evts)}, "started_cs": started_cs}, daemon=True).start()
+                riot_id = None; start_ts = None; started_cs = False; log("Idle.")
+
+            elif active and not run and in_cs:
+                cs_grace = 0.0   # 아직 챔피언 선택 → 계속 녹화
+                if not rec._recording(): active = rec.start()
+
+            elif active and not run:
+                # 챔피언 선택은 끝났는데 게임 프로세스가 아직 없음 = 로딩 중 or 닷지/취소
+                cs_grace += poll
+                if cs_grace > 120:   # 2분간 게임이 안 뜨면 닷지로 보고 클립 폐기(ingest 안 함)
+                    log("Champion select ended without a game (dodge?) \u2014 discarding clip.")
+                    _v = rec.stop(); active = False; saw_game = False; cs_grace = 0.0; started_cs = False
+                    try:
+                        if _v and os.path.isfile(_v): os.remove(_v)
+                    except Exception: pass
+                    riot_id = None; start_ts = None; log("Idle.")
+                elif not rec._recording():
+                    active = rec.start()
+
+            # ── 웹 표시용 실시간 상태 갱신 ──
+            if active and rec._recording():
+                REC_STATE.update(rec=True, text=("Recording" if saw_game else "Recording (champ select)"))
+                if start_ts and (time.time()-last_hb)>=300:    # 녹화 중 5분마다 진행 로그(타임라인에 살아있음)
+                    last_hb=time.time(); log("Recording\u2026 %d:%02d elapsed." % divmod(int(time.time()-start_ts),60))
+            elif run or in_cs:
                 REC_STATE.update(rec=False, text="Game detected")
             else:
-                REC_STATE.update(rec=False, text="Idle — auto-records when a game starts")
-            was = run; time.sleep(poll)
+                REC_STATE.update(rec=False, text="Idle \u2014 auto-records when a game starts")
+            time.sleep(poll)
         except KeyboardInterrupt:
             log("Quitting."); rec.stop(); break
         except Exception:
@@ -2154,13 +2402,15 @@ def run_gui(cfg, url):
         for _ in range(150):
             try: line=GUI_Q.get_nowait()
             except Exception: break
-            if st["log"]:
-                logtxt.config(state="normal"); logtxt.insert("end",line+"\n"); appended=True
+            logtxt.config(state="normal"); logtxt.insert("end",line+"\n"); appended=True   # 패널이 닫혀 있어도 항상 기록 → 열면 전체 타임라인이 보임
         if appended:
             n=int(logtxt.index("end-1c").split(".")[0])
             if n>300: logtxt.delete("1.0",f"{n-300}.0")
             logtxt.see("end"); logtxt.config(state="disabled")
         _rng=REC_STATE.get("recording"); _now=time.time(); _up=REC_STATE.get("uploaded_at",0)
+        if _rng and not _rec.get("was_rec"):       # 녹화 시작 순간 → 로그창 자동으로 열어 활동을 보여줌(에러처럼)
+            if not st["log"]: set_log(True)
+        _rec["was_rec"]=_rng
         topacc.config(bg=REC if _rng else BG)   # 녹화 중 상단 빨간 라인
         _warm=bool(_rng)                          # 녹화 중에는 협곡이 바론 핏빛으로 물듦
         if _bgitem is not None and _warm!=_SC["warm"]:

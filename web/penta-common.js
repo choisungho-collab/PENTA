@@ -57,7 +57,23 @@
   }
   // Match-V5의 championName은 대부분 DDragon 파일명과 같다. 알려진 예외만 보정.
   var CHAMP_FIX = { FiddleSticks: 'Fiddlesticks' };
-  function champKey(name) { return CHAMP_FIX[name] || String(name || '').replace(/[^A-Za-z0-9]/g, ''); }
+  // 한국 클라 Live Client는 한글 챔피언명("케일")을 주므로, ko_KR DDragon 데이터로 한글명→영문키 맵을 만든다.
+  var _champMap = null;
+  async function ddChampMap(ver) {
+    if (_champMap) return _champMap;
+    _champMap = {};
+    try {
+      var r = await fetch('https://ddragon.leagueoflegends.com/cdn/' + ver + '/data/ko_KR/champion.json');
+      var j = await r.json();
+      var d = (j && j.data) || {};
+      for (var key in d) { if (d[key] && d[key].name) _champMap[d[key].name] = d[key].id || key; }
+    } catch (e) {}
+    return _champMap;
+  }
+  function champKey(name) {
+    if (_champMap && _champMap[name]) return _champMap[name];   // 한글명 → 영문키
+    return CHAMP_FIX[name] || String(name || '').replace(/[^A-Za-z0-9]/g, '');
+  }
   function ddBase(ver) { return 'https://ddragon.leagueoflegends.com/cdn/' + ver; }
   function champIcon(ver, name) { return ddBase(ver) + '/img/champion/' + champKey(name) + '.png'; }
   function champSplash(name) { return 'https://ddragon.leagueoflegends.com/cdn/img/champion/splash/' + champKey(name) + '_0.jpg'; }
@@ -200,7 +216,7 @@
   global.PENTA = {
     SB_URL: SB_URL, SB_ANON: SB_ANON,
     sbSelect: sbSelect, sbInsert: sbInsert, sbRpc: sbRpc,
-    ddVersion: ddVersion, champKey: champKey, champIcon: champIcon,
+    ddVersion: ddVersion, ddChampMap: ddChampMap, champKey: champKey, champIcon: champIcon,
     champSplash: champSplash, champLoading: champLoading,
     itemIcon: itemIcon, spellIcon: spellIcon,
     posKo: posKo, posRank: posRank,
