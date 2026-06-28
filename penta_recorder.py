@@ -1414,7 +1414,7 @@ class Recorder:
                 _run([sys.executable, "-m", "pip", "install", "-q", "windows-capture", "--break-system-packages"], timeout=240)
                 from windows_capture import WindowsCapture
             except Exception as e:
-                log(f"  WGC unavailable (install failed: {e})"); return False
+                log("  WGC engine not installed here \u2014 using GPU desktop capture (ddagrab) instead."); return False
         try:
             import numpy as _np
         except Exception as e:
@@ -1426,28 +1426,25 @@ class Recorder:
         # Pick the monitor from config.output_idx (ddagrab is 0-based; windows-capture is 1-based → +1). "auto" → primary (1).
         _ci = CFG.get("output_idx", "auto")
         midx = (int(_ci) + 1) if (isinstance(_ci, int) or (isinstance(_ci, str) and _ci.isdigit())) else 1
-        try:
-            # draw_border=False → 녹화 중 노란 테두리 제거(Windows 11에서 적용; Windows 10은 OS에 해당 기능이 없어 무시됨)
-            cap = WindowsCapture(cursor_capture=None, draw_border=False, monitor_index=midx, window_name=None)
-        except Exception as e:
-            log(f"  WGC init failed (monitor {midx}): {e}"); return False
-
-        @cap.event
-        def on_frame_arrived(frame, capture_control):
-            if stop_ev.is_set():
-                try: capture_control.stop()
-                except Exception: pass
-                return
-            try:
-                shared["buf"] = frame.frame_buffer          # numpy 처리는 피더에서 (콜백은 최대한 단순하게)
-                shared["wh"] = (frame.width, frame.height)
-                shared["n"] = shared.get("n", 0) + 1
-            except Exception as e:
-                if shared.get("err") is None: shared["err"] = repr(e)
-
-        @cap.event
-        def on_closed():
-            pass
+        def _build_and_start(border):
+            """주어진 draw_border로 캡처 세션 생성+이벤트 등록+시작. (cap, control) 반환."""
+            cap = WindowsCapture(cursor_capture=None, draw_border=border, monitor_index=midx, window_name=None)
+            @cap.event
+            def on_frame_arrived(frame, capture_control):
+                if stop_ev.is_set():
+                    try: capture_control.stop()
+                    except Exception: pass
+                    return
+                try:
+                    shared["buf"] = frame.frame_buffer          # numpy 처리는 피더에서 (콜백은 최대한 단순하게)
+                    shared["wh"] = (frame.width, frame.height)
+                    shared["n"] = shared.get("n", 0) + 1
+                except Exception as e:
+                    if shared.get("err") is None: shared["err"] = repr(e)
+            @cap.event
+            def on_closed():
+                pass
+            return cap, cap.start_free_threaded()
 
         def feeder():
             t0 = time.time()
@@ -1487,10 +1484,18 @@ class Recorder:
                 try: p.terminate()
                 except Exception: pass
 
+        # draw_border=False(노란 테두리 제거)는 일부 OS(Win10/구버전 Win11)에서 'border toggle 미지원' 예외를 던진다.
+        # draw_border=None → DrawBorderSettings::Default 로 매핑되어 테두리 설정을 아예 안 건드림 → 모든 Windows에서 에러 없이 작동(2.0.0 소스 확인 완료).
+        # 그래서 False가 어떤 이유로든 실패하면 무조건 None(Default)로 재시도한다. WGC 자체가 불가하면 ddagrab(GPU)으로 폴백.
         try:
-            control = cap.start_free_threaded()
-        except Exception as e:
-            log(f"  WGC start failed: {e}"); return False
+            cap, control = _build_and_start(False)        # Win11: 노란 테두리 제거(깔끔)
+        except Exception:
+            try:
+                cap, control = _build_and_start(None)     # 그 외/구버전: 시스템 기본 테두리(토글 안 함) → 에러 없이 WGC 작동
+                log("  WGC: using this Windows build's default capture border.")
+            except Exception:
+                log("  WGC not usable here \u2014 using GPU desktop capture (ddagrab) instead.")
+                return False
         ft = threading.Thread(target=feeder, daemon=True); ft.start()
         self._wgc_control = control
         self._wgc_state = {"stop": stop_ev, "feeder": ft, "proc_box": proc_box}
@@ -1553,10 +1558,10 @@ class Recorder:
             try:
                 if self._start_wgc(verify=True):
                     self.verified = True; self.verified_backend = "wgc"; return True
-            except Exception as e:
-                log(f"WGC error: {e}")
+            except Exception:
+                log("  WGC not usable here \u2014 using GPU desktop capture (ddagrab) instead.")
             if capmode == "wgc":
-                log("  WGC failed → falling back to ddagrab/gdigrab")
+                log("  WGC unavailable \u2014 falling back to ddagrab/gdigrab.")
         # 2순위: ddagrab(모니터 0/1/2) → gdigrab
         ci = CFG.get("output_idx", "auto")
         if isinstance(ci, int) or (isinstance(ci, str) and ci.isdigit()):
@@ -2136,8 +2141,10 @@ def run_gui(cfg, url):
             else:
                 cv.itemconfig(status_lbl,text="Preparing\u2026",fill=INK); cv.itemconfig(sub_lbl,text="setting up tools",fill=INK2)
         try:
-            _b=cv.bbox(status_lbl)
-            if _b: cv.coords(sub_lbl,_b[2]+7,_LY+1)
+            _st=cv.itemcget(status_lbl,"text")          # 글자가 바뀔 때만 재배치 → 매 프레임 1px 흔들림(왔다갔다) 방지
+            if _st!=_rec.get("txt"):
+                _rec["txt"]=_st; _b=cv.bbox(status_lbl)
+                if _b: cv.coords(sub_lbl,_b[2]+7,_LY+1)
         except Exception: pass
         ea=(REC_STATE.get("encoder") or "").lower()
         if "nvenc" in ea: enc="NVENC"; is_sw=False
@@ -2151,13 +2158,15 @@ def run_gui(cfg, url):
         _scl=str(cfg.get("scale","auto")).lower().rstrip("p")
         if _scl in ("source","native","full","off","0"): th=_sh
         elif _scl in ("1080","720","480","1440"): th=int(_scl)
-        else: th=(720 if is_sw else _sh)
+        else: th=(720 if is_sw else min(1080,_sh))   # auto: NVENC면 1080p, 소프트웨어면 720p (실제 인코딩과 동일)
         if th>_sh: th=_sh
-        cv.itemconfig(opt_lbl,text=f"{th}p \u00b7 {enc}")
-        try:
-            _cb=cv.bbox(cloud_lbl)
-            if _cb: cv.coords(opt_lbl,_cb[0]-9,_LY)
-        except Exception: pass
+        _optxt=f"{th}p \u00b7 {enc}"
+        if _optxt!=_rec.get("opt"):                       # 해상도/인코더 라벨도 바뀔 때만 재배치 → 흔들림 방지
+            _rec["opt"]=_optxt; cv.itemconfig(opt_lbl,text=_optxt)
+            try:
+                _cb=cv.bbox(cloud_lbl)
+                if _cb: cv.coords(opt_lbl,_cb[0]-9,_LY)
+            except Exception: pass
         if LAST_ERR.get("msg") and (time.time()-LAST_ERR.get("t",0)<8):
             if not st["log"]: set_log(True)
             else: errbar.config(text="\u26a0 "+LAST_ERR["msg"])
