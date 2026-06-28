@@ -1266,6 +1266,7 @@ def make_preview(src, dst, height=720):
     return None
 
 
+def _target_height(src_h=0):
     """소프트웨어 인코딩이면 부하를 줄이려 다운스케일할 목표 높이. None이면 원본 유지."""
     _encoder_args()  # _ENC_IS_SW 확정
     pref = str(CFG.get("scale") or "auto").lower()

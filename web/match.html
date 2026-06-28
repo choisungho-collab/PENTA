@@ -103,7 +103,7 @@ a{color:inherit;text-decoration:none}svg{display:block}img{display:block;max-wid
 .summary .si .v{font-family:var(--fm);font-size:15px;color:var(--ink);font-variant-numeric:tabular-nums}
 .summary .sp{flex:1}
 .summary .acts{display:flex;align-items:center;gap:9px}
-.actbtn{display:inline-flex;align-items:center;gap:7px;font-family:var(--fd);font-weight:600;font-size:13.5px;color:var(--ink2);background:var(--well);border:1px solid var(--line);padding:9px 14px;border-radius:var(--r1);cursor:pointer;transition:.14s;font-variant-numeric:tabular-nums}
+.actbtn{display:inline-flex;align-items:center;gap:6px;font-family:var(--fd);font-weight:600;font-size:12.5px;color:var(--ink2);background:var(--well);border:1px solid var(--line);padding:6px 11px;border-radius:var(--r1);cursor:pointer;transition:.14s;font-variant-numeric:tabular-nums}
 .actbtn:hover{border-color:var(--line2);color:var(--ink)}
 .actbtn.liked{color:var(--loss);border-color:var(--loss-line);background:var(--loss-soft)}
 .actbtn .ic{width:15px;height:15px}
@@ -236,7 +236,7 @@ footer{border-top:1px solid var(--line);margin-top:70px}
 @media(max-width:640px){.foot-in .r{text-align:left}}
 
 /* ===== 전적 히어로 ===== */
-.hero{position:relative;margin:20px 0 0;background:linear-gradient(180deg,var(--surface2),var(--surface));border:1px solid var(--line);border-radius:var(--r3);padding:17px 22px 17px 25px;display:grid;grid-template-columns:auto 1fr auto;gap:22px;align-items:center;overflow:hidden}
+.hero{position:relative;margin:20px 0 0;background:linear-gradient(180deg,var(--surface2),var(--surface));border:1px solid var(--line);border-radius:var(--r3);padding:12px 22px 12px 25px;display:grid;grid-template-columns:auto 1fr auto;gap:22px;align-items:center;overflow:hidden}
 .hero.w{border-color:var(--win-line)}.hero.l{border-color:var(--loss-line)}
 .hero::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--gold)}
 .hero.w::before{background:var(--win)}.hero.l::before{background:var(--loss)}
@@ -251,16 +251,20 @@ footer{border-top:1px solid var(--line);margin-top:70px}
 .hkda .v{font-family:var(--fs);font-weight:700;font-size:30px;letter-spacing:-.02em;color:var(--ink);line-height:1;font-variant-numeric:tabular-nums}
 .hkda .v .s{color:var(--faint);font-weight:500;margin:0 3px}
 .hkda .r{font-family:var(--fm);font-size:13px;color:var(--gold-ink);font-weight:500}
-.vsum{font-family:var(--fd);font-size:13px;color:var(--ink2);margin-top:9px;line-height:1.5;max-width:46ch}
-.hside{display:flex;flex-direction:column;align-items:flex-end;gap:11px;white-space:nowrap}
+.vsum{font-family:var(--fd);font-size:13px;color:var(--ink2);margin-top:6px;line-height:1.5;max-width:48ch}
+.hstats{display:flex;flex-wrap:wrap;gap:7px;margin-top:11px}
+.hstats .chip{display:inline-flex;align-items:baseline;gap:5px;font-family:var(--fd);font-size:11.5px;color:var(--dim);background:var(--well);border:1px solid var(--line);padding:4px 10px;border-radius:7px}
+.hstats .chip b{font-family:var(--fm);font-weight:600;font-size:12px;color:var(--ink2);font-variant-numeric:tabular-nums}
+.hstats .chip.ghost{background:transparent;border-color:transparent;color:var(--faint);padding-left:2px}
+.hstats .chip.ghost b{color:var(--dim)}
+.hside{display:flex;flex-direction:column;align-items:flex-end;gap:10px;white-space:nowrap}
+.hfoot{display:flex;align-items:center;gap:12px}
 .wlbadge{font-family:var(--fs);font-weight:700;font-size:18px;letter-spacing:.05em;padding:5px 15px;border-radius:11px}
 .wlbadge.w{color:var(--win);background:var(--win-soft);border:1px solid var(--win-line)}
 .wlbadge.l{color:var(--loss);background:var(--loss-soft);border:1px solid var(--loss-line)}
 .wlbadge.u{color:var(--dim);background:rgba(150,150,160,.1);border:1px solid var(--line2)}
-.hmeta{display:flex;gap:18px}
-.hmeta .si{text-align:right}
-.hmeta .si .k{font-family:var(--fd);font-size:10.5px;color:var(--dim)}
-.hmeta .si .v{font-family:var(--fm);font-size:13px;color:var(--ink2);font-variant-numeric:tabular-nums;margin-top:2px}
+.hmeta{display:flex;align-items:center;gap:7px;font-family:var(--fm);font-size:12px;color:var(--ink2);font-variant-numeric:tabular-nums}
+.hmeta i{font-style:normal;color:var(--faint)}
 .hacts{display:flex;gap:8px}
 @media(max-width:780px){
  .hero{grid-template-columns:1fr;gap:15px;padding:15px 16px 15px 20px}
@@ -917,6 +921,16 @@ footer{border-top:1px solid var(--line);margin-top:70px}
     return key+tail;
   }
 
+  function heroStats(me){
+    var c = '';
+    c += '<span class="chip"><b>'+(me.cs||0)+'</b>CS</span>';
+    if (me.gold)  c += '<span class="chip"><b>'+P.compact(me.gold)+'</b>\uace8\ub4dc</span>';
+    if (me.dmg)   c += '<span class="chip"><b>'+P.compact(me.dmg)+'</b>\ub529\ub7c9</span>';
+    if (me.vision!=null) c += '<span class="chip"><b>'+me.vision+'</b>\uc2dc\uc57c</span>';
+    if (me.cs_per_min)   c += '<span class="chip ghost"><b>'+me.cs_per_min+'</b>CS/\ubd84</span>';
+    return '<div class="hstats">'+c+'</div>';
+  }
+
   function heroBlock(rep, won){
     var saver=(ROWS[curPov]||{}).saver;
     var players=ANALYSIS.players||[];
@@ -927,10 +941,9 @@ footer{border-top:1px solid var(--line);margin-top:70px}
     var len = rep.length || P.mmss(ANALYSIS.duration);
     var queue = P.queueName(rep.type||ANALYSIS.queue);
     var date = P.ago(rep.uploaded)||'-';
-    var meta = '<div class="hmeta"><div class="si"><div class="k">큐</div><div class="v">'+queue+'</div></div>'
-      +'<div class="si"><div class="k">시간</div><div class="v">'+len+'</div></div>'
-      +'<div class="si"><div class="k">날짜</div><div class="v">'+date+'</div></div></div>';
-    var side = '<div class="hside"><div class="wlbadge '+wl+'">'+verdict+'</div>'+meta+'<div class="hacts">'+likeBtnHTML()+viewHTML()+'</div></div>';
+    var meta = '<div class="hmeta">'+queue+'<i>\u00b7</i>'+len+'<i>\u00b7</i>'+date+'</div>';
+    var badge = (won===true||won===false) ? ('<div class="wlbadge '+wl+'">'+verdict+'</div>') : '';
+    var side = '<div class="hside">'+badge+'<div class="hfoot">'+meta+likeBtnHTML()+viewHTML()+'</div></div>';
     if(!me){
       return '<div class="hero '+wl+'"><div class="hchamp"><div class="ci"></div><div><div class="nm">경기 기록</div></div></div>'
         +'<div class="hmid"><div class="vsum">분석 정보가 없는 경기입니다. 영상으로 다시 볼 수 있습니다.</div></div>'+side+'</div>';
@@ -941,7 +954,8 @@ footer{border-top:1px solid var(--line);margin-top:70px}
       +'<div class="hchamp"><div class="ci"><img src="'+P.champIcon(ver,champ)+'" alt="'+esc(champ)+'" onerror="this.style.visibility=\'hidden\'"><span class="lv">'+(me.level||'')+'</span></div>'
         +'<div><div class="nm">'+esc(champ)+'</div>'+(pos?'<div class="po">'+pos+'</div>':'')+'</div></div>'
       +'<div class="hmid"><div class="hkda"><div class="v">'+(me.kills||0)+'<span class="s">/</span>'+(me.deaths||0)+'<span class="s">/</span>'+(me.assists||0)+'</div><div class="r">KDA '+kda+'</div></div>'
-        +'<div class="vsum">'+verdictLine(me,won)+'</div></div>'
+        +'<div class="vsum">'+verdictLine(me,won)+'</div>'
+        + heroStats(me) + '</div>'
       +side+'</div>';
   }
 
