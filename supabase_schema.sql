@@ -77,3 +77,6 @@ create policy c_ins on comments     for insert with check (true);
 -- 이미 만든 적이 있으면 에러 없이 다시 만들도록 drop 후 생성.
 drop policy if exists s_ins on storage.objects;
 create policy s_ins on storage.objects for insert with check (bucket_id = 'media');
+-- 같은 게임을 다시 녹화하면 x-upsert 로 덮어쓰므로 UPDATE 도 허용해야 한다.
+drop policy if exists s_upd on storage.objects;
+create policy s_upd on storage.objects for update using (bucket_id = 'media') with check (bucket_id = 'media');
