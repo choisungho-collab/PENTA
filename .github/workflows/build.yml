@@ -35,16 +35,7 @@ jobs:
           pip install pyinstaller
 
       - name: Build (onefile)
-        run: >
-          pyinstaller --onefile --windowed --name penta_recorder --noupx
-          --add-data "web;web"
-          --add-data "fonts;fonts"
-          --hidden-import psutil --hidden-import requests --hidden-import tkinter
-          --hidden-import windows_capture --hidden-import pyaudiowpatch
-         
-          --collect-all windows_capture
-          --exclude-module cv2 --exclude-module opencv-python --exclude-module matplotlib
-          penta_recorder.py
+        run: pyinstaller --onefile --windowed --name penta_recorder --noupx --add-data "fonts;fonts" --hidden-import psutil --hidden-import requests --hidden-import tkinter --hidden-import windows_capture --hidden-import pyaudiowpatch --collect-all windows_capture --exclude-module cv2 --exclude-module opencv-python --exclude-module matplotlib penta_recorder.py
 
       - name: Package exe as zip
         run: Compress-Archive -Path dist\penta_recorder.exe -DestinationPath penta_recorder.zip -Force
