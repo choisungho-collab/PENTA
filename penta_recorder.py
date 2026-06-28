@@ -86,6 +86,8 @@ REC_DIR    = os.path.join(DATA_DIR, "recordings")
 CONFIG_PATH= os.path.join(HERE, "config.json")
 FPS        = 30
 _PENTA_ICON = "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"
+# --- Top/bottom scrim overlay so status text stays legible over the scene (transparent middle keeps the crystal) ---
+_SCRIM_B64 = "iVBORw0KGgoAAAANSUhEUgAAAdIAAACWCAYAAABq3gn4AAACT0lEQVR42u3bOw7CMBBF0bFjhGjY/85YDCShoccKiRQz5yxhmquXT7ne7o8AADZpEbE6AwBsU50AACxSABBSABBSAEgW0sUZAMAiBQCLFACEFAAShXR2BgCwSAHAIgUAIQUAIQUAekL6cgYAsEgBwCIFACEFACEFAIQUAIQUAIQUAP4ypE9nAACLFAAsUgCwSAHAIgUAhBQAhBQAzhtS70gBwCIFACEFACEFACEFAIQUAIQUAE4cUr+/AIBFCgBCCgBCCgCZQuodKQBYpABgkQKARQoAFikAIKQAIKQAIKQAIKQAgJACwH4hnZ0BACxSALBIAUBIAUBIAYCekC7OAAAWKQBYpAAgpACQKKSrMwCARQoAFikACCkACCkA8E11AgAQUgAQUgAQUgAQUgBASAFASAFASAFASAEAIQUAIQUAIQUAIQUAIQUAhBQAhBQAhBQAhBQAEFIAEFIAEFIAEFIA4KNFRHEGABBSABBSABBSAEgUUh8cAYCQAoCQAoCQAkCmkE7OAAAWKQBYpAAgpAAgpABAT0ibMwCARQoAFikACCkACCkAIKQAIKQAIKQAIKQAgJACwG4hvTgDAFikAGCRAoBFCgAWKQAgpABwcEg92gUAixQAhBQAhgupR7sAYJECgJACwHAh9WgXACxSALBIAcAiBQCLFAAQUgAQUgAQUgAQUgBASAFASAFASAFg9JBOzgAAFikAWKQAIKQAIKQAQE9IqzMAgEUKABYpAAgpAAgpACCkAHBwSIszAICQAoCQAoCQAkASPjQCgB+8AXZQQhBhzyXrAAAAAElFTkSuQmCC"
 # --- Summoner's Rift ambient scene (behind the status bar; warms while recording) ---
 _RIFT_COOL_B64 = (
 "iVBORw0KGgoAAAANSUhEUgAAAdIAAACWCAYAAABq3gn4AAAAIGNIUk0AAHomAACAhAAA+gAAAIDoAAB1MAAA6mAAADqYAAAXcJy6UTwAAAAGYktHRAD/AP"
@@ -1889,7 +1891,7 @@ def _hide_console():
     except Exception: pass
 
 def _load_recorder_fonts():
-    """Register bundled .ttf fonts so Tkinter can use Space Grotesk / IBM Plex Mono (Windows only)."""
+    """Register bundled .ttf fonts so Tkinter can use Sora / IBM Plex Mono (Windows only)."""
     if sys.platform != "win32": return
     try:
         import ctypes
@@ -1907,7 +1909,7 @@ def run_gui(cfg, url):
     import tkinter as tk
     import tkinter.font as _tkfont
     BG="#080A0E"; SURF="#161B23"
-    INK="#ECE7DD"; INK2="#C2BBAD"; DIM="#867F71"; FAINT="#564F44"
+    INK="#ECE7DD"; INK2="#C2BBAD"; SUB="#D7D0C1"; DIM="#867F71"; FAINT="#564F44"
     GOLD="#DEC79C"; GOLD2="#EFDDBC"; REC="#FF5470"; TEAL="#52C3AC"; BLUE="#6BA6FF"; LINE="#1F252E"; LINE2="#2B323C"
     W=466
     _load_recorder_fonts()
@@ -1922,9 +1924,9 @@ def run_gui(cfg, url):
             return c[-1]
     except Exception:
         def _pick(*c): return c[0]
-    SG  =_pick("Space Grotesk","Segoe UI")
-    SG_M=_pick("Space Grotesk Medium","Space Grotesk","Segoe UI Semibold","Segoe UI")
-    SG_S=_pick("Space Grotesk SemiBold","Space Grotesk","Segoe UI Semibold","Segoe UI")
+    SG  =_pick("Sora","Segoe UI")
+    SG_M=_pick("Sora Medium","Sora","Segoe UI Semibold","Segoe UI")
+    SG_S=_pick("Sora SemiBold","Sora","Segoe UI Semibold","Segoe UI")
     PLEX=_pick("IBM Plex Mono","Consolas","Segoe UI")
     UI=SG; SEMI=SG_S; MON=PLEX
     BASE_H, SET_H, LOG_H = 160, 156, 210
@@ -1941,22 +1943,25 @@ def run_gui(cfg, url):
         _img_cool=tk.PhotoImage(data=_RIFT_COOL_B64); _img_warm=tk.PhotoImage(data=_RIFT_WARM_B64)
     except Exception:
         _img_cool=_img_warm=None
+    try: _img_scrim=tk.PhotoImage(data=_SCRIM_B64)
+    except Exception: _img_scrim=None
     cv=tk.Canvas(root,width=SCENE_W,height=SCENE_H,bg=BG,highlightthickness=0,bd=0); cv.pack(fill="x")
-    cv._imgs=(_img_cool,_img_warm)            # keep refs from GC
+    cv._imgs=(_img_cool,_img_warm,_img_scrim)            # keep refs from GC
     _bgitem=cv.create_image(0,0,anchor="nw",image=_img_cool) if _img_cool is not None else None
+    if _img_scrim is not None: cv.create_image(0,0,anchor="nw",image=_img_scrim)   # 상/하단 막: 텍스트보다 아래, 크리스털(중앙)은 투명
     _SC={"warm":False}
     _ICONS={}                                  # filled when the toolbar icons are built (open-state highlight)
 
     # status line drawn on the canvas: light + status + sub (left) | preset toggle + cloud (right)
     _LY=30
     did=cv.create_oval(18,_LY-4,26,_LY+4,fill=GOLD,outline="")
-    status_lbl=cv.create_text(33,_LY,anchor="w",text="Starting\u2026",fill=INK,font=(SG_S,13))
-    sub_lbl=cv.create_text(120,_LY+1,anchor="w",text="",fill=INK2,font=(SG,9))
+    status_lbl=cv.create_text(33,_LY,anchor="w",text="Starting\u2026",fill=INK,font=(SG_S,14))
+    sub_lbl=cv.create_text(120,_LY+1,anchor="w",text="",fill=SUB,font=(SG,10))
     _cs=cloud_state()
     _cmap={"cloud":(GOLD2,"\u2601 Cloud"),"readonly":(GOLD,"\u26a0 Key needed"),"local":(INK2,"\u25cf Local")}
     _cc,_ct=_cmap.get(_cs,_cmap["local"])
-    cloud_lbl=cv.create_text(SCENE_W-17,_LY,anchor="e",text=_ct,fill=_cc,font=(SG_M,9))
-    opt_lbl=cv.create_text(SCENE_W-92,_LY,anchor="e",text="",fill=GOLD2,font=(PLEX,9))
+    cloud_lbl=cv.create_text(SCENE_W-17,_LY,anchor="e",text=_ct,fill=_cc,font=(SG_M,10))
+    opt_lbl=cv.create_text(SCENE_W-92,_LY,anchor="e",text="",fill=GOLD2,font=(PLEX,10))
     cv.tag_bind(opt_lbl,"<Button-1>",lambda e: toggle_settings())
     cv.tag_bind(opt_lbl,"<Enter>",lambda e:(cv.itemconfig(opt_lbl,fill="#FFFFFF"),cv.config(cursor="hand2")))
     cv.tag_bind(opt_lbl,"<Leave>",lambda e:(cv.itemconfig(opt_lbl,fill=GOLD if st["settings"] else GOLD2),cv.config(cursor="")))
@@ -2129,17 +2134,17 @@ def run_gui(cfg, url):
             cv.itemconfig(did,fill=(BLUE if _rec["blink"] else "#22344f"))
             _pct=REC_STATE.get("upload_pct") or 0
             cv.itemconfig(status_lbl,text=("Uploading\u2026 %d%%"%_pct) if _pct>0 else "Uploading\u2026",fill=BLUE)
-            cv.itemconfig(sub_lbl,text="sending to cloud",fill=INK2)
+            cv.itemconfig(sub_lbl,text="sending to cloud",fill=SUB)
         elif _up and (_now-_up < 5):   # 업로드 완료 토스트(5초)
             _rec["since"]=None; _rec["blink"]=False
-            cv.itemconfig(did,fill=TEAL); cv.itemconfig(status_lbl,text="Uploaded \u2713",fill=TEAL); cv.itemconfig(sub_lbl,text="added to your archive",fill=INK2)
+            cv.itemconfig(did,fill=TEAL); cv.itemconfig(status_lbl,text="Uploaded \u2713",fill=TEAL); cv.itemconfig(sub_lbl,text="added to your archive",fill=SUB)
         else:
             _rec["since"]=None; _rec["blink"]=False
             cv.itemconfig(did,fill=GOLD)
             if REC_STATE.get("ready"):
-                cv.itemconfig(status_lbl,text="Ready",fill=INK); cv.itemconfig(sub_lbl,text="auto-records",fill=INK2)
+                cv.itemconfig(status_lbl,text="Ready",fill=INK); cv.itemconfig(sub_lbl,text="auto-records",fill=SUB)
             else:
-                cv.itemconfig(status_lbl,text="Preparing\u2026",fill=INK); cv.itemconfig(sub_lbl,text="setting up tools",fill=INK2)
+                cv.itemconfig(status_lbl,text="Preparing\u2026",fill=INK); cv.itemconfig(sub_lbl,text="setting up tools",fill=SUB)
         try:
             _st=cv.itemcget(status_lbl,"text")          # 글자가 바뀔 때만 재배치 → 매 프레임 1px 흔들림(왔다갔다) 방지
             if _st!=_rec.get("txt"):
