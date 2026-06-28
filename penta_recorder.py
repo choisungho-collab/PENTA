@@ -1954,6 +1954,7 @@ def run_gui(cfg, url):
 
     # status line drawn on the canvas: light + status + sub (left) | preset toggle + cloud (right)
     _LY=30
+    halo=cv.create_oval(15,_LY-7,29,_LY+7,fill="#3a2f18",outline="")   # 점 뒤 은은한 글로우(상태색에 맞춰 변함)
     did=cv.create_oval(18,_LY-4,26,_LY+4,fill=GOLD,outline="")
     status_lbl=cv.create_text(33,_LY,anchor="w",text="Starting\u2026",fill=INK,font=(SG_S,13))
     sub_lbl=cv.create_text(120,_LY+1,anchor="w",text="",fill=SUB,font=(SG_M,9))
@@ -1961,6 +1962,11 @@ def run_gui(cfg, url):
     _cmap={"cloud":(TEAL,"\u2601 Cloud"),"readonly":(GOLD,"\u26a0 Key needed"),"local":(INK2,"\u25cf Local")}
     _cc,_ct=_cmap.get(_cs,_cmap["local"])
     cloud_lbl=cv.create_text(SCENE_W-17,_LY,anchor="e",text=_ct,fill=_cc,font=(SG_M,9))
+    if _cs=="cloud":                                  # 연결됨 → 틸 배지(pill)로 강조
+        cv.itemconfig(cloud_lbl,fill="#7adcc6")
+        _cb=cv.bbox(cloud_lbl); x1,y1,x2,y2,rr=_cb[0]-7,_LY-9,_cb[2]+6,_LY+9,9
+        _pill=cv.create_polygon([x1+rr,y1,x2-rr,y1,x2,y1,x2,y1+rr,x2,y2-rr,x2,y2,x2-rr,y2,x1+rr,y2,x1,y2,x1,y2-rr,x1,y1+rr,x1,y1],smooth=True,fill="#12231e",outline="#46a08f",width=1)
+        cv.tag_lower(_pill,cloud_lbl)
     opt_lbl=cv.create_text(SCENE_W-92,_LY,anchor="e",text="",fill=GOLD2,font=(PLEX,9))
     cv.tag_bind(opt_lbl,"<Button-1>",lambda e: toggle_settings())
     cv.tag_bind(opt_lbl,"<Enter>",lambda e:(cv.itemconfig(opt_lbl,fill="#FFFFFF"),cv.config(cursor="hand2")))
@@ -2063,18 +2069,35 @@ def run_gui(cfg, url):
                 except Exception: pass
                 tip["w"]=None
         cv.tag_bind(item,"<Enter>",show,add="+"); cv.tag_bind(item,"<Leave>",hide,add="+")
-    def _cbtn(text,x,cmd,gold=False):
-        fg=GOLD if gold else INK2; fgh=GOLD2 if gold else INK
-        fill="#191307" if gold else "#10141b"; fillh="#241b0b" if gold else "#181d26"
-        outl="#5d4f2e" if gold else LINE2; outlh="#7a6838" if gold else "#3A434F"
-        pad=13
-        t=cv.create_text(x+pad,_BY,anchor="w",text=text,fill=fg,font=(SG_S,9))
-        b=cv.bbox(t); r=_rrect(x,b[1]-7,b[2]+pad,b[3]+7,8)
+    def _ic_archive(cx,cy,col):                       # 갤러리 = 2x2 격자
+        s=2.3; out=[]
+        for dx in (-(s+0.7),0.7):
+            for dy in (-(s+0.7),0.7):
+                out.append(cv.create_rectangle(cx+dx,cy+dy,cx+dx+s,cy+dy+s,fill=col,outline=""))
+        return out
+    def _ic_folder(cx,cy,col):                        # 폴더 실루엣(왼쪽 탭)
+        return [cv.create_polygon([cx-5,cy+4,cx-5,cy-4,cx-1,cy-4,cx,cy-2,cx+5,cy-2,cx+5,cy+4],fill=col,outline="")]
+    def _cbtn(text,x,cmd,gold=False,icon=None):
+        if gold: fg="#DEC79C"; fgh="#EFDDBC"; fill="#16130c"; fillh="#1e1a10"; outl="#5d4f2e"; outlh="#7a6838"
+        else:    fg=SUB; fgh=INK; fill="#10141b"; fillh="#181d26"; outl=LINE2; outlh="#3A434F"
+        pad=11; ix=x+pad
+        icon_items=icon(ix+4,_BY,fg) if icon else []
+        t=cv.create_text(ix+(13 if icon else 0),_BY,anchor="w",text=text,fill=fg,font=(SG_S,9))
+        x2=cv.bbox(t)[2]+pad; r=_rrect(x,_BY-13,x2,_BY+13,8)
         cv.itemconfig(r,fill=fill,outline=outl,width=1); cv.tag_lower(r,t)
-        g="g%d"%t; cv.addtag_withtag(g,t); cv.addtag_withtag(g,r)
-        cv.tag_bind(g,"<Button-1>",lambda e: cmd())
-        cv.tag_bind(g,"<Enter>",lambda e:(cv.itemconfig(t,fill=fgh),cv.itemconfig(r,fill=fillh,outline=outlh),cv.config(cursor="hand2")))
-        cv.tag_bind(g,"<Leave>",lambda e:(cv.itemconfig(t,fill=fg),cv.itemconfig(r,fill=fill,outline=outl),cv.config(cursor="")))
+        for it in icon_items: cv.tag_raise(it)                                   # 아이콘을 버튼 배경 위로
+        hi=None  # 아웃라인 골드 → 상단 하이라이트 불필요
+        g="g%d"%t
+        for it in [t,r,*icon_items]+([hi] if hi else []): cv.addtag_withtag(g,it)
+        def _en(_e):
+            cv.itemconfig(t,fill=fgh); cv.itemconfig(r,fill=fillh,outline=outlh)
+            for it in icon_items: cv.itemconfig(it,fill=fgh)
+            cv.config(cursor="hand2")
+        def _lv(_e):
+            cv.itemconfig(t,fill=fg); cv.itemconfig(r,fill=fill,outline=outl)
+            for it in icon_items: cv.itemconfig(it,fill=fg)
+            cv.config(cursor="")
+        cv.tag_bind(g,"<Button-1>",lambda e: cmd()); cv.tag_bind(g,"<Enter>",_en); cv.tag_bind(g,"<Leave>",_lv)
         return cv.bbox(r)[2]
     def _cicon(glyph,xr,cmd,statekey,tip):
         t=cv.create_text(xr-16,_BY,text=glyph,fill=ICON_FG,font=(SG_S,12))
@@ -2086,9 +2109,11 @@ def run_gui(cfg, url):
         cv.tag_bind(g,"<Leave>",lambda e:(cv.itemconfig(t,fill=GOLD if _act() else ICON_FG),cv.itemconfig(r,outline=ICON_ON if _act() else ICON_BORD),cv.config(cursor="")))
         _ctip(r,tip)
         return (t,r)
+    cv.create_line(24,_BY-18,178,_BY-18,fill="#352e1b",width=1)              # 툴바 구분 헤어라인(좌: 버튼)
+    cv.create_line(SCENE_W-104,_BY-18,SCENE_W-12,_BY-18,fill="#352e1b",width=1)  # (우: 아이콘) — 가운데 크리스털은 피함
     _bx=16
-    _bx=_cbtn("Archive",_bx,open_gallery,gold=True)+8
-    _cbtn("Open folder",_bx,open_folder)
+    _bx=_cbtn("Archive",_bx,open_gallery,gold=True,icon=_ic_archive)+8
+    _cbtn("Open folder",_bx,open_folder,icon=_ic_folder)
     _ICONS["log"]=_cicon("\u25A4",SCENE_W-16,toggle_log,"log","Log")
     _ICONS["set"]=_cicon("\u2699",SCENE_W-52,toggle_settings,"settings","Settings")
     root.protocol("WM_DELETE_WINDOW", do_quit)   # ✕ → 종료. 최소화(_)는 일반 작업표시줄.
@@ -2125,22 +2150,22 @@ def run_gui(cfg, url):
         if _rng:
             if _rec["since"] is None: _rec["since"]=_now
             _rec["blink"]=not _rec["blink"]
-            cv.itemconfig(did,fill=(REC if _rec["blink"] else "#3a2230"))
+            cv.itemconfig(did,fill=(REC if _rec["blink"] else "#3a2230")); cv.itemconfig(halo,fill="#2e1622")
             _el=int(_now-_rec["since"]); _mm,_ss=divmod(_el,60)
             cv.itemconfig(status_lbl,text="Recording",fill=REC); cv.itemconfig(sub_lbl,text="%d:%02d"%(_mm,_ss),fill=INK)
         elif REC_STATE.get("uploading"):   # 업로드 중 — 진행률(파란 점멸)
             _rec["since"]=None
             _rec["blink"]=not _rec["blink"]
-            cv.itemconfig(did,fill=(BLUE if _rec["blink"] else "#22344f"))
+            cv.itemconfig(did,fill=(BLUE if _rec["blink"] else "#22344f")); cv.itemconfig(halo,fill="#162640")
             _pct=REC_STATE.get("upload_pct") or 0
             cv.itemconfig(status_lbl,text=("Uploading\u2026 %d%%"%_pct) if _pct>0 else "Uploading\u2026",fill=BLUE)
             cv.itemconfig(sub_lbl,text="sending to cloud",fill=SUB)
         elif _up and (_now-_up < 5):   # 업로드 완료 토스트(5초)
             _rec["since"]=None; _rec["blink"]=False
-            cv.itemconfig(did,fill=TEAL); cv.itemconfig(status_lbl,text="Uploaded \u2713",fill=TEAL); cv.itemconfig(sub_lbl,text="added to your archive",fill=SUB)
+            cv.itemconfig(did,fill=TEAL); cv.itemconfig(halo,fill="#163029"); cv.itemconfig(status_lbl,text="Uploaded \u2713",fill=TEAL); cv.itemconfig(sub_lbl,text="added to your archive",fill=SUB)
         else:
             _rec["since"]=None; _rec["blink"]=False
-            cv.itemconfig(did,fill=GOLD)
+            cv.itemconfig(did,fill=GOLD); cv.itemconfig(halo,fill="#3a2f18")
             if REC_STATE.get("ready"):
                 cv.itemconfig(status_lbl,text="Ready",fill=INK); cv.itemconfig(sub_lbl,text="auto-records",fill=SUB)
             else:
