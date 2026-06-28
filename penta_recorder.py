@@ -1124,6 +1124,22 @@ def sb_upload(local, path, ctype, on_progress=None):
     if r.status_code not in (200, 201):
         raise RuntimeError("storage %s: %s" % (r.status_code, r.text[:200]))
     return "%s/storage/v1/object/public/%s/%s" % (base, bk, path)
+def cloud_selftest():
+    """작은 파일을 실제 업로드해 업로드 권한을 즉시 진단(전체 게임 없이). 결과를 GUI 로그에 남긴다."""
+    import tempfile
+    p = os.path.join(tempfile.gettempdir(), "penta_selftest.txt")
+    try:
+        with open(p, "w", encoding="utf-8") as _f: _f.write("penta")
+        sb_upload(p, "_selftest/ping.txt", "text/plain")      # x-upsert 라 매번 같은 파일 덮어씀(누적 없음)
+        log("Cloud upload self-test: OK \u2713  (\uc5c5\ub85c\ub4dc \uad8c\ud55c \uc815\uc0c1)")
+    except Exception as e:
+        _em = str(e)
+        log(f"Cloud upload self-test FAILED: {e}")            # 정확한 Supabase 응답을 그대로 노출
+        if ("row-level security" in _em) or (" 403" in _em) or ("403:" in _em) or ("Unauthorized" in _em):
+            log("\u2192 Storage RLS \ucc28\ub2e8. Supabase SQL Editor \uc5d0\uc11c supabase_storage_fix.sql \uc744 \uc2e4\ud589\ud558\uac70\ub098 service_key \ub97c \uc124\uc815\ud558\uc138\uc694.")
+    finally:
+        try: os.remove(p)
+        except Exception: pass
 def sb_insert_match(row):
     import requests
     r = requests.post(_sb_base() + "/rest/v1/matches",
@@ -1758,10 +1774,9 @@ def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr", 
         log(f"Upload complete — {('matchId ' + gid) if mid else 'video only (no analysis)'}")
     except Exception as e:
         _em = str(e)
+        log(f"Upload failed: {e}")          # ← 원본 Supabase 응답을 항상 표시(진단용; 더 이상 가리지 않음)
         if ("row-level security" in _em) or ("Unauthorized" in _em) or (" 403" in _em) or ("403:" in _em):
-            log("Upload failed: cloud storage blocked the file (RLS). Fix in Supabase → make a PUBLIC bucket named 'media' and apply the storage insert/update policy from supabase_schema.sql, OR set supabase.service_key in config.json. The video is kept locally.")
-        else:
-            log(f"Upload failed: {e}")
+            log("\u2192 Storage RLS 차단. Supabase SQL Editor 에서 supabase_storage_fix.sql 을 실행하거나, config.json 의 supabase.service_key 를 채우세요. 영상은 로컬에 보관됩니다.")
     finally:
         REC_STATE["uploading"] = False; REC_STATE["upload_pct"] = 0
 
@@ -1956,17 +1971,22 @@ def run_gui(cfg, url):
     _LY=30
     halo=cv.create_oval(15,_LY-7,29,_LY+7,fill="#3a2f18",outline="")   # 점 뒤 은은한 글로우(상태색에 맞춰 변함)
     did=cv.create_oval(18,_LY-4,26,_LY+4,fill=GOLD,outline="")
-    status_lbl=cv.create_text(33,_LY,anchor="w",text="Starting\u2026",fill=INK,font=(SG_S,13))
+    status_lbl=cv.create_text(33,_LY,anchor="w",text="Starting\u2026",fill=INK,font=(SG_S,12))
     sub_lbl=cv.create_text(120,_LY+1,anchor="w",text="",fill=SUB,font=(SG_M,9))
     _cs=cloud_state()
     _cmap={"cloud":(TEAL,"\u2601 Cloud"),"readonly":(GOLD,"\u26a0 Key needed"),"local":(INK2,"\u25cf Local")}
     _cc,_ct=_cmap.get(_cs,_cmap["local"])
-    cloud_lbl=cv.create_text(SCENE_W-17,_LY,anchor="e",text=_ct,fill=_cc,font=(SG_M,9))
-    if _cs=="cloud":                                  # 연결됨 → 틸 배지(pill)로 강조
-        cv.itemconfig(cloud_lbl,fill="#7adcc6")
-        _cb=cv.bbox(cloud_lbl); x1,y1,x2,y2,rr=_cb[0]-7,_LY-9,_cb[2]+6,_LY+9,9
+    if _cs=="cloud":                                  # 연결됨 → 틸 배지: 작은 클라우드 아이콘 + Cloud(9px)
+        _ctxt=cv.create_text(SCENE_W-17,_LY,anchor="e",text="Cloud",fill="#7adcc6",font=(SG_M,9))
+        _ctb=cv.bbox(_ctxt)
+        _cico=cv.create_text(_ctb[0]-2,_LY,anchor="e",text="\u2601",fill="#7adcc6",font=(SG_M,7))   # 아이콘만 작게
+        _cib=cv.bbox(_cico)
+        x1,y1,x2,y2,rr=_cib[0]-6,_LY-8,_ctb[2]+6,_LY+8,8
         _pill=cv.create_polygon([x1+rr,y1,x2-rr,y1,x2,y1,x2,y1+rr,x2,y2-rr,x2,y2,x2-rr,y2,x1+rr,y2,x1,y2,x1,y2-rr,x1,y1+rr,x1,y1],smooth=True,fill="#12231e",outline="#46a08f",width=1)
-        cv.tag_lower(_pill,cloud_lbl)
+        cv.tag_raise(_ctxt); cv.tag_raise(_cico)      # 텍스트/아이콘을 pill 위로
+        cloud_lbl=_pill                               # poll이 opt를 pill 기준으로 배치
+    else:
+        cloud_lbl=cv.create_text(SCENE_W-17,_LY,anchor="e",text=_ct,fill=_cc,font=(SG_M,9))
     opt_lbl=cv.create_text(SCENE_W-92,_LY,anchor="e",text="",fill=GOLD2,font=(PLEX,9))
     cv.tag_bind(opt_lbl,"<Button-1>",lambda e: toggle_settings())
     cv.tag_bind(opt_lbl,"<Enter>",lambda e:(cv.itemconfig(opt_lbl,fill="#FFFFFF"),cv.config(cursor="hand2")))
@@ -2109,8 +2129,6 @@ def run_gui(cfg, url):
         cv.tag_bind(g,"<Leave>",lambda e:(cv.itemconfig(t,fill=GOLD if _act() else ICON_FG),cv.itemconfig(r,outline=ICON_ON if _act() else ICON_BORD),cv.config(cursor="")))
         _ctip(r,tip)
         return (t,r)
-    cv.create_line(24,_BY-18,178,_BY-18,fill="#352e1b",width=1)              # 툴바 구분 헤어라인(좌: 버튼)
-    cv.create_line(SCENE_W-104,_BY-18,SCENE_W-12,_BY-18,fill="#352e1b",width=1)  # (우: 아이콘) — 가운데 크리스털은 피함
     _bx=16
     _bx=_cbtn("Archive",_bx,open_gallery,gold=True,icon=_ic_archive)+8
     _cbtn("Open folder",_bx,open_folder,icon=_ic_folder)
@@ -2126,6 +2144,7 @@ def run_gui(cfg, url):
             log(f"Tool setup issue: {e}")
         if not FFMPEG:
             log("\u26a0 ffmpeg setup failed \u2014 check your internet connection and restart."); return
+        if cloud_state()=="cloud": cloud_selftest()    # 시작 시 업로드 권한 즉시 진단(게임 없이)
         recorder_loop(cfg)
     threading.Thread(target=_prep_and_run,daemon=True).start()
 
@@ -2158,8 +2177,8 @@ def run_gui(cfg, url):
             _rec["blink"]=not _rec["blink"]
             cv.itemconfig(did,fill=(BLUE if _rec["blink"] else "#22344f")); cv.itemconfig(halo,fill="#162640")
             _pct=REC_STATE.get("upload_pct") or 0
-            cv.itemconfig(status_lbl,text=("Uploading\u2026 %d%%"%_pct) if _pct>0 else "Uploading\u2026",fill=BLUE)
-            cv.itemconfig(sub_lbl,text="sending to cloud",fill=SUB)
+            cv.itemconfig(status_lbl,text=("Uploading %d%%"%_pct) if _pct>0 else "Uploading",fill=BLUE)
+            cv.itemconfig(sub_lbl,text="")          # 업로드 중엔 보조 라벨 제거(상태에 %가 있어 중복·겹침 방지)
         elif _up and (_now-_up < 5):   # 업로드 완료 토스트(5초)
             _rec["since"]=None; _rec["blink"]=False
             cv.itemconfig(did,fill=TEAL); cv.itemconfig(halo,fill="#163029"); cv.itemconfig(status_lbl,text="Uploaded \u2713",fill=TEAL); cv.itemconfig(sub_lbl,text="added to your archive",fill=SUB)
