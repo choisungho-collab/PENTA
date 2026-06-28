@@ -1955,13 +1955,13 @@ def run_gui(cfg, url):
     # status line drawn on the canvas: light + status + sub (left) | preset toggle + cloud (right)
     _LY=30
     did=cv.create_oval(18,_LY-4,26,_LY+4,fill=GOLD,outline="")
-    status_lbl=cv.create_text(33,_LY,anchor="w",text="Starting\u2026",fill=INK,font=(SG_S,14))
-    sub_lbl=cv.create_text(120,_LY+1,anchor="w",text="",fill=SUB,font=(SG,10))
+    status_lbl=cv.create_text(33,_LY,anchor="w",text="Starting\u2026",fill=INK,font=(SG_S,13))
+    sub_lbl=cv.create_text(120,_LY+1,anchor="w",text="",fill=SUB,font=(SG_M,9))
     _cs=cloud_state()
-    _cmap={"cloud":(GOLD2,"\u2601 Cloud"),"readonly":(GOLD,"\u26a0 Key needed"),"local":(INK2,"\u25cf Local")}
+    _cmap={"cloud":(TEAL,"\u2601 Cloud"),"readonly":(GOLD,"\u26a0 Key needed"),"local":(INK2,"\u25cf Local")}
     _cc,_ct=_cmap.get(_cs,_cmap["local"])
-    cloud_lbl=cv.create_text(SCENE_W-17,_LY,anchor="e",text=_ct,fill=_cc,font=(SG_M,10))
-    opt_lbl=cv.create_text(SCENE_W-92,_LY,anchor="e",text="",fill=GOLD2,font=(PLEX,10))
+    cloud_lbl=cv.create_text(SCENE_W-17,_LY,anchor="e",text=_ct,fill=_cc,font=(SG_M,9))
+    opt_lbl=cv.create_text(SCENE_W-92,_LY,anchor="e",text="",fill=GOLD2,font=(PLEX,9))
     cv.tag_bind(opt_lbl,"<Button-1>",lambda e: toggle_settings())
     cv.tag_bind(opt_lbl,"<Enter>",lambda e:(cv.itemconfig(opt_lbl,fill="#FFFFFF"),cv.config(cursor="hand2")))
     cv.tag_bind(opt_lbl,"<Leave>",lambda e:(cv.itemconfig(opt_lbl,fill=GOLD if st["settings"] else GOLD2),cv.config(cursor="")))
@@ -2149,7 +2149,7 @@ def run_gui(cfg, url):
             _st=cv.itemcget(status_lbl,"text")          # 글자가 바뀔 때만 재배치 → 매 프레임 1px 흔들림(왔다갔다) 방지
             if _st!=_rec.get("txt"):
                 _rec["txt"]=_st; _b=cv.bbox(status_lbl)
-                if _b: cv.coords(sub_lbl,_b[2]+7,_LY+1)
+                if _b: cv.coords(sub_lbl,_b[2]+11,_LY+1)
         except Exception: pass
         ea=(REC_STATE.get("encoder") or "").lower()
         if "nvenc" in ea: enc="NVENC"; is_sw=False
@@ -2170,7 +2170,7 @@ def run_gui(cfg, url):
             _rec["opt"]=_optxt; cv.itemconfig(opt_lbl,text=_optxt)
             try:
                 _cb=cv.bbox(cloud_lbl)
-                if _cb: cv.coords(opt_lbl,_cb[0]-9,_LY)
+                if _cb: cv.coords(opt_lbl,_cb[0]-13,_LY)
             except Exception: pass
         if LAST_ERR.get("msg") and (time.time()-LAST_ERR.get("t",0)<8):
             if not st["log"]: set_log(True)
