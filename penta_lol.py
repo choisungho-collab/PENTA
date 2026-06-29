@@ -166,8 +166,10 @@ def analyze_match(match, timeline=None):
     # 라인전 격차(상대 라이너 대비)를 각 선수에 merge
     if timeline:
         _lanes = _lane_diffs(timeline, parts)
+        _d14 = _dmg_at(timeline, 840000)   # 14분 시점 누적 챔피언 피해
         for _i, _pl in enumerate(players):
             _pl["lane"] = _lanes.get(_i + 1, {})
+            _pl["dmg14"] = _d14.get(_i + 1)
 
     return {
         "players": players,
@@ -211,6 +213,28 @@ def saver_won(analysis, puuid):
         if p.get("puuid") == puuid:
             return p.get("win")
     return None
+
+
+def _dmg_at(timeline, ms):
+    """특정 시점(ms)까지의 선수별 누적 챔피언 가한 피해. pre-14 표시용."""
+    frames = ((timeline.get("info") or {}).get("frames")) or []
+    best = None
+    for f in frames:
+        if (f.get("timestamp") or 0) <= ms:
+            best = f
+        else:
+            break
+    out = {}
+    if not best:
+        return out
+    for k, v in (best.get("participantFrames") or {}).items():
+        try:
+            pid = int(k)
+        except (TypeError, ValueError):
+            continue
+        ds = v.get("damageStats") or {}
+        out[pid] = ds.get("totalDamageDoneToChampions") or 0
+    return out
 
 
 def _lane_diffs(timeline, parts):
@@ -293,6 +317,7 @@ def _obj_events(timeline):
                     "t": (e.get("timestamp") or 0) // 1000,
                     "kind": "TOWER" if e.get("buildingType") == "TOWER_BUILDING" else "BUILDING",
                     "lane": e.get("laneType"),
+                    "tower": e.get("towerType"),
                     "killer": e.get("killerId"),
                     "team": e.get("teamId"),
                 })

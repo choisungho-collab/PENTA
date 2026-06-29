@@ -93,7 +93,8 @@
   var POS_KO = { TOP: '탑', JUNGLE: '정글', MIDDLE: '미드', BOTTOM: '원딜', UTILITY: '서폿' };
   function posKo(p) { return POS_KO[p] || ''; }
   var POS_ORDER = { TOP: 0, JUNGLE: 1, MIDDLE: 2, BOTTOM: 3, UTILITY: 4 };
-  function posRank(p) { return POS_ORDER[p] != null ? POS_ORDER[p] : 9; }
+  var POS_ALIAS = { TOP:0, JUNGLE:1, JG:1, JUNG:1, JGL:1, MIDDLE:2, MID:2, BOTTOM:3, BOT:3, ADC:3, CARRY:3, BOTCARRY:3, UTILITY:4, SUPPORT:4, SUP:4, SUPP:4 };
+  function posRank(p) { if (p == null) return 9; var k = String(p).toUpperCase().replace(/[^A-Z]/g, ''); return POS_ALIAS[k] != null ? POS_ALIAS[k] : 9; }
 
   // ───────────────────────── 큐 이름 ──────────────────────────
   var QUEUE = {
@@ -116,7 +117,7 @@
   }
   function compact(n) {
     n = n || 0;
-    if (n >= 1000) return (n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, '') + 'k';
+    if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
     return String(n);
   }
   // "n분 전" 류 상대 시각
@@ -213,6 +214,47 @@
     return { score: score, letter: letter };
   }
 
+  // ===================== 세션 / 로그인 =====================
+  // 토큰은 localStorage 보관. #code(레코더 Archive가 붙여줌) → exchange_login_code → 토큰.
+  var SESS_KEY = 'penta_session';
+  function _sessRead() { try { return JSON.parse(localStorage.getItem(SESS_KEY) || 'null'); } catch (e) { return null; } }
+  function _sessWrite(s) { try { if (s) localStorage.setItem(SESS_KEY, JSON.stringify(s)); else localStorage.removeItem(SESS_KEY); } catch (e) {} }
+  function session() { return _sessRead(); }                 // {token,puuid,name,icon} | null (로컬 캐시)
+  function sessionPuuid() { var s = _sessRead(); return s && s.puuid; }
+
+  async function loginWithCode(code) {
+    var r = await sbRpc('exchange_login_code', { p_code: code });   // {token,puuid,name,icon}
+    if (r && r.token) { _sessWrite(r); return r; }
+    return null;
+  }
+  async function whoami() {
+    var s = _sessRead(); if (!s || !s.token) return null;
+    try {
+      var r = await sbRpc('session_whoami', { p_token: s.token });
+      if (r && r.puuid) { var ns = { token: s.token, puuid: r.puuid, name: r.name, icon: r.icon }; _sessWrite(ns); return ns; }
+      _sessWrite(null); return null;                          // 만료/무효 → 정리
+    } catch (e) { return s; }                                 // 네트워크 오류면 캐시 유지
+  }
+  async function logout() {
+    var s = _sessRead();
+    if (s && s.token) { try { await sbRpc('end_session', { p_token: s.token }); } catch (e) {} }
+    _sessWrite(null);
+  }
+  // 페이지 로드시: #code 있으면 소비(→토큰, URL에서 제거), 그 뒤 토큰 검증. 세션 반환.
+  async function initAuth() {
+    try {
+      var m = (location.hash || '').match(/[#&]code=([^&]+)/);
+      if (m) {
+        var code = decodeURIComponent(m[1]);
+        try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { location.hash = ''; }
+        try { await loginWithCode(code); } catch (e) {}
+      }
+    } catch (e) {}
+    return await whoami();
+  }
+  async function updateMatchMeta(mid, title) { var s = _sessRead(); if (!s || !s.token) throw new Error('not logged in'); return sbRpc('update_match_meta', { p_token: s.token, p_match_id: mid, p_title: title }); }
+  async function deleteMatch(mid) { var s = _sessRead(); if (!s || !s.token) throw new Error('not logged in'); return sbRpc('delete_match', { p_token: s.token, p_match_id: mid }); }
+
   global.PENTA = {
     SB_URL: SB_URL, SB_ANON: SB_ANON,
     sbSelect: sbSelect, sbInsert: sbInsert, sbRpc: sbRpc,
@@ -223,6 +265,9 @@
     queueName: queueName, mmss: mmss, kdaRatio: kdaRatio, compact: compact, ago: ago,
     groupKeyOf: groupKeyOf, clusterByMatch: clusterByMatch, pickPrimary: pickPrimary,
     saverCard: saverCard, heroCard: heroCard, bestMulti: bestMulti, grade: grade,
-    likeGroup: likeGroup, viewGroup: viewGroup, statsAll: statsAll, statsOne: statsOne
+    likeGroup: likeGroup, viewGroup: viewGroup, statsAll: statsAll, statsOne: statsOne,
+    session: session, sessionPuuid: sessionPuuid, loginWithCode: loginWithCode,
+    whoami: whoami, logout: logout, initAuth: initAuth,
+    updateMatchMeta: updateMatchMeta, deleteMatch: deleteMatch
   };
 })(typeof window !== 'undefined' ? window : globalThis);

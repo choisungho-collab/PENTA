@@ -1,7 +1,7 @@
 <!doctype html><html lang="ko"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>myPENTA — League of Legends Replay Archive</title>
-<meta name="description" content="리그 오브 레전드 게임을 자동으로 녹화하고 분석해 모아보는 커뮤니티 아카이브">
+<title>나의 협곡 — myPENTA</title>
+<meta name="description" content="myPENTA에 업로드한 내 게임 기록과 지표">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2 L15 9 L22 9 L16.5 13.5 L18.5 21 L12 16.5 L5.5 21 L7.5 13.5 L2 9 L9 9 Z' fill='%23DEC79C'/%3E%3C/svg%3E">
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -35,8 +35,6 @@ a{color:inherit;text-decoration:none}svg{display:block}img{display:block;max-wid
 .brand .mk{width:22px;height:22px;color:var(--gold);filter:drop-shadow(0 0 9px rgba(222,199,156,.4))}
 .brand b{font-family:var(--fg);font-weight:600;font-size:20px;letter-spacing:.15em;color:var(--gold)}
 .auth{display:flex;align-items:center;gap:8px;margin-left:10px;flex:0 0 auto}
-.auth .me-link{font-family:var(--fd);font-weight:600;font-size:13px;color:var(--gold-ink);padding:5px 9px;border-radius:8px;border:1px solid var(--gold-line);background:var(--gold-soft);transition:.14s}
-.auth .me-link:hover{filter:brightness(1.12)}
 .auth .who{font-size:13px;font-weight:600;color:var(--gold);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .auth .lo{font-size:12px;color:var(--dim,#867F71);background:none;border:1px solid var(--line2,#2B323C);border-radius:8px;padding:5px 9px;cursor:pointer}
 .auth .lo:hover{color:var(--ink,#ECE7DD);border-color:var(--gold-line,#3a3526)}
@@ -173,8 +171,60 @@ footer{border-top:1px solid var(--line);margin-top:70px}
 .foot-in .fnav{display:flex;gap:16px;font-size:13px}
 .foot-in .fnav a{color:var(--dim);transition:.14s;border-bottom:1px solid transparent}
 .foot-in .fnav a:hover{color:var(--gold-ink);border-bottom-color:var(--gold-line)}
-</style>
-</head>
+
+/* ===== 내 기록 대시보드 ===== */
+.auth .me-link{font-family:var(--fd);font-weight:600;font-size:13px;color:var(--gold-ink);padding:5px 9px;border-radius:8px;border:1px solid var(--gold-line);background:var(--gold-soft);transition:.14s}
+.auth .me-link:hover{filter:brightness(1.12)}
+.auth .me-link.on{color:var(--bg);background:var(--gold);border-color:var(--gold)}
+
+.dash{display:none}.dash.on{display:block}
+.me-hero{padding:46px 0 6px}
+.me-hero .eb{font-family:var(--fm);font-size:11px;letter-spacing:.3em;color:var(--gold);text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:10px}
+.me-hero .eb .dd{width:6px;height:6px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 4px var(--gold-soft)}
+.me-hero h1{font-family:var(--fs);font-weight:400;font-size:clamp(32px,5vw,52px);margin:0;letter-spacing:.01em;color:var(--ink);line-height:1.05}
+.me-hero h1 .g{color:var(--gold)}
+.me-hero .sub{font-family:var(--fd);font-size:16px;color:var(--ink2);margin:16px 0 0}
+
+.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:14px;margin:30px 0 4px}
+.kpi .box{background:var(--surface);border:1px solid var(--line);border-radius:var(--r2);padding:20px 22px;display:flex;flex-direction:column;justify-content:flex-start}
+.kpi .box .v{font-family:var(--fs);font-weight:400;font-size:34px;line-height:1;font-variant-numeric:tabular-nums;color:var(--ink)}
+.kpi .box .v.g{color:var(--gold)}.kpi .box .v.w{color:var(--win)}.kpi .box .v.l{color:var(--loss)}.kpi .box .v.t{color:var(--win)}
+.kpi .box .k{font-family:var(--fd);font-weight:600;font-size:12px;color:var(--dim);margin-top:11px}
+.kpi .box .sub{font-family:var(--fm);font-size:11px;color:var(--faint);margin-top:5px;font-variant-numeric:tabular-nums}
+
+.sec{margin:44px 0 17px;display:flex;align-items:baseline;gap:12px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.sec h2{font-family:var(--fs);font-weight:400;font-size:22px;color:var(--ink);margin:0;letter-spacing:.01em}
+.sec .ct{font-family:var(--fm);font-size:12px;color:var(--dim)}
+
+.champlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(278px,1fr));gap:12px}
+.crow{display:flex;align-items:center;gap:13px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r2);padding:13px 15px;transition:.15s}
+.crow:hover{border-color:var(--line2)}
+.crow img{width:44px;height:44px;border-radius:10px;border:1.5px solid var(--gold-line);background:var(--well);object-fit:cover;flex-shrink:0}
+.crow .nm{flex:1;min-width:0}
+.crow .nm b{font-family:var(--fd);font-weight:600;font-size:14.5px;color:var(--ink);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.crow .nm span{font-family:var(--fm);font-size:11px;color:var(--dim)}
+.crow .wr{text-align:right;font-family:var(--fs);font-size:21px;font-variant-numeric:tabular-nums;line-height:1.1}
+.crow .wr.good{color:var(--win)}.crow .wr.bad{color:var(--loss)}
+.crow .wr small{display:block;font-family:var(--fm);font-size:10px;color:var(--faint);font-weight:400;margin-top:3px}
+
+.posbars{display:flex;flex-direction:column;gap:10px;max-width:540px}
+.pbar{display:flex;align-items:center;gap:13px}
+.pbar .lb{width:42px;font-family:var(--fd);font-weight:600;font-size:13px;color:var(--ink2);flex-shrink:0}
+.pbar .tr{flex:1;height:9px;background:var(--well);border-radius:6px;overflow:hidden}
+.pbar .fl{height:100%;background:linear-gradient(90deg,var(--gold-line),var(--gold));border-radius:6px;transition:width .4s}
+.pbar .n{width:62px;text-align:right;font-family:var(--fm);font-size:11.5px;color:var(--dim);font-variant-numeric:tabular-nums;flex-shrink:0}
+
+.gate{padding:88px 24px;text-align:center;display:none}
+.gate.on{display:block}
+.gate .mk{width:52px;height:52px;color:var(--line2);margin:0 auto 22px}
+.gate h2{font-family:var(--fs);font-weight:400;font-size:26px;color:var(--ink);margin:0 0 12px;letter-spacing:.01em}
+.gate p{font-family:var(--fd);font-size:15px;color:var(--dim);max-width:460px;margin:0 auto;line-height:1.75}
+.gate p b{color:var(--gold-ink);font-weight:600}
+.gate .cta{margin-top:26px;display:inline-flex;align-items:center;gap:9px;font-family:var(--fd);font-weight:600;font-size:14px;color:var(--bg);background:linear-gradient(180deg,#D8BC82,#DEC79C);padding:12px 22px;border-radius:var(--r1);box-shadow:0 4px 16px -5px rgba(222,199,156,.5)}
+.gate .cta .ic{width:16px;height:16px}
+.gempty{grid-column:1/-1;padding:50px 20px;text-align:center;border:1px dashed var(--line2);border-radius:var(--r2);color:var(--dim);font-family:var(--fd)}
+.gempty b{color:var(--gold-ink)}
+</style></head>
 <body>
 
 <header class="bar" id="bar">
@@ -183,47 +233,23 @@ footer{border-top:1px solid var(--line);margin-top:70px}
    <svg class="mk" viewBox="0 0 24 24"><path d="M12 2 L15 9 L22 9 L16.5 13.5 L18.5 21 L12 16.5 L5.5 21 L7.5 13.5 L2 9 L9 9 Z" fill="currentColor"/></svg>
    <b><span class="my">my</span>PENTA</b>
   </a>
-  <nav class="nav"><a class="on" href="index.html">아카이브</a><a href="manual.html">메뉴얼</a><a href="download.html">다운로드</a></nav>
+  <nav class="nav"><a href="index.html">아카이브</a><a href="manual.html">메뉴얼</a><a href="download.html">다운로드</a></nav>
   <div class="sp"></div>
-  <label class="search">
-   <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
-   <input id="q" placeholder="챔피언 · 소환사 검색" autocomplete="off">
-  </label>
   <div class="auth" id="auth"></div>
  </div>
 </header>
 
 <main class="wrap">
- <section class="head">
-  <div class="eb"><span class="dd"></span>League of Legends Replay Archive</div>
-  <h1>당신의 협곡을,<br><span class="g">다시 본다</span></h1>
-  <p class="desc">게임이 끝나면 <b>myPENTA 레코더</b>가 영상과 전적을 알아서 모읍니다. 한 판을 여러 명이 녹화하면 <b>각자의 시점</b>으로 묶여, 같은 교전을 다른 자리에서 다시 볼 수 있습니다.</p>
- </section>
 
- <div class="toolbar">
-  <div class="stats" id="stats">
-   <div class="stat"><div class="v g" id="s-games">—</div><div class="k">기록된 게임</div></div>
-   <div class="stat"><div class="v t" id="s-penta">—</div><div class="k">펜타킬</div></div>
-   <div class="stat"><div class="v" id="s-pov">—</div><div class="k">멀티 시점</div></div>
-  </div>
-  <div class="filters" id="filters">
-   <button class="fchip on" data-f="all">전체</button>
-   <button class="fchip" data-f="win">승리</button>
-   <button class="fchip" data-f="penta">펜타킬</button>
-  </div>
- </div>
-
- <div class="grid" id="grid"></div>
-
- <div class="state" id="loading">
+ <div class="state on" id="loading">
   <svg class="mk" viewBox="0 0 24 24"><path d="M12 2 L15 9 L22 9 L16.5 13.5 L18.5 21 L12 16.5 L5.5 21 L7.5 13.5 L2 9 L9 9 Z" fill="currentColor"/></svg>
   <h3>불러오는 중…</h3>
  </div>
 
- <div class="state" id="empty">
-  <svg class="mk" viewBox="0 0 24 24"><path d="M12 2 L15 9 L22 9 L16.5 13.5 L18.5 21 L12 16.5 L5.5 21 L7.5 13.5 L2 9 L9 9 Z" fill="currentColor"/></svg>
-  <h3>아직 기록된 게임이 없습니다</h3>
-  <p>myPENTA 레코더를 켜두고 게임을 플레이하면, 끝나는 순간 영상과 전적이 이곳에 자동으로 올라옵니다.</p>
+ <div class="gate" id="gate">
+  <svg class="mk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2 L15 9 L22 9 L16.5 13.5 L18.5 21 L12 16.5 L5.5 21 L7.5 13.5 L2 9 L9 9 Z"/></svg>
+  <h2>로그인이 필요합니다</h2>
+  <p>myPENTA 레코더의 <b>Archive</b> 버튼을 누르면 이 브라우저에 자동으로 로그인됩니다. 그 뒤 이 페이지에서 내가 업로드한 게임과 지표를 모아볼 수 있어요.</p>
   <a class="cta" href="download.html">
    <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg>
    레코더 내려받기
@@ -232,9 +258,35 @@ footer{border-top:1px solid var(--line);margin-top:70px}
 
  <div class="state" id="failed">
   <svg class="mk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.01"/></svg>
-  <h3>목록을 불러오지 못했습니다</h3>
+  <h3>기록을 불러오지 못했습니다</h3>
   <p>잠시 후 새로고침해 주세요. 문제가 계속되면 네트워크 연결을 확인해 주세요.</p>
  </div>
+
+ <div class="dash" id="dash">
+  <section class="me-hero">
+   <div class="eb"><span class="dd"></span>My Rift</div>
+   <h1><span class="g" id="me-name">소환사</span>님의 협곡</h1>
+   <p class="sub">myPENTA에 업로드된 내 게임과 지표를 한눈에 봅니다.</p>
+  </section>
+
+  <div class="kpi">
+   <div class="box"><div class="v g" id="k-games">—</div><div class="k">업로드한 게임</div></div>
+   <div class="box"><div class="v" id="k-wr">—</div><div class="k">승률</div><div class="sub" id="k-wr-sub"></div></div>
+   <div class="box"><div class="v" id="k-time">—</div><div class="k">총 녹화 시간</div><div class="sub" id="k-time-sub"></div></div>
+   <div class="box"><div class="v" id="k-kda">—</div><div class="k">평균 KDA</div><div class="sub" id="k-kda-sub"></div></div>
+   <div class="box"><div class="v t" id="k-penta">—</div><div class="k">펜타킬</div></div>
+  </div>
+
+  <div class="sec"><h2>챔피언</h2><span class="ct" id="champ-ct"></span></div>
+  <div class="champlist" id="champlist"></div>
+
+  <div class="sec"><h2>포지션</h2></div>
+  <div class="posbars" id="posbars"></div>
+
+  <div class="sec"><h2>최근 경기</h2><span class="ct" id="recent-ct"></span></div>
+  <div class="grid" id="grid"></div>
+ </div>
+
 </main>
 
 <footer>
@@ -247,59 +299,47 @@ footer{border-top:1px solid var(--line);margin-top:70px}
 <script src="penta-common.js"></script>
 <script>
 (function(){
-  var P = window.PENTA;
-  var grid = document.getElementById('grid');
-  var elLoading = document.getElementById('loading'),
-      elEmpty = document.getElementById('empty'),
-      elFailed = document.getElementById('failed');
+  var P = window.PENTA; if(!P) return;
   var ver = '15.1.1';
-  var GROUPS = [];          // 전체 그룹
-  var STATS = {};           // match_id → {likes, views}
-  var filter = 'all';
-  var search = '';
 
-  function show(el){ [elLoading,elEmpty,elFailed].forEach(function(e){ e.classList.toggle('on', e===el); }); }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+  function show(id){ ['gate','loading','dash','failed'].forEach(function(x){ var e=document.getElementById(x); if(e) e.classList.toggle('on', x===id); }); }
+  function setText(id,v){ var e=document.getElementById(id); if(e) e.textContent=v; }
+  function avg(x,n){ return n?(x/n).toFixed(1):'0'; }
+  function fmtPct(x){ return Math.round(x*100)+'%'; }
+  function fmtDur(sec){ sec=Math.max(0,Math.round(sec||0)); var h=Math.floor(sec/3600), m=Math.round((sec%3600)/60); return h>0?(h+'시간 '+m+'분'):(m+'분'); }
 
-  // 챔피언/멀티킬/요약을 카드 1장으로
-  function cardHTML(group){
-    var r = P.pickPrimary(group);
+  function renderAuthChip(me){
+    var host=document.getElementById('auth'); if(!host) return;
+    if(me && me.puuid){
+      host.innerHTML='<a class="me-link on" href="me.html">나의 협곡</a><span class="who"></span><button class="lo" id="loBtn">로그아웃</button>';
+      var nm=(me.name||'').split('#')[0]||'소환사';
+      var w=host.querySelector('.who'); w.textContent=nm; w.title=me.name||'';
+      var b=document.getElementById('loBtn');
+      if(b) b.addEventListener('click', async function(){ try{ await P.logout(); }catch(e){} location.href='index.html'; });
+    } else { host.innerHTML=''; }
+  }
+
+  // 갤러리와 같은 형식의 카드(단순화 — 내 시점 대표)
+  function cardHTML(r){
     var me = P.heroCard(r);
-    var won = (r.won != null) ? r.won : (me.win != null ? me.win : null);  // 미확인은 null 유지
-    var champ = me.champion || '';
+    var won = (r.won!=null)?r.won:(me.win!=null?me.win:null);
+    var champ = me.champion||'';
     var icon = P.champIcon(ver, champ);
     var bg = r.thumb || (champ ? P.champLoading(champ) : '');
-    var k = me.kills||0, d = me.deaths||0, a = me.assists||0;
+    var k=me.kills||0, d=me.deaths||0, a=me.assists||0;
     var len = r.length || P.mmss(r.length_sec);
     var q = P.queueName(r.type);
     var role = P.posKo(me.position);
-    var povN = group.length;
-    var bm = P.bestMulti(me);
     var gk = P.groupKeyOf(r);
-    var views = (STATS[gk] && STATS[gk].views) || group.reduce(function(s,x){ return s + (x.views||0); }, 0);
-
-    // 매치 페이지와 동일 기준의 종합 등급(분석 데이터 사용)
-    var ana = r.analysis || {}, aps = ana.players || [], anaMe = null;
-    for(var ai=0; ai<aps.length; ai++){ if(aps[ai] && aps[ai].name===r.saver){ anaMe=aps[ai]; break; } }
-    if(!anaMe) anaMe = aps[0] || null;
-    var G = anaMe ? P.grade(anaMe, ana.duration || r.length_sec || 0) : null;
-    var gradeHTML = G ? '<div class="cgrade g-'+G.letter.toLowerCase()+'" title="측정 지표 종합 '+G.score+'/100">'+G.letter+'</div>' : '';
-
-    var multiHTML = bm ? ('<div class="multi"><svg class="ic" viewBox="0 0 24 24"><path d="M13 2 L4 14 H11 L9 22 L20 9 H13 Z" fill="currentColor"/></svg>'
-        + bm.label + (bm.n>1 ? (' ×'+bm.n) : '') + '</div>') : '';
-    var povHTML = povN>1 ? ('<span class="pov"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3.2"/><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/></svg>'
-        + povN + '시점</span>') : '';
-    var viewHTML = views>0 ? ('<span class="vw"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3.2"/><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/></svg>'
-        + P.compact(views) + '</span>') : '';
-
-    return '<a class="card '+(won===true?'win':won===false?'loss':'')+'" href="match.html?id='+encodeURIComponent(P.groupKeyOf(r))+'">'
+    return '<a class="card '+(won===true?'win':won===false?'loss':'')+'" href="match.html?id='+encodeURIComponent(gk)+'">'
       + '<div class="thumb">'
         + (bg ? '<img class="bgimg" src="'+bg+'" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '')
         + '<div class="scrim"></div>'
         + '<div class="res '+(won===true?'w':won===false?'l':'u')+'">'+(won===true?'승리':won===false?'패배':'미확인')+'</div>'
-        + gradeHTML
-        + multiHTML
+        + '<div class="dur">'+len+'</div>'
         + '<div class="heroline">'
-          + '<img class="champ" src="'+icon+'" alt="'+champ+'" loading="lazy" onerror="this.style.visibility=\'hidden\'">'
+          + '<img class="champ" src="'+icon+'" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">'
           + '<div class="nm"><div class="cn">'+esc(champ||'알 수 없음')+'</div>'+(role?'<div class="role">'+role+'</div>':'')+'</div>'
         + '</div>'
         + '<div class="play"><span><svg class="ic" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></span></div>'
@@ -307,98 +347,81 @@ footer{border-top:1px solid var(--line);margin-top:70px}
       + '<div class="cbody">'
         + '<div class="kda"><span class="nums">'+k+'<span class="s">/</span>'+d+'<span class="s">/</span>'+a+'</span>'
           + '<span class="ratio"><b>'+P.kdaRatio(k,d,a)+'</b> 평점</span></div>'
-        + '<div class="meta"><span class="tag q">'+q+'</span><span class="tag">'+len+'</span><span class="tag">CS '+(me.cs||0)+'</span><span class="tag">'+(me.level?('Lv '+me.level):'')+'</span></div>'
-        + '<div class="foot">'
-          + '<div class="upl"><b>'+esc(r.saver||r.uploader||'소환사')+'</b> · '+(P.ago(r.uploaded)||'')+'</div>'
-          + '<div class="fr">'+povHTML+viewHTML+'</div>'
-        + '</div>'
+        + '<div class="meta"><span class="tag q">'+q+'</span><span class="tag">'+len+'</span><span class="tag">CS '+(me.cs||0)+'</span></div>'
+        + '<div class="foot"><div class="upl">'+(P.ago(r.uploaded)||'')+'</div></div>'
       + '</div>'
     + '</a>';
   }
 
-  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
-
-  function matchFilter(group){
-    var r = P.pickPrimary(group), me = P.heroCard(r);
-    if(filter==='win' && !((r.won!=null)?r.won:me.win)) return false;
-    if(filter==='penta' && !(me.pentas>0)) return false;
-    if(search){
-      var hay = (me.champion||'') + ' ' + (r.saver||'') + ' ' + (r.uploader||'');
-      // 모든 참가자 이름/챔피언도 검색 대상
-      (r.players||[]).forEach(function(p){ hay += ' '+(p.name||'')+' '+(p.champion||''); });
-      if(hay.toLowerCase().indexOf(search.toLowerCase())<0) return false;
-    }
-    return true;
-  }
-
-  function render(){
-    var list = GROUPS.filter(matchFilter);
-    if(!list.length){
-      grid.innerHTML='';
-      if(!GROUPS.length){ show(elEmpty); }
-      else { grid.innerHTML='<div class="state on" style="grid-column:1/-1;padding:60px 20px"><h3>조건에 맞는 게임이 없습니다</h3><p>필터나 검색어를 바꿔보세요.</p></div>'; show(null); }
-      return;
-    }
-    show(null);
-    grid.innerHTML = list.map(cardHTML).join('');
-  }
-
-  function setStats(){
-    var games = GROUPS.length;
-    var penta = 0, pov = 0;
-    GROUPS.forEach(function(g){
-      if(g.length>1) pov++;
-      g.forEach(function(r){ (r.players||[]).forEach(function(p){ penta += (p.pentas||0); }); });
+  function computeAndRender(rows){
+    var games=rows.length, wins=0, losses=0, totalSec=0, K=0, D=0, A=0, pentas=0;
+    var champ={}, pos={};
+    rows.forEach(function(r){
+      var me = P.heroCard(r);
+      var won = (r.won!=null)?r.won:(me.win!=null?me.win:null);
+      if(won===true) wins++; else if(won===false) losses++;
+      totalSec += (r.length_sec||0);
+      K += me.kills||0; D += me.deaths||0; A += me.assists||0; pentas += me.pentas||0;
+      var c = me.champion;
+      if(c){ var cc=(champ[c]=champ[c]||{g:0,w:0,k:0,d:0,a:0}); cc.g++; if(won===true) cc.w++; cc.k+=me.kills||0; cc.d+=me.deaths||0; cc.a+=me.assists||0; }
+      var pp = me.position;
+      if(pp){ pos[pp]=(pos[pp]||0)+1; }
     });
-    document.getElementById('s-games').textContent = games;
-    document.getElementById('s-penta').textContent = penta;
-    document.getElementById('s-pov').textContent = pov;
+    var decided = wins+losses;
+
+    setText('k-games', games);
+    var wrEl=document.getElementById('k-wr');
+    wrEl.textContent = decided ? fmtPct(wins/decided) : '—';
+    wrEl.className = 'v ' + (decided ? (wins/decided>=0.5?'w':'l') : '');
+    setText('k-wr-sub', decided ? (wins+'승 '+losses+'패') : '승패 기록 없음');
+    setText('k-time', fmtDur(totalSec));
+    setText('k-time-sub', games+'게임');
+    setText('k-kda', D ? (((K+A)/D).toFixed(2)) : (games?'Perfect':'—'));
+    setText('k-kda-sub', games ? (avg(K,games)+' / '+avg(D,games)+' / '+avg(A,games)) : '');
+    setText('k-penta', pentas);
+
+    var clist = Object.keys(champ).map(function(c){ var o=champ[c]; o.name=c; o.wr=o.g?o.w/o.g:0; o.kda=o.d?((o.k+o.a)/o.d):(o.k+o.a); return o; });
+    clist.sort(function(x,y){ return (y.g-x.g) || (y.wr-x.wr); });
+    setText('champ-ct', clist.length ? (clist.length+'종') : '');
+    document.getElementById('champlist').innerHTML = clist.length
+      ? clist.slice(0,8).map(function(o){
+          var wr=Math.round(o.wr*100);
+          return '<div class="crow"><img src="'+P.champIcon(ver,o.name)+'" alt="" onerror="this.style.visibility=\'hidden\'">'
+            + '<div class="nm"><b>'+esc(o.name)+'</b><span>'+o.g+'게임 · KDA '+o.kda.toFixed(2)+'</span></div>'
+            + '<div class="wr '+(wr>=50?'good':'bad')+'">'+wr+'%<small>'+o.w+'승 '+(o.g-o.w)+'패</small></div></div>';
+        }).join('')
+      : '<div class="gempty">아직 챔피언 데이터가 없습니다.</div>';
+
+    var order=['TOP','JUNGLE','MIDDLE','BOTTOM','UTILITY'], labels={TOP:'탑',JUNGLE:'정글',MIDDLE:'미드',BOTTOM:'원딜',UTILITY:'서폿'};
+    var maxp=Math.max.apply(null, order.map(function(p){ return pos[p]||0; }).concat([1]));
+    document.getElementById('posbars').innerHTML = order.map(function(p){
+      var n=pos[p]||0, w=Math.round(n/maxp*100);
+      return '<div class="pbar"><div class="lb">'+labels[p]+'</div><div class="tr"><div class="fl" style="width:'+w+'%"></div></div><div class="n">'+n+'게임</div></div>';
+    }).join('');
+
+    var recent = rows.slice(0,12);
+    setText('recent-ct', games ? (games+'게임 중 최근 '+recent.length+'개') : '');
+    document.getElementById('grid').innerHTML = recent.length
+      ? recent.map(cardHTML).join('')
+      : '<div class="gempty">아직 업로드한 게임이 없습니다. <b>myPENTA 레코더</b>를 켜고 한 판 플레이하면 자동으로 올라옵니다.</div>';
   }
 
   async function load(){
-    show(elLoading);
-    try{ ver = await P.ddVersion(); }catch(e){}
-    try{ await P.ddChampMap(ver); }catch(e){}
-    var rows;
-    try{
-      rows = await P.sbSelect('matches', 'select=*&order=uploaded.desc&limit=120');
-    }catch(e){
-      show(elFailed); return;
-    }
-    GROUPS = P.clusterByMatch(rows || []);
-    try{ STATS = await P.statsAll(); }catch(e){ STATS = {}; }
-    setStats();
-    render();
-  }
-
-  // 필터 칩
-  document.getElementById('filters').addEventListener('click', function(e){
-    var b = e.target.closest('.fchip'); if(!b) return;
-    filter = b.dataset.f;
-    document.querySelectorAll('.fchip').forEach(function(x){ x.classList.toggle('on', x===b); });
-    render();
-  });
-  // 검색
-  var qi = document.getElementById('q');
-  if(qi) qi.addEventListener('input', function(){ search = qi.value.trim(); render(); });
-  // 스크롤 시 바 그림자
-  addEventListener('scroll', function(){ document.getElementById('bar').classList.toggle('scrolled', scrollY>4); });
-
-  // 로그인 칩 (#code 소비 → 토큰; 자동 로그인)
-  async function renderAuth(){
-    var host=document.getElementById('auth'); if(!host) return;
+    show('loading');
     var me=null; try{ me=await P.initAuth(); }catch(e){}
-    if(me && me.puuid){
-      host.innerHTML='<a class="me-link" href="me.html">나의 협곡</a><span class="who"></span><button class="lo" id="loBtn">로그아웃</button>';
-      var nm=(me.name||'').split('#')[0] || '소환사';
-      var w=host.querySelector('.who'); w.textContent=nm; w.title=me.name||'';
-      var b=document.getElementById('loBtn');
-      if(b) b.addEventListener('click', async function(){ try{ await P.logout(); }catch(e){} host.innerHTML=''; });
-    } else { host.innerHTML=''; }
+    renderAuthChip(me);
+    if(!me || !me.puuid){ show('gate'); return; }
+    setText('me-name', (me.name||'').split('#')[0] || '소환사');
+    try{ ver = await P.ddVersion(); }catch(e){}
+    var rows=[];
+    try{
+      rows = await P.sbSelect('matches', 'owner_puuid=eq.'+encodeURIComponent(me.puuid)+'&select=*&order=uploaded.desc');
+    }catch(e){ show('failed'); return; }
+    computeAndRender(rows || []);
+    show('dash');
   }
 
   load();
-  renderAuth();
 })();
 </script>
 </body></html>

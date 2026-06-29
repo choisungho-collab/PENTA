@@ -77,7 +77,7 @@ a{color:inherit;text-decoration:none}svg{display:block}
 .callout p{margin:0;font-size:14px;color:var(--ink2);line-height:1.7}
 .callout a{color:var(--gold-ink);font-weight:600;border-bottom:1px solid var(--gold-line)}
 .shot{margin:2px 0 18px;border:1px solid var(--line);border-radius:var(--r2);overflow:hidden;background:var(--well);max-width:520px}
-.shot img{width:100%;height:auto;display:block}
+.shot img,.shot svg{width:100%;height:auto;display:block}
 .shot .cap{font-family:var(--fm);font-size:11px;color:var(--faint);padding:8px 13px;border-top:1px solid var(--line);letter-spacing:.01em}
 
 footer{border-top:1px solid var(--line);margin-top:58px}
@@ -119,13 +119,38 @@ footer{border-top:1px solid var(--line);margin-top:58px}
 
  <section class="sec">
   <h2>레코더 화면 <span class="sub">한눈에</span></h2>
-  <figure class="shot"><img src="recorder.png" alt="myPENTA 레코더 창" width="466" height="99"><div class="cap">대기 중 — 게임을 켜면 자동으로 Recording으로 바뀝니다</div></figure>
+  <figure class="shot"><svg viewBox="0 0 466 160" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="myPENTA 레코더 — 대기 중 화면">
+   <defs>
+    <radialGradient id="mbA" cx="50%" cy="26%" r="92%"><stop offset="0" stop-color="#101c25"/><stop offset=".55" stop-color="#0a0e15"/><stop offset="1" stop-color="#06090d"/></radialGradient>
+    <radialGradient id="mcA" cx="50%" cy="4%" r="58%"><stop offset="0" stop-color="#2f7d74" stop-opacity=".20"/><stop offset="1" stop-color="#2f7d74" stop-opacity="0"/></radialGradient>
+    <linearGradient id="mdA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ECD8AD"/><stop offset="1" stop-color="#CDB27C"/></linearGradient>
+    <filter id="msA" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="2.3"/></filter>
+   </defs>
+   <rect width="466" height="160" fill="url(#mbA)"/><rect width="466" height="160" fill="url(#mcA)"/>
+   <g stroke="#3c4c46" stroke-width="1" opacity=".10" fill="none"><path d="M52 160 C 150 108 232 92 372 34"/><path d="M128 160 C 214 118 306 100 446 56"/></g>
+   <rect x="14" y="0" width="438" height="2" rx="1" fill="#27313C"/>
+   <circle cx="24" cy="31" r="8.4" fill="#DEC79C" opacity=".14" filter="url(#msA)"/><circle cx="24" cy="31" r="4.2" fill="url(#mdA)"/>
+   <text x="36" y="35.4" font-family="'Sora',sans-serif" font-weight="600" font-size="13.5" fill="#ECE7DD" letter-spacing=".2">Ready</text>
+   <text x="90" y="35.4" font-family="'Sora',sans-serif" font-weight="500" font-size="10" fill="#A7A192">auto-records</text>
+   <text x="380" y="35" text-anchor="end" font-family="'IBM Plex Mono',monospace" font-size="9.5" fill="#EFDDBC" letter-spacing=".4">1080p · NVENC</text>
+   <rect x="393" y="22.5" width="59" height="17.5" rx="8.75" fill="#12231E" stroke="#46A08F"/>
+   <text x="447" y="34.6" text-anchor="end" font-family="'Sora',sans-serif" font-weight="500" font-size="9.5" fill="#7ADCC6">Cloud</text>
+   <text x="411" y="34.6" text-anchor="end" font-family="'Sora',sans-serif" font-size="9" fill="#7ADCC6">☁</text>
+   <rect x="16" y="117" width="78" height="26" rx="8" fill="#16130C" stroke="#5D4F2E"/>
+   <g fill="#DEC79C"><rect x="27" y="125.2" width="3.1" height="3.1" rx=".5"/><rect x="31.4" y="125.2" width="3.1" height="3.1" rx=".5"/><rect x="27" y="129.6" width="3.1" height="3.1" rx=".5"/><rect x="31.4" y="129.6" width="3.1" height="3.1" rx=".5"/></g>
+   <text x="41" y="133.8" font-family="'Sora',sans-serif" font-weight="600" font-size="9.5" fill="#DEC79C">Archive</text>
+   <rect x="102" y="117" width="94" height="26" rx="8" fill="#10141B" stroke="#2B323C"/>
+   <path d="M110 125.6 h4.2 l1.5 1.8 h6 a1.2 1.2 0 0 1 1.2 1.2 v3.8 a1.2 1.2 0 0 1 -1.2 1.2 h-11.7 a1.2 1.2 0 0 1 -1.2 -1.2 z" fill="#CFC8BA"/>
+   <text x="127" y="133.8" font-family="'Sora',sans-serif" font-weight="600" font-size="9.5" fill="#CFC8BA">Open folder</text>
+   <rect x="384" y="117" width="28" height="26" rx="7" fill="#10141B" stroke="#232A34"/><text x="398" y="135" text-anchor="middle" font-family="'Sora',sans-serif" font-size="13.5" fill="#9A9282">⚙</text>
+   <rect x="420" y="117" width="28" height="26" rx="7" fill="#10141B" stroke="#232A34"/><text x="434" y="134.6" text-anchor="middle" font-family="'Sora',sans-serif" font-size="12.5" fill="#9A9282">▤</text>
+  </svg><div class="cap">대기 중 — 게임을 켜면 자동으로 Recording으로 바뀝니다</div></figure>
   <div class="cfgnote">
    <div class="cfgrow"><div class="ck">Ready / Recording</div><div class="cv"><b>지금 상태.</b> 왼쪽 점과 글씨로 보입니다. Ready는 게임 대기 중, Recording은 녹화 중이며 옆에 <b>경과 시간(mm:ss)</b>이 같이 흐릅니다. 녹화 중에는 창 맨 위에 얇은 빨간 줄이 켜져, 다른 창에 가려도 알 수 있습니다.</div></div>
-   <div class="cfgrow"><div class="ck">1440p · NVENC</div><div class="cv"><b>지금 화질·인코더.</b> 오른쪽에 현재 설정이 칩으로 표시됩니다. <b>눌러서 바로 설정</b>을 열 수 있습니다.</div></div>
+   <div class="cfgrow"><div class="ck">1080p · NVENC</div><div class="cv"><b>지금 화질·인코더.</b> 오른쪽에 현재 설정이 칩으로 표시됩니다. <b>눌러서 바로 설정</b>을 열 수 있습니다.</div></div>
    <div class="cfgrow"><div class="ck">☁ Cloud</div><div class="cv">아카이브 연결 상태. <b>Cloud</b>면 업로드 준비 완료, <b>Key needed</b>면 <span class="k">service_key</span>가 빠진 상태입니다. 업로드가 끝나면 잠깐 <span class="k">Uploaded ✓</span>가 뜹니다.</div></div>
    <div class="cfgrow"><div class="ck">Archive · Open folder</div><div class="cv"><b>Archive</b>는 웹 아카이브 열기, <b>Open folder</b>는 녹화 폴더 열기. 오른쪽 두 아이콘은 <b>⚙ 설정</b>과 <b>▤ 로그</b>입니다.</div></div>
-   <div class="cfgrow"><div class="ck">창 닫기 ✕</div><div class="cv">닫아도 꺼지지 않고 <b>트레이로 최소화</b>됩니다. 완전히 끄려면 트레이 아이콘 우클릭 → <b>Quit</b>.</div></div>
+   <div class="cfgrow"><div class="ck">창 닫기 ✕</div><div class="cv"><b>✕를 누르면 종료</b>됩니다. 게임 중엔 켜둔 채로 두시고, 잠깐 치워두고 싶으면 <b>최소화(─)</b>를 쓰세요 — 작업표시줄에 남아 계속 녹화합니다.</div></div>
   </div>
  </section>
 
@@ -133,7 +158,7 @@ footer{border-top:1px solid var(--line);margin-top:58px}
   <h2>녹화 흐름 <span class="sub">4단계</span></h2>
   <ol class="steps">
    <li><b>레코더를 켜둡니다.</b> 한 번 실행해 두면 떠 있다가 게임을 감지합니다. 창은 닫지 말고 켜둔 채로 두세요.</li>
-   <li><b>리그 오브 레전드를 플레이합니다.</b> 게임이 시작되면 자동으로 녹화가 켜지고, 화면이 <span class="k">Recording</span>으로 바뀝니다.</li>
+   <li><b>리그 오브 레전드를 플레이합니다.</b> 챔피언 선택이 시작되면 자동으로 녹화가 켜지고, 화면이 <span class="k">Recording</span>으로 바뀝니다. 밴픽부터 게임 종료까지 한 영상에 담깁니다.</li>
    <li><b>게임이 끝나면 멈춥니다.</b> 녹화가 자동으로 종료되고, 잠시 뒤 <b>Riot 공식 기록</b>으로 전적이 분석됩니다.</li>
    <li><b>아카이브에 자동 업로드.</b> 영상과 전적이 웹 아카이브에 올라갑니다. <span class="k">Archive</span> 버튼으로 바로 확인하세요.</li>
   </ol>
@@ -142,7 +167,19 @@ footer{border-top:1px solid var(--line);margin-top:58px}
  <section class="sec">
   <h2>녹화 설정 <span class="sub">⚙ Settings</span></h2>
   <p class="lead">기본값(Auto)이 대부분 최선입니다. 창의 <b>⚙</b>를 누르면 열리고, 바꾸면 다음 녹화부터 적용됩니다.</p>
-  <figure class="shot"><img src="recorder-settings.png" alt="녹화 설정 패널" width="466" height="255"><div class="cap">⚙ 설정 — Quality와 Encoder</div></figure>
+  <figure class="shot"><svg viewBox="0 0 466 150" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="myPENTA 레코더 설정 — Quality와 Encoder">
+   <rect width="466" height="150" fill="#0B0C0F"/>
+   <text x="20" y="26" font-family="'Sora',sans-serif" font-weight="700" font-size="9.5" fill="#C2BBAD" letter-spacing="1.5">RECORDING SETTINGS</text>
+   <text x="20" y="56" font-family="'Sora',sans-serif" font-weight="500" font-size="11" fill="#867F71">Quality</text>
+   <rect x="80" y="45" width="366" height="22" rx="6" fill="#181B21" stroke="#2B323C"/>
+   <text x="92" y="60" font-family="'Sora',sans-serif" font-size="11" fill="#ECE7DD">Auto (best)</text>
+   <path d="M430 53.5 l4.2 4.2 l4.2 -4.2" fill="none" stroke="#9A9282" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+   <text x="20" y="91" font-family="'Sora',sans-serif" font-weight="500" font-size="11" fill="#867F71">Encoder</text>
+   <rect x="80" y="80" width="366" height="22" rx="6" fill="#181B21" stroke="#2B323C"/>
+   <text x="92" y="95" font-family="'Sora',sans-serif" font-size="11" fill="#ECE7DD">Auto (GPU first)</text>
+   <path d="M430 88.5 l4.2 4.2 l4.2 -4.2" fill="none" stroke="#9A9282" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+   <text x="20" y="128" font-family="'Sora',sans-serif" font-size="9.5" fill="#564F44">Auto = best quality · GPU-accelerated so your game stays smooth</text>
+  </svg><div class="cap">⚙ 설정 — Quality와 Encoder</div></figure>
   <div class="cfgnote">
    <div class="cfgrow"><div class="ck">Quality</div><div class="cv"><b>Auto · Source · 1080p · 720p · 480p.</b> Auto는 최상 화질. 저장 공간이나 업로드가 부담되면 720p로 낮추세요.</div></div>
    <div class="cfgrow"><div class="ck">Encoder</div><div class="cv"><b>Auto · GPU(NVENC) · CPU(x264).</b> Auto는 NVIDIA가 있으면 GPU로 녹화해 게임이 안 끊깁니다. GPU가 없으면 자동으로 CPU로 넘어갑니다. 캡처 방식과 모니터는 레코더가 알아서 잡으니 고를 필요가 없습니다.</div></div>
@@ -165,7 +202,7 @@ footer{border-top:1px solid var(--line);margin-top:58px}
    <div class="fcard">
     <svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 19V9m5 10V5m5 14v-7m5 7V11"/></svg>
     <h3>전적 분석</h3>
-    <p>영상 옆에 KDA·CS·골드 추이·오브젝트가 Riot 공식 데이터로 정리됩니다.</p>
+    <p>영상 옆에 승패·KDA·CS·골드 추이·오브젝트가 Riot 공식 데이터로 정리됩니다.</p>
    </div>
   </div>
  </section>
@@ -178,6 +215,7 @@ footer{border-top:1px solid var(--line);margin-top:58px}
    <div class="faqrow"><p class="q">경기 수가 이상해요</p><p class="a">아카이브는 15초마다 자동으로 갱신됩니다. 방금 끝낸 게임이 안 보이면 잠시 후 새로고침해 주세요.</p></div>
    <div class="faqrow"><p class="q">화면이 검게 녹화돼요</p><p class="a">레코더는 전체화면도 잡히는 <b>WGC</b> 방식을 기본으로 씁니다. 그래도 검게 나오면 대개 그래픽 드라이버 문제이니 최신으로 올려주세요.</p></div>
    <div class="faqrow"><p class="q">처음 켰더니 한참 멈춰 있어요</p><p class="a">최초 1회는 영상 도구(ffmpeg)를 자동으로 받아옵니다. 1~3분 기다리면 <span class="k">Ready</span>로 바뀝니다.</p></div>
+   <div class="faqrow"><p class="q">영상 용량이 부담돼요</p><p class="a">아카이브에는 화질은 1080p 그대로 두되 <b>용량을 줄인 영상</b>이 올라가고, <b>원본 고화질</b>은 PC의 녹화 폴더(<span class="k">Open folder</span>)에 그대로 남습니다. 더 줄이고 싶으면 <span class="k">⚙ 설정 → Quality</span>를 720p로 낮추면 됩니다.</p></div>
   </div>
  </section>
 
