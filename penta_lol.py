@@ -503,10 +503,28 @@ def analyze_live(snaps, events, my_name):
             objs.append({"t": t, "kind": _kind, "team": _ct})
             if _ct in (100, 200): objectives[_ct][_okey]["kills"] += 1
 
+    # 골드 추이(추정): 스냅샷마다 팀별 아이템 가치 합 → goldDiffChart용 series.
+    # Live Client는 남(타 플레이어) 정확 골드를 안 주므로 '아이템에 투자된 골드' 합으로 근사한다.
+    # (정확하진 않지만 시간에 따른 우위 흐름은 충분히 드러난다. 웹에서 '추정'으로 표기.)
+    series = None
+    if len(snaps) >= 3:
+        series = []
+        for s in snaps:
+            g100 = g200 = 0
+            for q in (s.get("players") or []):
+                gv = _item_gold(q.get("items"))
+                if (q.get("team") == "ORDER"): g100 += gv
+                else: g200 += gv
+            series.append({"t": int(float(s.get("t") or 0)), "g100": g100, "g200": g200})
+        # 단조 증가 보정(아이템 판매/일시적 감소로 우상향이 깨지는 잡음 완화)
+        for i in range(1, len(series)):
+            if series[i]["g100"] < series[i-1]["g100"]: series[i]["g100"] = series[i-1]["g100"]
+            if series[i]["g200"] < series[i-1]["g200"]: series[i]["g200"] = series[i-1]["g200"]
+
     return {
         "players": players, "win_team": win_team,
         "duration": int(dur_sec), "queue": queue,
         "patch": None, "objectives": objectives, "bans": {},
-        "series": None, "kills": kills, "objs": objs,
+        "series": series, "series_est": (series is not None), "kills": kills, "objs": objs,
         "source": "live",
     }

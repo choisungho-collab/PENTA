@@ -1292,7 +1292,7 @@ def _encoder_args():
     return _ENC_CACHE
 
 def make_preview(src, dst):
-    """원본을 갤러리용으로 재인코딩 — 1080p(원본 해상도) 유지, 압축 강하게(cq25)로 용량↓. 성공 시 dst, 실패 시 None."""
+    """원본을 갤러리용으로 재인코딩 — 최대 1080p(초과분만 다운스케일, 업스케일 안 함) + 강한 압축(cq25)으로 용량↓. 성공 시 dst, 실패 시 None."""
     if not (FFMPEG and src and os.path.isfile(src)): return None
     enc = _encoder_args() or []
     if "h264_nvenc" in enc:
@@ -1302,7 +1302,7 @@ def make_preview(src, dst):
     try:
         log("Compressing for gallery (1080p, smaller file)\u2026")
         r = _run([FFMPEG, "-y", "-loglevel", "error", "-i", src,
-                  *venc, "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", dst],
+                  *venc, "-vf", "scale=-2:'min(1080,ih)'", "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", dst],
                  timeout=3600)
         if r.returncode == 0 and os.path.isfile(dst) and os.path.getsize(dst) > 0:
             return dst
@@ -1321,8 +1321,8 @@ def _target_height(src_h=0):
     elif pref in ("720", "720p"): th = 720
     elif pref in ("480", "480p"): th = 480
     elif pref in ("1440", "1440p"): th = 1440
-    else:  # auto: 소프트웨어면 720p, 하드웨어(NVENC)면 1080p (클라우드 업로드·대역폭 절감; 원본 원하면 scale="source")
-        th = 720 if _ENC_IS_SW else 1080
+    else:  # auto: 인코더 무관 1080p (가독성 우선 — 720p로 안 떨어뜨림; 원본 그대로는 scale="source", CPU 부하 크면 수동 720p 선택)
+        th = 1080
     if th is None: return None
     if src_h and src_h <= th: return None   # 업스케일 금지
     return th
@@ -1999,7 +1999,7 @@ def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr", 
         REC_STATE["preparing"] = False
         log("Cloud (Supabase) not configured → keeping locally only."); return
     tmp_thumb = os.path.join(base, "thumb.jpg"); has_thumb = make_thumb(video_path, tmp_thumb)
-    # 갤러리 빠른 재생용 720p 프리뷰만 업로드. 원본(고화질)은 PC에 그대로 보관(다운로드 없음).
+    # 갤러리용 프리뷰(최대 1080p, 강한 압축)만 업로드. 원본(고화질)은 PC에 그대로 보관(다운로드 없음).
     preview = os.path.join(base, "preview.mp4")
     up_src = make_preview(video_path, preview) or video_path
     up_size = os.path.getsize(up_src)
