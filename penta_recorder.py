@@ -1197,6 +1197,18 @@ def riot_key(rid):
     이 키가 곧 계정. PC를 가리지 않고, 같은 Riot ID면 어느 기기에서 올려도 한 계정으로 묶인다."""
     return (rid or "").strip().lower()
 
+def _bind_account(rid):
+    """게임에서 Riot ID를 확인하면 즉시 계정으로 묶는다 — riot_id 저장 + (클라우드면) 신원 등록.
+    업로드를 끝까지 안 해도 게임 시작 직후 Archive 로그인이 되도록 한다."""
+    if not rid: return
+    try: device_set(riot_id=rid)
+    except Exception: pass
+    if cloud_state() == "cloud":
+        def _reg():
+            try: sb_rpc("register_identity", {"p_puuid": riot_key(rid), "p_secret": device_secret(), "p_name": rid, "p_icon": None})
+            except Exception: pass
+        threading.Thread(target=_reg, daemon=True).start()
+
 def sb_rpc(fn, payload, timeout=30):
     """Supabase RPC(/rest/v1/rpc/{fn}) 호출 → 결과(JSON). 실패 시 예외."""
     import requests
@@ -1298,12 +1310,12 @@ def _encoder_args():
 
 def make_preview(src, dst):
     """원본을 갤러리용으로 재인코딩 — 최대 1080p(초과분만 다운스케일, 업스케일 안 함) + '또렷한' 화질.
-    화질 노브: config.json 의 preview_cq(NVENC, 낮을수록 고화질, 기본 23) / preview_crf(x264, 기본 23).
+    화질 노브: config.json 의 preview_cq(NVENC, 낮을수록 고화질, 기본 26) / preview_crf(x264, 기본 26).
     값을 더 낮추면(예: cq18/crf19) 더 선명·용량↑. 성공 시 dst, 실패 시 None(원본 업로드로 폴백)."""
     if not (FFMPEG and src and os.path.isfile(src)): return None
     enc = _encoder_args() or []
-    cq  = str(CFG.get("preview_cq", 23))    # NVENC 품질(0~51, 낮을수록 고화질). 기본 23 = 또렷+적당 용량
-    crf = str(CFG.get("preview_crf", 23))   # x264 품질(0~51, 낮을수록 고화질). 기본 23
+    cq  = str(CFG.get("preview_cq", 26))    # NVENC 품질(0~51, 낮을수록 고화질). 기본 26 = 적당 화질 + 더 작은 용량
+    crf = str(CFG.get("preview_crf", 26))   # x264 품질(0~51, 낮을수록 고화질). 기본 26
     if "h264_nvenc" in enc:
         # p6(고품질 프리셋) + VBR 기반 CQ. maxrate 로 최대 비트레이트만 막아 용량 폭주 방지.
         venc = ["-c:v", "h264_nvenc", "-preset", "p6", "-rc", "vbr", "-cq", cq,
@@ -1596,15 +1608,16 @@ class Recorder:
                 try: p.terminate()
                 except Exception: pass
 
-        # draw_border=False(노란 테두리 제거)는 일부 OS(Win10/구버전 Win11)에서 'border toggle 미지원' 예외를 던진다.
-        # draw_border=None → DrawBorderSettings::Default 로 매핑되어 테두리 설정을 아예 안 건드림 → 모든 Windows에서 에러 없이 작동(2.0.0 소스 확인 완료).
-        # 그래서 False가 어떤 이유로든 실패하면 무조건 None(Default)로 재시도한다. WGC 자체가 불가하면 ddagrab(GPU)으로 폴백.
+        # 1순위: 테두리 없는 WGC(가장 가볍고 깔끔). 일부 OS(Win10/구버전 Win11)는 이 토글을 미지원해 예외가 난다.
+        # ★ 성능 우선: ddagrab(GPU)은 hwdownload 로 매 프레임을 GPU→CPU 로 복사해 WGC보다 무겁다(인게임 FPS 저하 가능).
+        #   따라서 borderless 가 안 되면 ddagrab 으로 떨어뜨리지 말고, WGC 기본(None)으로 — 여전히 GPU 기반이라 가볍다.
+        #   (그 대신 일부 빌드는 노란 테두리가 남을 수 있음. 노란선이 싫고 부하를 감수하면 config.json "capture":"ddagrab".)
         try:
-            cap, control = _build_and_start(False)        # Win11: 노란 테두리 제거(깔끔)
+            cap, control = _build_and_start(False)        # 테두리 없는 WGC
         except Exception:
             try:
-                cap, control = _build_and_start(None)     # 그 외/구버전: 시스템 기본 테두리(토글 안 함) → 에러 없이 WGC 작동
-                log("  WGC: using this Windows build's default capture border.")
+                cap, control = _build_and_start(None)     # WGC 기본(가벼움) — 빌드에 따라 노란 테두리가 남을 수 있음
+                log("  WGC: this build keeps the default capture border (kept WGC for low overhead).")
             except Exception:
                 log("  WGC not usable here \u2014 using GPU desktop capture (ddagrab) instead.")
                 return False
@@ -2101,6 +2114,7 @@ def recorder_loop(cfg):
                         if penta_lol.game_active():
                             riot_id = penta_lol.my_riot_id() or riot_id; break
                         time.sleep(1)
+                    _bind_account(riot_id)
                     started_cs = False
                 else:
                     log("Champion select detected \u2014 recording from draft.")
@@ -2115,7 +2129,7 @@ def recorder_loop(cfg):
                     log("Recording stream dropped \u2192 restarting automatically.")
                     active = rec.start()
                 if not riot_id and penta_lol.game_active():
-                    riot_id = penta_lol.my_riot_id()
+                    riot_id = penta_lol.my_riot_id(); _bind_account(riot_id)
                 # Live Client 스냅샷(약 25초 간격) + 이벤트(매 루프) 수집
                 try:
                     snap = penta_lol.live_snapshot()
@@ -2509,16 +2523,14 @@ def run_gui(cfg, url):
             if not st["log"]: set_log(True)
         _rec["was_rec"]=_rng
         _uploading=bool(REC_STATE.get("uploading")); _preparing=bool(REC_STATE.get("preparing")); _doneToast=bool(_up and (_now-_up<5))
-        # 상단 라인 + 배경 틴트로 단계 구분: 녹화=빨강, 업로드 준비중~업로드중=파랑, 완료=틸
+        # 단계 구분은 '상단 얇은 라인 색'으로만: 녹화=빨강, 업로드=파랑, 완료=틸. (배경 틴트는 제거 — 화면을 안 건드려 깔끔)
         if _rng: _acc=REC
         elif _uploading or _preparing: _acc=BLUE
         elif _doneToast: _acc=TEAL
         else: _acc=BG
         topacc.config(bg=_acc)
         try:
-            if _uploading or _preparing: cv.itemconfig(_tint,state="normal",fill=BLUE)
-            elif _doneToast: cv.itemconfig(_tint,state="normal",fill=TEAL)
-            else: cv.itemconfig(_tint,state="hidden")
+            cv.itemconfig(_tint,state="hidden")   # 업로드 중에도 배경은 그대로 — 상단 라인 색 + "Uploading %" 텍스트만으로 표시
         except Exception: pass
         _warm=bool(_rng)                          # 녹화 중에는 협곡이 바론 핏빛으로 물듦
         if _bgitem is not None and _warm!=_SC["warm"]:

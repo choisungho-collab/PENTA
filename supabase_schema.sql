@@ -89,7 +89,13 @@ create table if not exists identities (
   created        timestamptz default now(),
   updated        timestamptz default now()
 );
--- 기존 배포 호환(여러 번 실행 안전): 컬럼 추가 → 단일 비밀키를 배열로 이관 → not null 해제
+-- 기존 배포 호환(여러 번 실행 안전): 빠진 컬럼 모두 보강 → 단일 비밀키를 배열로 이관 → not null 해제
+-- ★ register_identity 가 name/icon 에 insert 하므로 두 컬럼이 반드시 존재해야 함(과거 테이블엔 없을 수 있음).
+alter table identities add column if not exists secret_hash    text;
+alter table identities add column if not exists name           text;
+alter table identities add column if not exists icon           int;
+alter table identities add column if not exists created        timestamptz default now();
+alter table identities add column if not exists updated        timestamptz default now();
 alter table identities add column if not exists device_secrets text[] not null default '{}';
 update identities set device_secrets = array[secret_hash]
   where secret_hash is not null and coalesce(array_length(device_secrets,1),0)=0;
@@ -301,3 +307,157 @@ drop policy if exists s_del on storage.objects;
 create policy s_sel on storage.objects for select to anon, authenticated using (true);
 create policy s_ins on storage.objects for insert to anon, authenticated with check (true);
 create policy s_upd on storage.objects for update to anon, authenticated using (true) with check (true);
+
+-- ════════════════════════════════ 자유게시판 (댓글·좋아요·카테고리) ════════════════════════════════
+-- ── 1) posts (없으면 생성) + 신규 컬럼 보강 ──────────────────────────────
+create table if not exists posts (
+  id          bigint generated always as identity primary key,
+  author      text not null,
+  author_name text,
+  title       text not null,
+  body        text not null default '',
+  created     timestamptz default now(),
+  updated     timestamptz default now()
+);
+alter table posts add column if not exists category text not null default '자유';   -- 자유/공략/질문/클립/기타
+alter table posts add column if not exists likes    int  not null default 0;          -- 좋아요 수(캐시)
+alter table posts add column if not exists comments int  not null default 0;          -- 댓글 수(캐시)
+create index if not exists posts_created_idx  on posts (created desc);
+create index if not exists posts_category_idx on posts (category);
+
+alter table posts enable row level security;
+drop policy if exists p_sel on posts;
+create policy p_sel on posts for select using (true);
+
+-- ── 2) 좋아요(사용자별 중복 방지) ────────────────────────────────────────
+create table if not exists post_likes (
+  post_id bigint not null references posts(id) on delete cascade,
+  puuid   text   not null,
+  created timestamptz default now(),
+  primary key (post_id, puuid)
+);
+alter table post_likes enable row level security;
+drop policy if exists pl_sel on post_likes;
+create policy pl_sel on post_likes for select using (true);
+
+-- ── 3) 댓글 ──────────────────────────────────────────────────────────────
+create table if not exists post_comments (
+  id          bigint generated always as identity primary key,
+  post_id     bigint not null references posts(id) on delete cascade,
+  author      text not null,
+  author_name text,
+  body        text not null,
+  created     timestamptz default now()
+);
+create index if not exists post_comments_post_idx on post_comments (post_id, created);
+alter table post_comments enable row level security;
+drop policy if exists pc_sel on post_comments;
+create policy pc_sel on post_comments for select using (true);
+
+-- ── 4) 글 작성/수정 (카테고리 포함) — 기존 3·4인자 버전 제거 후 재생성 ──
+drop function if exists board_create(text, text, text);
+drop function if exists board_create(text, text, text, text);
+drop function if exists board_update(text, bigint, text, text);
+drop function if exists board_update(text, bigint, text, text, text);
+
+create or replace function board_create(p_token text, p_title text, p_body text, p_category text default '자유')
+returns bigint language plpgsql security definer set search_path = public as $$
+declare pu text; nm text; nid bigint; cat text;
+begin
+  select puuid into pu from sessions where token = p_token;
+  if pu is null then raise exception 'not logged in'; end if;
+  if p_title is null or length(btrim(p_title)) = 0 then raise exception 'empty title'; end if;
+  if length(p_title) > 200 then raise exception 'title too long'; end if;
+  if length(coalesce(p_body, '')) > 20000 then raise exception 'body too long'; end if;
+  cat := coalesce(nullif(btrim(p_category), ''), '자유');
+  if cat not in ('자유','공략','질문','클립','기타') then cat := '자유'; end if;
+  select name into nm from identities where puuid = pu;
+  insert into posts (author, author_name, title, body, category)
+       values (pu, nm, btrim(p_title), coalesce(p_body, ''), cat)
+  returning id into nid;
+  return nid;
+end; $$;
+
+create or replace function board_update(p_token text, p_id bigint, p_title text, p_body text, p_category text default '자유')
+returns void language plpgsql security definer set search_path = public as $$
+declare pu text; cat text;
+begin
+  select puuid into pu from sessions where token = p_token;
+  if pu is null then raise exception 'not logged in'; end if;
+  if p_title is null or length(btrim(p_title)) = 0 then raise exception 'empty title'; end if;
+  if length(p_title) > 200 then raise exception 'title too long'; end if;
+  if length(coalesce(p_body, '')) > 20000 then raise exception 'body too long'; end if;
+  cat := coalesce(nullif(btrim(p_category), ''), '자유');
+  if cat not in ('자유','공략','질문','클립','기타') then cat := '자유'; end if;
+  update posts set title = btrim(p_title), body = coalesce(p_body, ''), category = cat, updated = now()
+   where id = p_id and author = pu;
+  if not found then raise exception 'not your post'; end if;
+end; $$;
+
+-- 글 삭제 (작성자만) — 좋아요/댓글은 FK on delete cascade 로 함께 정리
+create or replace function board_delete(p_token text, p_id bigint)
+returns void language plpgsql security definer set search_path = public as $$
+declare pu text;
+begin
+  select puuid into pu from sessions where token = p_token;
+  if pu is null then raise exception 'not logged in'; end if;
+  delete from posts where id = p_id and author = pu;
+  if not found then raise exception 'not your post'; end if;
+end; $$;
+
+-- ── 5) 좋아요 토글 (로그인 필요) → {likes, liked} ────────────────────────
+create or replace function post_like_toggle(p_token text, p_id bigint)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare pu text; has boolean; cnt int;
+begin
+  select puuid into pu from sessions where token = p_token;
+  if pu is null then raise exception 'not logged in'; end if;
+  select exists(select 1 from post_likes where post_id = p_id and puuid = pu) into has;
+  if has then
+    delete from post_likes where post_id = p_id and puuid = pu;
+  else
+    insert into post_likes(post_id, puuid) values (p_id, pu) on conflict do nothing;
+  end if;
+  select count(*)::int into cnt from post_likes where post_id = p_id;
+  update posts set likes = cnt where id = p_id;
+  return jsonb_build_object('likes', cnt, 'liked', not has);
+end; $$;
+
+-- 내가 좋아요한 글 id 목록 (로그인 필요) → 하트 채움 표시용
+create or replace function my_liked_posts(p_token text)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare pu text; arr jsonb;
+begin
+  select puuid into pu from sessions where token = p_token;
+  if pu is null then return '[]'::jsonb; end if;
+  select coalesce(jsonb_agg(post_id), '[]'::jsonb) into arr from post_likes where puuid = pu;
+  return arr;
+end; $$;
+
+-- ── 6) 댓글 작성/삭제 (posts.comments 캐시 동기화) ───────────────────────
+create or replace function comment_create(p_token text, p_post_id bigint, p_body text)
+returns bigint language plpgsql security definer set search_path = public as $$
+declare pu text; nm text; nid bigint;
+begin
+  select puuid into pu from sessions where token = p_token;
+  if pu is null then raise exception 'not logged in'; end if;
+  if p_body is null or length(btrim(p_body)) = 0 then raise exception 'empty comment'; end if;
+  if length(p_body) > 5000 then raise exception 'comment too long'; end if;
+  if not exists(select 1 from posts where id = p_post_id) then raise exception 'no such post'; end if;
+  select name into nm from identities where puuid = pu;
+  insert into post_comments(post_id, author, author_name, body)
+       values (p_post_id, pu, nm, btrim(p_body)) returning id into nid;
+  update posts set comments = comments + 1 where id = p_post_id;
+  return nid;
+end; $$;
+
+create or replace function comment_delete(p_token text, p_id bigint)
+returns void language plpgsql security definer set search_path = public as $$
+declare pu text; pid bigint;
+begin
+  select puuid into pu from sessions where token = p_token;
+  if pu is null then raise exception 'not logged in'; end if;
+  delete from post_comments where id = p_id and author = pu returning post_id into pid;
+  if pid is null then raise exception 'not your comment'; end if;
+  update posts set comments = greatest(0, comments - 1) where id = pid;
+end; $$;
