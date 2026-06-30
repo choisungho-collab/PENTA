@@ -40,9 +40,14 @@ a{color:inherit;text-decoration:none}svg{display:block}
 .lead{font-family:var(--fd);font-size:17px;line-height:1.75;color:var(--ink2);margin:20px 0 0;max-width:760px}
 .lead b{color:var(--ink);font-weight:600}
 
-.sec{margin:42px 0 0}
+.sec{margin:0;padding-top:40px;border-top:1px solid var(--line,#1F252E);scroll-margin-top:72px}
 .sec h2{font-family:var(--fs);font-weight:400;font-size:22px;letter-spacing:.02em;margin:0 0 18px;display:flex;align-items:baseline;gap:10px}
 .sec h2 .sub{font-family:var(--fm);font-size:12px;color:var(--faint);letter-spacing:0}
+html{scroll-behavior:smooth}
+.sec h2::before{content:'';align-self:center;flex:0 0 auto;width:3px;height:17px;background:var(--gold,#DEC79C);border-radius:2px}
+.toc{display:flex;flex-wrap:wrap;gap:8px;margin:22px 0 4px;max-width:760px}
+.toc a{font-family:var(--fd);font-size:13px;font-weight:600;color:var(--ink2,#C9C3B6);background:var(--surface,#12161D);border:1px solid var(--line,#1F252E);border-radius:999px;padding:7px 13px;transition:.14s;text-decoration:none}
+.toc a:hover{border-color:var(--gold-line,rgba(222,199,156,.32));color:var(--ink,#ECE7DD)}
 .sec>.lead{font-size:15px;margin:0 0 16px;color:var(--dim)}
 
 .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
@@ -117,7 +122,18 @@ footer{border-top:1px solid var(--line);margin-top:58px}
   <p class="lead">레코더를 켜두고 리그 오브 레전드를 플레이하면 끝입니다. 화면이 무엇을 뜻하는지, 설정은 어떻게 바꾸는지, 막힐 때는 어떻게 하는지 안내합니다.</p>
  </section>
 
- <section class="sec">
+ <nav class="toc">
+  <a href="#s-screen">레코더 화면</a>
+  <a href="#s-flow">녹화 흐름</a>
+  <a href="#s-settings">녹화 설정</a>
+  <a href="#s-archive">아카이브 보기</a>
+  <a href="#s-login">로그인</a>
+  <a href="#s-faq">자주 묻는 질문</a>
+  <a href="#s-download">다운로드</a>
+ </nav>
+
+
+ <section class="sec" id="s-screen">
   <h2>레코더 화면 <span class="sub">한눈에</span></h2>
   <figure class="shot"><svg viewBox="0 0 466 160" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="myPENTA 레코더 — 대기 중 화면">
    <defs>
@@ -154,7 +170,7 @@ footer{border-top:1px solid var(--line);margin-top:58px}
   </div>
  </section>
 
- <section class="sec">
+ <section class="sec" id="s-flow">
   <h2>녹화 흐름 <span class="sub">4단계</span></h2>
   <ol class="steps">
    <li><b>레코더를 켜둡니다.</b> 한 번 실행해 두면 떠 있다가 게임을 감지합니다. 창은 닫지 말고 켜둔 채로 두세요.</li>
@@ -164,7 +180,7 @@ footer{border-top:1px solid var(--line);margin-top:58px}
   </ol>
  </section>
 
- <section class="sec">
+ <section class="sec" id="s-settings">
   <h2>녹화 설정 <span class="sub">⚙ Settings</span></h2>
   <p class="lead">기본값(Auto)이 대부분 최선입니다. 창의 <b>⚙</b>를 누르면 열리고, 바꾸면 다음 녹화부터 적용됩니다.</p>
   <figure class="shot"><svg viewBox="0 0 466 150" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="myPENTA 레코더 설정 — Quality와 Encoder">
@@ -186,7 +202,7 @@ footer{border-top:1px solid var(--line);margin-top:58px}
   </div>
  </section>
 
- <section class="sec">
+ <section class="sec" id="s-archive">
   <h2>아카이브에서 보기</h2>
   <div class="cards">
    <div class="fcard">
@@ -207,7 +223,31 @@ footer{border-top:1px solid var(--line);margin-top:58px}
   </div>
  </section>
 
- <section class="sec">
+ <section class="sec" id="s-login">
+  <h2>로그인 <span class="sub">자동 · 비밀번호 없음</span></h2>
+  <p class="lead">회원가입도 비밀번호도 없습니다. 레코더의 <span class="k">Archive</span>(보관함) 버튼을 누르면 브라우저가 <b>이미 로그인된 상태로</b> 열립니다. 로그인하면 내가 올린 영상의 <b>제목 수정·삭제</b>를 할 수 있어요.</p>
+  <div class="cards">
+   <div class="fcard">
+    <svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+    <h3>어떻게 로그인되나</h3>
+    <p>레코더가 게임 중에 내 Riot ID를 읽어 둡니다. <span class="k">Archive</span>를 누르면 그 Riot ID로 일회용 로그인 링크를 만들어 브라우저로 넘겨, 비밀번호 없이 바로 로그인됩니다.</p>
+   </div>
+   <div class="fcard">
+    <svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.7 2.6 15.3 0 18M12 3c-2.6 2.7-2.6 15.3 0 18"/></svg>
+    <h3>한글 닉네임도 OK</h3>
+    <p>닉네임이 한글이어도 자동 로그인이 정상 동작합니다. 갤러리에는 한글 닉네임이 그대로 표시돼요.</p>
+   </div>
+   <div class="fcard">
+    <svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M8.4 12.4l2.6 2.6 4.6-5.2"/></svg>
+    <h3>여러 PC도 한 계정</h3>
+    <p>계정은 PC가 아니라 <b>내 Riot ID 기준</b>이에요. 어느 PC에서든 그 Riot ID로 한 판 하면 그 PC에서도 자동 로그인되고, <b>여러 PC에서 올린 영상이 모두 한 계정</b>으로 묶입니다. Riot API 연동도 필요 없어요.</p>
+   </div>
+  </div>
+  <p class="lead">계정은 Riot ID 기준이라, 같은 Riot ID로 플레이한 PC는 어디서든 같은 보관함으로 로그인됩니다 — 집·다른 PC에서 올린 영상이 한 계정으로 모여요.</p>
+  <p class="lead">로그인은 레코더의 <span class="k">Archive</span> 버튼으로만 됩니다(웹에서 아이디로 직접 로그인하는 화면은 당분간 없어요). 로그인되면 — 레코더는 내 Riot ID를 알고 있고, 웹은 오른쪽 위에 <b>내 닉네임과 로그아웃</b>이 떠서 로그인 상태를 바로 확인할 수 있어요. 로그아웃 상태면 그 자리에 <b>레코더로 로그인</b> 안내가 보입니다.</p>
+ </section>
+
+ <section class="sec" id="s-faq">
   <h2>자주 묻는 질문</h2>
   <div class="faq">
    <div class="faqrow"><p class="q">녹화가 안 켜져요</p><p class="a">대부분 그래픽 드라이버가 오래된 경우입니다. NVIDIA 드라이버를 최신으로 올리면 거의 해결됩니다. 캡처 방식은 레코더가 자동으로 고르니 따로 만질 게 없습니다.</p></div>
@@ -216,10 +256,11 @@ footer{border-top:1px solid var(--line);margin-top:58px}
    <div class="faqrow"><p class="q">화면이 검게 녹화돼요</p><p class="a">레코더는 전체화면도 잡히는 <b>WGC</b> 방식을 기본으로 씁니다. 그래도 검게 나오면 대개 그래픽 드라이버 문제이니 최신으로 올려주세요.</p></div>
    <div class="faqrow"><p class="q">처음 켰더니 한참 멈춰 있어요</p><p class="a">최초 1회는 영상 도구(ffmpeg)를 자동으로 받아옵니다. 1~3분 기다리면 <span class="k">Ready</span>로 바뀝니다.</p></div>
    <div class="faqrow"><p class="q">영상 용량이 부담돼요</p><p class="a">아카이브에는 화질은 1080p 그대로 두되 <b>용량을 줄인 영상</b>이 올라가고, <b>원본 고화질</b>은 PC의 녹화 폴더(<span class="k">Open folder</span>)에 그대로 남습니다. 더 줄이고 싶으면 <span class="k">⚙ 설정 → Quality</span>를 720p로 낮추면 됩니다.</p></div>
+   <div class="faqrow"><p class="q">로그인이 안 되거나 내 영상 관리가 안 떠요</p><p class="a">갤러리는 꼭 레코더의 <span class="k">Archive</span> 버튼으로 여세요 — 주소창에 직접 입력하면 로그인 정보가 안 넘어갈 수 있습니다. 내 Riot ID로 한 판 플레이해 영상이 <span class="k">☁ Cloud</span>로 한 번 올라가면, 그 뒤 <span class="k">Archive</span>를 누를 때마다 자동 로그인됩니다(Riot API 연동 없이도 됩니다).</p></div>
   </div>
  </section>
 
- <section class="sec">
+ <section class="sec" id="s-download">
   <h2>아직 안 받으셨다면</h2>
   <div class="callout">
    <svg class="ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg>

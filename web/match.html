@@ -534,6 +534,18 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
 .it2 .it.trinket{border-color:var(--gold-line);border-radius:50%}
 .it2 .it img{width:100%;height:100%}
 @media(max-width:480px){.it2 .it{width:16px;height:16px}.pw2{width:72px;min-width:72px}.kd2{width:88px;min-width:88px}}
+
+/* ===== 멀티뷰: 세로(쌓기) + 항상 보이는 커스텀 컨트롤 바 ===== */
+.stage.grid.vert{grid-template-columns:1fr}
+.mvbar{display:flex;align-items:center;gap:11px;margin-top:8px;padding:9px 13px;background:var(--surface);border:1px solid var(--line);border-radius:11px}
+.mvbar .mvbtn{flex:0 0 auto;width:32px;height:32px;display:grid;place-items:center;background:var(--well);border:1px solid var(--line2);border-radius:8px;color:var(--ink2);cursor:pointer;padding:0;transition:border-color .14s,color .14s}
+.mvbar .mvbtn:hover{color:var(--ink);border-color:var(--gold-line)}
+.mvbar .mvbtn svg{width:16px;height:16px;display:block}
+.mvbar .mvseek{flex:1 1 auto;min-width:0;-webkit-appearance:none;appearance:none;height:5px;border-radius:3px;background:var(--line2);cursor:pointer;outline:none}
+.mvbar .mvseek::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:15px;height:15px;border-radius:50%;background:var(--gold);border:2px solid var(--bg);cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.5)}
+.mvbar .mvseek::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:var(--gold);border:none;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.5)}
+.mvbar .mvtime{flex:0 0 auto;font-family:var(--fm);font-size:11.5px;color:var(--dim);font-variant-numeric:tabular-nums;white-space:nowrap}
+.lmode2{margin-left:2px}
 </style>
 </head>
 <body>
@@ -578,6 +590,8 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
   var selected = [];      // 분할 선택 인덱스
   var syncRAF = null;
   var splitMode = 'grid';   // 'grid' | 'focus'
+  var gridVert = false;     // grid 방향: true=세로(쌓기)/false=가로(나란히). 2인이면 세로 디폴트.
+  var orientUserSet = false;// 사용자가 가로/세로를 직접 고르면 true(디폴트 자동변경 중지)
   var resumeAt = 0;         // 레이아웃 전환 시 영상 시각 유지
   var ME = null;            // 로그인 세션 {token,puuid,name,icon}
 
@@ -722,7 +736,11 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
     if(g15!=null){
       out.key={k:'15분 골드차',v:(g15>0?'+':'')+P.compact(g15),c:g15>=800?'up':(g15<=-800?'down':''),cap:g15>=800?'초반을 가져옴':(g15<=-800?'초반 열세':'팽팽한 초반')};
       if(g15>=800) out.good.push(['초반 우위 확보','15분 기준 상대 라이너보다 골드 +'+P.compact(g15)+'. 초반을 이겼습니다. 핵심은 "이 리드를 오브젝트·로밍·다이브로 바꿨는가"입니다 — 리드는 굴려야 의미가 있어요.']);
-      else if(g15<=-1000) out.bad.push(['초반에 벌어진 격차','15분에 골드 '+P.compact(g15)+'. 게임은 사실상 라인전에서 갈렸습니다. 죽지 않고 CS 격차를 줄이는 것부터 — 한 번 죽을 때마다 격차가 더 벌어집니다.']);
+      else if(g15<=-700){
+        var _csEven=(c15!=null)?(c15>=-12):(c10!=null?(c10>=-10):false);
+        if(_csEven) out.bad.push(['데스로 새어나간 골드','15분 골드는 '+P.compact(g15)+'로 밀렸지만 CS 격차는 크지 않습니다. 라인전 자체는 안 졌다는 뜻 — 골드 차는 거의 데스에서 나왔어요. 죽는 장면만 줄이면 바로 앞설 수 있습니다.']);
+        else if(g15<=-1000) out.bad.push(['초반에 벌어진 격차','15분에 골드 '+P.compact(g15)+'. 게임은 사실상 라인전에서 갈렸습니다. 죽지 않고 CS 격차를 줄이는 것부터 — 한 번 죽을 때마다 격차가 더 벌어집니다.']);
+      }
     } else if(g10!=null){
       out.key={k:'10분 골드차',v:(g10>0?'+':'')+P.compact(g10),c:g10>=500?'up':(g10<=-500?'down':''),cap:g10>=500?'초반 리드':(g10<=-500?'초반 열세':'팽팽')};
     } else if(c10!=null){
@@ -758,9 +776,43 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
     }
     return out;
   }
+  // ===== 임팩트/플레이메이킹 (선취점·단독킬·멀티킬·죽음→오브젝트) =====
+  function impactInsights(me,pid,players,durSec){
+    var out={good:[],bad:[]};
+    var kills=(ANALYSIS.kills)||[]; if(!kills.length) return out;
+    var myTeam=me.team, enemyTeam=myTeam===100?200:100;
+    var sorted=kills.slice().sort(function(a,b){return a.t-b.t;});
+    function mmss(t){ t=Math.max(0,Math.round(t)); var m=Math.floor(t/60),s=t%60; return m+':'+(s<10?'0':'')+s; }
+    // 선취점(첫 킬, 5분 이내)
+    var fb=sorted[0];
+    if(fb && fb.t<=300){
+      if(fb.killer===pid) out.good.push(['선취점 획득','경기 첫 킬('+mmss(fb.t)+')을 따냈습니다. 초반 골드와 주도권을 동시에 가져왔어요 — 이 리드를 포탑 플레이트·다이브·정글 호응으로 바로 이으면 격차가 커집니다.']);
+      else if(fb.victim===pid) out.bad.push(['선취점 헌납','경기 첫 킬의 희생자였습니다('+mmss(fb.t)+'). 초반 선취점은 상대에게 골드와 라인 주도권을 한 번에 줍니다 — 시야 없는 구간과 상대 정글 위치를 의식하고 안전하게 출발하세요.']);
+    }
+    // 단독 킬(어시스트 0)
+    var solo=sorted.filter(function(e){ return e.killer===pid && (!e.assists||e.assists.length===0); });
+    if(solo.length>=2){
+      var early=solo.filter(function(e){return e.t<840;}).length;
+      out.good.push(['단독 킬'+(early>=2?' (라인전)':''),'어시스트 없이 '+solo.length+'번 단독으로 잡았습니다. 1대1과 되치기에서 우위를 보였어요 — 본인 캐리력이 드러나는 장면이니 어떻게 만들었는지 기억해 두세요.']);
+    }
+    // 멀티킬(트리플 이상)
+    var bm=(typeof P!=='undefined'&&P.bestMulti)?P.bestMulti(me):null;
+    if(bm && bm.rank>=3) out.good.push(['결정적 멀티킬',bm.label+(bm.n>1?(' '+bm.n+'회'):'')+' — 한타를 본인이 터뜨렸습니다. 그 진입 각도와 포지션을 복기해 재현하세요.']);
+    // 죽음이 오브젝트로 — 내 죽음 직후(≤45초) 상대가 용/바론/전령 획득
+    var objs=(ANALYSIS.objs)||[];
+    if(objs.some(function(o){return o.team!=null;})){
+      var myDeaths=sorted.filter(function(e){return e.victim===pid;}).map(function(e){return e.t;});
+      var big=objs.filter(function(o){ return o.team===enemyTeam && (o.kind==='DRAGON'||o.kind==='BARON_NASHOR'||o.kind==='RIFTHERALD'); });
+      var gave=0, baron=0;
+      myDeaths.forEach(function(dt){ big.forEach(function(o){ if(o.t>=dt && o.t-dt<=45){ gave++; if(o.kind==='BARON_NASHOR') baron++; } }); });
+      if(gave>=2 || baron>=1)
+        out.bad.push(['죽음이 오브젝트로','내가 죽은 직후 상대가 '+(baron>=1?'바론을 포함해 ':'')+'주요 오브젝트를 '+gave+'번 가져갔습니다. 데스의 진짜 비용은 골드가 아니라 그 사이 넘어가는 오브젝트예요 — 용·바론 스폰 1분 전엔 무리한 사이드·교전을 접고 생존을 1순위로 두세요.']);
+    }
+    return out;
+  }
   function pickFocus(bad){
     if(!bad.length) return null;
-    var order=['팀 내 최다 데스','교환 없이 죽음','라인전 단계 사망 과다','초반 동선 사망','연속으로 끊김','적 진영에서 잘림','후반 캐리 사망','초반에 벌어진 격차','라인전 크게 밀림','낮은 딜 비중','리드를 굳히지 못함','오브젝트를 내줌','시야 관리 부족','파밍 효율 저조','CS 수급 부족','낮은 킬관여'];
+    var order=['죽음이 오브젝트로','팀 내 최다 데스','교환 없이 죽음','선취점 헌납','라인전 단계 사망 과다','초반 동선 사망','연속으로 끊김','적 진영에서 잘림','후반 캐리 사망','데스로 새어나간 골드','초반에 벌어진 격차','라인전 크게 밀림','낮은 딜 비중','리드를 굳히지 못함','오브젝트를 내줌','시야 관리 부족','파밍 효율 저조','CS 수급 부족','낮은 킬관여'];
     for(var i=0;i<order.length;i++) for(var j=0;j<bad.length;j++) if(bad[j][0]===order[i]) return bad[j];
     return bad[0];
   }
@@ -781,7 +833,7 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
     var visFloor=isSup?0.9:(isJg?0.8:0.5), visGood=isSup?1.8:(isJg?1.3:1.0);
     var kpB=pos==='TOP'?0.35:((isSup||isJg)?0.55:(pos==='MIDDLE'?0.50:0.48));
 
-    var DI=deathInsights(me,pid,players,durSec), FI=fifteenInsights(me), DMI=damageInsights(me,players), MA=macroInsights(me,players,won);
+    var DI=deathInsights(me,pid,players,durSec), FI=fifteenInsights(me), DMI=damageInsights(me,players), MA=macroInsights(me,players,won), IMI=impactInsights(me,pid,players,durSec);
 
     // key metrics (lead with 15-min gold diff)
     var key=[];
@@ -817,11 +869,11 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
       if(vspm>=visGood) good.push(['시야 장악','분당 시야 '+vspm+'점. 맵 정보를 잘 만들었습니다.']);
       else if(vspm<visFloor) bad.push(['시야 관리 부족','분당 시야 '+vspm+'점. '+rx('vision','제어 와드를 꾸준히 사 적 동선을 미리 비추세요.')]);
     }
-    good=good.concat(FI.good,DI.good,DMI.good,MA.good);
-    bad=bad.concat(FI.bad,DI.bad,DMI.bad,MA.bad);
+    good=good.concat(IMI.good,FI.good,DI.good,DMI.good,MA.good);
+    bad=bad.concat(FI.bad,DI.bad,IMI.bad,DMI.bad,MA.bad);
     function dedupe(a){ var s={},o=[]; a.forEach(function(x){ if(!s[x[0]]){s[x[0]]=1;o.push(x);} }); return o; }
     good=dedupe(good); bad=dedupe(bad);
-    var PRI=['팀 내 최다 데스','교환 없이 죽음','라인전 단계 사망 과다','초반 동선 사망','연속으로 끊김','적 진영에서 잘림','후반 캐리 사망','초반에 벌어진 격차','라인전 크게 밀림','낮은 딜 비중','리드를 굳히지 못함','오브젝트를 내줌','시야 관리 부족','파밍 효율 저조','CS 수급 부족','낮은 킬관여'];
+    var PRI=['죽음이 오브젝트로','팀 내 최다 데스','교환 없이 죽음','선취점 헌납','라인전 단계 사망 과다','초반 동선 사망','연속으로 끊김','적 진영에서 잘림','후반 캐리 사망','데스로 새어나간 골드','초반에 벌어진 격차','라인전 크게 밀림','낮은 딜 비중','리드를 굳히지 못함','오브젝트를 내줌','시야 관리 부족','파밍 효율 저조','CS 수급 부족','낮은 킬관여'];
     bad.sort(function(a,b){ var ia=PRI.indexOf(a[0]); var ib=PRI.indexOf(b[0]); if(ia<0)ia=99; if(ib<0)ib=99; return ia-ib; });
     var focus=pickFocus(bad);
     good=good.slice(0,4); bad=bad.slice(0,5);
@@ -867,17 +919,37 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
       +checksHTML+drillHTML;
   }
 
-  // 데스/오브젝트 버튼 → 영상 점프(게임 시각 기준이라 영상과 약간 오차 가능)
+  // 킬/데스/오브젝트 버튼 → 영상 점프. 게임시각 t를 각 영상의 (t - g0)로 변환해 seek.
+  // 보이는 영상 전부(나란히=모든 셀 / 단일=활성 영상)를 맞춘다. 메타데이터 미로드면 로드 후 seek,
+  // 일부 브라우저·원격 영상이 먼 지점 seek 직후 0으로 되돌아가는 현상은 재확인 루프로 복구.
+  function _seekVid(v, vt){
+    if(!v || v._err) return 0;
+    vt = Math.max(0, vt||0);
+    var apply=function(){
+      try{ var d=v.duration; if(isFinite(d)&&d>0.6) vt=Math.min(vt, d-0.3); v.currentTime=vt; }catch(_){}
+    };
+    if(v.readyState>=1 && isFinite(v.duration)) apply();
+    else { try{v.load();}catch(_){}  v.addEventListener('loadedmetadata', apply, {once:true}); }
+    return vt;
+  }
+  function jumpTo(gameT){
+    var vids = split ? stageVideos() : (activeVideo()?[activeVideo()]:stageVideos());
+    vids = vids.filter(function(v){ return v && !v._err; });
+    if(!vids.length){ var fb=document.querySelector('#stagehost video'); if(fb) vids=[fb]; }
+    if(!vids.length) return;
+    var goals = vids.map(function(v){ return { v:v, t:_seekVid(v, gameT - vG0(v)) }; });
+    vids.forEach(function(v){ var p=v.play&&v.play(); if(p&&p.catch)p.catch(function(){}); });
+    var n=0; (function fix(){ n++;
+      goals.forEach(function(g){ try{ if(g.t>1 && (g.v.currentTime||0) < g.t-1.5) g.v.currentTime=g.t; }catch(_){} });
+      if(n<8) setTimeout(fix, 220);
+    })();
+    var ref=vids[0], y=ref.getBoundingClientRect().top+window.pageYOffset-64;
+    window.scrollTo({top:y<0?0:y, behavior:'smooth'});
+  }
   document.addEventListener('click', function(e){
     var b=e.target.closest?e.target.closest('.jbtn[data-jump]'):null;
     if(!b) return;
-    var t=parseInt(b.getAttribute('data-jump'),10)||0;
-    var v=activeVideo()||document.querySelector('#stagehost video')||document.querySelector('video');
-    if(!v) return;
-    try{ v.currentTime=Math.max(0, t - vG0(v)); }catch(_){}
-    if(v.play){ var pr=v.play(); if(pr&&pr.catch) pr.catch(function(){}); }
-    var y=v.getBoundingClientRect().top+window.pageYOffset-64;
-    window.scrollTo({top:y<0?0:y,behavior:'smooth'});
+    jumpTo(parseInt(b.getAttribute('data-jump'),10)||0);
   });
 
   function goldChart(series){
@@ -1154,9 +1226,9 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
   function stageSplit(){
     var cells = selected.map(function(idx){
       var r = ROWS[idx];
-      return '<div class="cell">'+cellTag(r)+cellVideo(idx, idx===selected[0])+'</div>';
+      return '<div class="cell">'+cellTag(r)+cellVideo(idx, false)+'</div>';
     }).join('');
-    return '<div class="stage grid mv-'+selected.length+'">'+cells+'</div>';
+    return '<div class="stage grid mv-'+selected.length+(gridVert?' vert':'')+'">'+cells+'</div>';
   }
   function stageFocus(){
     var mainIdx = selected[0], r = ROWS[mainIdx];
@@ -1165,9 +1237,53 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
       return '<div class="pipcell" data-promote="'+idx+'" title="크게 보기">'+cellTag(rr)+cellVideo(idx,false)
         +'<span class="promote"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H3v6M21 9V3h-6M3 15v6h6M15 21h6v-6"/></svg></span></div>';
     }).join('');
-    return '<div class="stage">'+cellTag(r)+cellVideo(mainIdx,true)+'</div><div class="piprow">'+pips+'</div>';
+    return '<div class="stage">'+cellTag(r)+cellVideo(mainIdx,false)+'</div><div class="piprow">'+pips+'</div>';
   }
 
+  function mvBar(){
+    return '<div class="mvbar" id="mvbar">'
+      + '<button class="mvbtn mvplay" id="mvplay" aria-label="재생/일시정지"></button>'
+      + '<input type="range" class="mvseek" id="mvseek" min="0" max="1000" value="0" step="1" aria-label="탐색">'
+      + '<span class="mvtime" id="mvtime">0:00 / 0:00</span>'
+      + '<button class="mvbtn mvmute" id="mvmute" aria-label="음소거"></button>'
+      + '<button class="mvbtn mvfs" id="mvfs" aria-label="전체화면"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>'
+      + '</div>';
+  }
+  function wireMvBar(){
+    var master = stageVideos()[0]; if(!master) return;
+    master.muted = false;                                   // 마스터(첫 영상)에서 소리
+    var seek=document.getElementById('mvseek'), tEl=document.getElementById('mvtime'),
+        playBtn=document.getElementById('mvplay'), muteBtn=document.getElementById('mvmute'), fsBtn=document.getElementById('mvfs');
+    if(!seek || !playBtn) return;
+    var PLAY='<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>';
+    var PAUSE='<svg viewBox="0 0 24 24"><path d="M7 5h3.2v14H7zM13.8 5H17v14h-3.2z" fill="currentColor"/></svg>';
+    var VOL='<svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/></svg>';
+    var MUTED='<svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M15.5 9.5l5 5M20.5 9.5l-5 5" stroke="currentColor" stroke-width="1.8"/></svg>';
+    var seeking=false;
+    function fmt(s){ s=Math.max(0,Math.floor(s||0)); var m=Math.floor(s/60), ss=s%60; return m+':'+(ss<10?'0':'')+ss; }
+    function paintTime(){
+      var d=master.duration||0, c=master.currentTime||0;
+      if(!seeking && isFinite(d) && d>0) seek.value=Math.round(c/d*1000);
+      tEl.textContent=fmt(c)+' / '+((isFinite(d)&&d>0)?fmt(d):'0:00');
+    }
+    function paintPlay(){ playBtn.innerHTML = master.paused ? PLAY : PAUSE; }
+    function paintMute(){ muteBtn.innerHTML = master.muted ? MUTED : VOL; }
+    master.addEventListener('timeupdate', paintTime);
+    master.addEventListener('loadedmetadata', paintTime);
+    master.addEventListener('durationchange', paintTime);
+    master.addEventListener('play', paintPlay);
+    master.addEventListener('pause', paintPlay);
+    master.addEventListener('volumechange', paintMute);
+    seek.addEventListener('input', function(){ seeking=true; var d=master.duration||0; if(isFinite(d)&&d>0) tEl.textContent=fmt(d*seek.value/1000)+' / '+fmt(d); });
+    seek.addEventListener('change', function(){ var d=master.duration||0; if(isFinite(d)&&d>0){ try{ master.currentTime=d*seek.value/1000; }catch(_){} } seeking=false; });
+    playBtn.addEventListener('click', function(){ if(master.paused){ var p=master.play&&master.play(); if(p&&p.catch)p.catch(function(){}); } else master.pause(); });
+    muteBtn.addEventListener('click', function(){ master.muted=!master.muted; });
+    fsBtn.addEventListener('click', function(){
+      var st=document.getElementById('stagehost'); if(!st) return;
+      try{ if(!document.fullscreenElement){ (st.requestFullscreen||st.webkitRequestFullscreen||function(){}).call(st); } else { (document.exitFullscreen||document.webkitExitFullscreen||function(){}).call(document); } }catch(_){}
+    });
+    paintTime(); paintPlay(); paintMute();
+  }
   function stageVideos(){ var h=document.getElementById('stagehost'); return h?Array.prototype.slice.call(h.querySelectorAll('video')):[]; }
   function activeVideo(){ return split ? (stageVideos()[0]||null) : (POOL?POOL.querySelector('.pvid.on'):null); }
   function curT(){ var v=activeVideo(); return v?(v.currentTime||0):0; }
@@ -1182,9 +1298,10 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
     if(syncRAF){ cancelAnimationFrame(syncRAF); syncRAF=null; }
     POOL = null;
     var multi = split && selected.length>=2;
-    host.innerHTML = multi ? (splitMode==='focus'?stageFocus():stageSplit()) : stageSingle();
+    host.innerHTML = multi ? ((splitMode==='focus'?stageFocus():stageSplit()) + mvBar()) : stageSingle();
     if(multi){
       wireMaster();
+      wireMvBar();
       host.querySelectorAll('.pipcell[data-promote]').forEach(function(c){
         c.addEventListener('click', function(){
           var idx=+c.dataset.promote, pos=selected.indexOf(idx);
@@ -1253,7 +1370,7 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
         stageVideos().forEach(function(v){
           if(v!==a && !v._err && !v.paused){
             var want=base+(ga-vG0(v)); if(want<0) want=0;
-            if(Math.abs((v.currentTime||0)-want)>0.3){ try{v.currentTime=want;}catch(_){} }
+            if(Math.abs((v.currentTime||0)-want)>0.2){ try{v.currentTime=want;}catch(_){} }
           }
         });
       }
@@ -1283,7 +1400,8 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
     host.innerHTML = '<span class="povlab">시점</span><div class="povtabs">'+tabs+'</div>'
       + (canSplit?('<button class="splitbtn'+(split?' on':'')+'" id="splitbtn"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="8" height="16" rx="1"/><rect x="13" y="4" width="8" height="16" rx="1"/></svg>'+(split?'분할 끄기':'시점 비교')+'</button>'):'')
       + (split?('<div class="lmode"><button data-lm="grid" class="'+(splitMode==='grid'?'on':'')+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="8" height="16" rx="1"/><rect x="13" y="4" width="8" height="16" rx="1"/></svg>나란히</button><button data-lm="focus" class="'+(splitMode==='focus'?'on':'')+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="11" rx="1"/><rect x="3" y="17.5" width="5" height="3" rx="1"/><rect x="9.5" y="17.5" width="5" height="3" rx="1"/><rect x="16" y="17.5" width="5" height="3" rx="1"/></svg>포커스</button></div>'):'')
-      + (split?'<div class="splithint">최대 4개 시점 · 나란히 또는 포커스(메인+작은 화면) · 첫 영상에 동기화됩니다.</div>':'');
+      + (split && splitMode==='grid' ? ('<div class="lmode lmode2"><button data-or="h" class="'+(!gridVert?'on':'')+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="8" height="12" rx="1"/><rect x="13" y="6" width="8" height="12" rx="1"/></svg>가로</button><button data-or="v" class="'+(gridVert?'on':'')+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="3" width="12" height="8" rx="1"/><rect x="6" y="13" width="12" height="8" rx="1"/></svg>세로</button></div>') : '')
+      + (split?'<div class="splithint">최대 4개 시점 · 나란히/포커스 · 가로·세로 전환 · 컨트롤 바로 재생/탐색 · 첫 영상에 동기화됩니다.</div>':'');
   }
 
   function bindPov(){
@@ -1292,11 +1410,13 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
     host.addEventListener('click', function(e){
       var lm = e.target.closest('[data-lm]');
       if(lm){ resumeAt = curT(); splitMode = lm.dataset.lm; renderPovBar(); renderStage(); return; }
+      var orb = e.target.closest('[data-or]');
+      if(orb){ resumeAt = curT(); orientUserSet = true; gridVert = (orb.dataset.or==='v'); renderPovBar(); renderStage(); return; }
       var sb = e.target.closest('#splitbtn');
       if(sb){
         resumeAt = curT();
         split = !split;
-        if(split){ selected = [curPov]; }
+        if(split){ selected = [curPov]; orientUserSet = false; gridVert = false; }
         else { selected = []; }
         renderPovBar(); renderStage(); return;
       }
@@ -1307,6 +1427,7 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
         var pos = selected.indexOf(i);
         if(pos>=0){ if(selected.length>1) selected.splice(pos,1); }
         else if(selected.length<4 && ROWS[i].video){ selected.push(i); }
+        if(!orientUserSet) gridVert = (selected.length===2);
         renderPovBar(); renderStage();
       } else {
         setActive(i); renderPovBar(); renderAnalysis();
@@ -1436,7 +1557,7 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
       var w=host.querySelector('.who'); w.textContent=nm; w.title=ME.name||'';
       var b=document.getElementById('loBtn');
       if(b) b.addEventListener('click', async function(){ try{ await P.logout(); }catch(e){} location.href='index.html'; });
-    } else { host.innerHTML=''; }
+    } else { host.innerHTML='<span class="hint" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--dim,#867F71);white-space:nowrap" title="myPENTA 레코더의 Archive 버튼을 누르면 이 브라우저가 로그인됩니다"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>레코더로 로그인</span>'; }
   }
 
   function renderManage(){

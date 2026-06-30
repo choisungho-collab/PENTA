@@ -1192,6 +1192,11 @@ def device_get(key, default=None):
 def device_set(**kw):
     d = _device_load(); d.update(kw); _device_save(d)
 
+def riot_key(rid):
+    """Riot ID(gameName#tagline)를 계정 신원 키로 정규화 — 대소문자/공백 차이를 무시한다.
+    이 키가 곧 계정. PC를 가리지 않고, 같은 Riot ID면 어느 기기에서 올려도 한 계정으로 묶인다."""
+    return (rid or "").strip().lower()
+
 def sb_rpc(fn, payload, timeout=30):
     """Supabase RPC(/rest/v1/rpc/{fn}) 호출 → 결과(JSON). 실패 시 예외."""
     import requests
@@ -1292,18 +1297,25 @@ def _encoder_args():
     return _ENC_CACHE
 
 def make_preview(src, dst):
-    """원본을 갤러리용으로 재인코딩 — 최대 1080p(초과분만 다운스케일, 업스케일 안 함) + 강한 압축(cq25)으로 용량↓. 성공 시 dst, 실패 시 None."""
+    """원본을 갤러리용으로 재인코딩 — 최대 1080p(초과분만 다운스케일, 업스케일 안 함) + '또렷한' 화질.
+    화질 노브: config.json 의 preview_cq(NVENC, 낮을수록 고화질, 기본 23) / preview_crf(x264, 기본 23).
+    값을 더 낮추면(예: cq18/crf19) 더 선명·용량↑. 성공 시 dst, 실패 시 None(원본 업로드로 폴백)."""
     if not (FFMPEG and src and os.path.isfile(src)): return None
     enc = _encoder_args() or []
+    cq  = str(CFG.get("preview_cq", 23))    # NVENC 품질(0~51, 낮을수록 고화질). 기본 23 = 또렷+적당 용량
+    crf = str(CFG.get("preview_crf", 23))   # x264 품질(0~51, 낮을수록 고화질). 기본 23
     if "h264_nvenc" in enc:
-        venc = ["-c:v", "h264_nvenc", "-preset", "p4", "-cq", "25"]
+        # p6(고품질 프리셋) + VBR 기반 CQ. maxrate 로 최대 비트레이트만 막아 용량 폭주 방지.
+        venc = ["-c:v", "h264_nvenc", "-preset", "p6", "-rc", "vbr", "-cq", cq,
+                "-b:v", "0", "-maxrate", "16M", "-bufsize", "32M"]
     else:
-        venc = ["-c:v", "libx264", "-preset", "veryfast", "-crf", "27"]
+        venc = ["-c:v", "libx264", "-preset", "veryfast", "-crf", crf]
     try:
-        log("Compressing for gallery (1080p, smaller file)\u2026")
+        log("Compressing for gallery (1080p, sharper)\u2026")
         r = _run([FFMPEG, "-y", "-loglevel", "error", "-i", src,
-                  *venc, "-vf", "scale=-2:'min(1080,ih)'", "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", dst],
-                 timeout=3600)
+                  *venc, "-vf", "scale=-2:'min(1080,ih)':flags=lanczos",
+                  "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", dst],
+                 timeout=5400)
         if r.returncode == 0 and os.path.isfile(dst) and os.path.getsize(dst) > 0:
             return dst
         log("Gallery re-encode returned code %s \u2014 uploading original instead." % r.returncode)
@@ -1987,8 +1999,14 @@ def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr", 
         gid = _live_gid(analysis, start_ts)   # 같은 게임을 녹화한 사람끼리 멀티뷰로 묶임
     else:
         gid = "local_" + datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    row_id = gid + "__" + (puuid or riot_id.replace("#", "_")).replace("/", "_")   # 시점별 고유 행 id
-    safe = row_id.replace("/", "_")
+    # 시점별 고유 행 id — 스토리지 키로도 쓰이므로 반드시 ASCII (한글/특수문자 → Supabase InvalidKey 방지)
+    if puuid:
+        _viewer = puuid
+    else:
+        _nm = "".join(ch for ch in (riot_id or "") if ch.isascii() and ch.isalnum())[:24]
+        _viewer = (_nm + "_" if _nm else "") + hashlib.sha1((riot_id or "").encode("utf-8")).hexdigest()[:10]
+    row_id = gid + "__" + _viewer
+    safe = "".join(ch if (ch.isascii() and (ch.isalnum() or ch in "._-")) else "_" for ch in row_id)   # 키 안전망: 무조건 ASCII
     size = os.path.getsize(video_path)
     base = os.path.join(UPLOAD_DIR, safe); os.makedirs(base, exist_ok=True)
     trimmed = 0.0
@@ -1999,7 +2017,7 @@ def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr", 
         REC_STATE["preparing"] = False
         log("Cloud (Supabase) not configured → keeping locally only."); return
     tmp_thumb = os.path.join(base, "thumb.jpg"); has_thumb = make_thumb(video_path, tmp_thumb)
-    # 갤러리용 프리뷰(최대 1080p, 강한 압축)만 업로드. 원본(고화질)은 PC에 그대로 보관(다운로드 없음).
+    # 갤러리용 프리뷰(최대 1080p, 또렷한 화질)만 업로드. 원본(고화질)은 PC에 그대로 보관(다운로드 없음).
     preview = os.path.join(base, "preview.mp4")
     up_src = make_preview(video_path, preview) or video_path
     up_size = os.path.getsize(up_src)
@@ -2038,12 +2056,13 @@ def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr", 
             "np": len(players), "players": players, "won": won,
             "analysis": analysis,
         }
-        if puuid:   # 소유자 박아 업로드(register → upload_match). 실패하면 익명 업로드로 폴백(업로드는 절대 안 끊김).
+        _ident = riot_key(riot_id)   # 계정 = Riot ID. PC 안 가리고 같은 ID면 한 계정.
+        if _ident:   # 이 PC를 인가 기기로 등록하고 소유자(riot_key) 박아 업로드. 실패 시에만 익명 폴백.
             try:
                 _sec = device_secret()
-                sb_rpc("register_identity", {"p_puuid": puuid, "p_secret": _sec, "p_name": riot_id, "p_icon": None})
-                device_set(puuid=puuid, name=riot_id)
-                sb_rpc("upload_match", {"p_puuid": puuid, "p_secret": _sec, "p_row": _row})
+                sb_rpc("register_identity", {"p_puuid": _ident, "p_secret": _sec, "p_name": riot_id, "p_icon": None})
+                device_set(riot_id=riot_id)
+                sb_rpc("upload_match", {"p_puuid": _ident, "p_secret": _sec, "p_row": _row})
             except Exception as _e:
                 log(f"  Owner upload failed ({_e}) \u2014 falling back to anonymous upload."); sb_insert_match(_row)
         else:
@@ -2317,7 +2336,7 @@ def run_gui(cfg, url):
     def open_gallery():
         def _go():
             try:
-                _pu = device_get("puuid"); _sec = device_secret()
+                _pu = riot_key(device_get("riot_id")); _sec = device_secret()
                 if _pu and _sec and cloud_state() == "cloud":
                     _code = secrets.token_urlsafe(24)
                     sb_rpc("issue_login_code", {"p_puuid": _pu, "p_secret": _sec, "p_code": _code})

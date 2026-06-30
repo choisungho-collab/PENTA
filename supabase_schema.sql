@@ -81,13 +81,19 @@ create index if not exists comments_match_id_idx on comments(match_id);
 
 -- 신원: puuid → 기기 비밀키 해시
 create table if not exists identities (
-  puuid       text primary key,
-  secret_hash text not null,             -- sha256(기기 비밀키) — 원문은 서버에 저장하지 않음
-  name        text,                      -- "이름#태그"
-  icon        int,
-  created     timestamptz default now(),
-  updated     timestamptz default now()
+  puuid          text primary key,                          -- 계정 신원 = riot_key (gameName#tagline 정규화)
+  secret_hash    text,                                      -- (구) 단일 비밀키 해시 — 호환용. 신규는 device_secrets
+  device_secrets text[] not null default '{}',              -- 신원당 여러 기기 비밀키 해시(멀티 PC)
+  name           text,                                      -- "이름#태그" (표시용, 원본 대소문자)
+  icon           int,
+  created        timestamptz default now(),
+  updated        timestamptz default now()
 );
+-- 기존 배포 호환(여러 번 실행 안전): 컬럼 추가 → 단일 비밀키를 배열로 이관 → not null 해제
+alter table identities add column if not exists device_secrets text[] not null default '{}';
+update identities set device_secrets = array[secret_hash]
+  where secret_hash is not null and coalesce(array_length(device_secrets,1),0)=0;
+alter table identities alter column secret_hash drop not null;
 
 -- 일회용 로그인 코드 (Archive 클릭 시 발급, 10분 내 1회 교환)
 create table if not exists login_codes (
@@ -123,35 +129,38 @@ returns void language sql security definer set search_path = public as $$
 $$;
 
 -- 신원 등록/갱신 (TOFU: 처음이면 청구, 이후엔 비밀키 일치해야 갱신) — 녹화기 호출
+-- 반환 타입이 바뀌므로 기존 함수를 먼저 제거(없으면 무시) 후 재생성. (Postgres: create or replace 로는 반환타입 변경 불가)
+drop function if exists register_identity(text, text, text, integer);
+drop function if exists upload_match(text, text, jsonb);
+drop function if exists issue_login_code(text, text, text);
+
 create or replace function register_identity(p_puuid text, p_secret text, p_name text default null, p_icon int default null)
 returns boolean language plpgsql security definer set search_path = public, extensions as $$
-declare h text; cur text;
+declare h text;
 begin
   if p_puuid is null or p_secret is null or length(p_secret) < 16 then
     raise exception 'bad identity args';
   end if;
   h := encode(digest(p_secret, 'sha256'), 'hex');
-  select secret_hash into cur from identities where puuid = p_puuid;
-  if cur is null then
-    insert into identities(puuid, secret_hash, name, icon) values (p_puuid, h, p_name, p_icon);
-    return true;
-  elsif cur = h then
-    update identities set name = coalesce(p_name, name), icon = coalesce(p_icon, icon), updated = now()
-      where puuid = p_puuid;
-    return true;
-  else
-    raise exception 'identity already claimed by another device';
-  end if;
+  insert into identities(puuid, name, icon, device_secrets)
+       values (p_puuid, p_name, p_icon, array[h])
+  on conflict (puuid) do update set
+       name           = coalesce(p_name, identities.name),
+       icon           = coalesce(p_icon, identities.icon),
+       updated        = now(),
+       device_secrets = (select array(select distinct e
+                                        from unnest(identities.device_secrets || array[h]) as e));
+  return true;
 end; $$;
 
 -- 매치 업로드 (소유자 박아 저장) — 녹화기 호출. owner_puuid 는 검증된 puuid 로 서버가 세팅.
 create or replace function upload_match(p_puuid text, p_secret text, p_row jsonb)
 returns text language plpgsql security definer set search_path = public, extensions as $$
-declare h text; cur text;
+declare h text; ok boolean;
 begin
   h := encode(digest(p_secret, 'sha256'), 'hex');
-  select secret_hash into cur from identities where puuid = p_puuid;
-  if cur is null or cur <> h then raise exception 'unauthorized'; end if;
+  select (h = any(device_secrets)) into ok from identities where puuid = p_puuid;
+  if not coalesce(ok, false) then raise exception 'unauthorized'; end if;
 
   insert into matches(
     id, match_id, players, analysis, map, matchup, length, length_sec, type,
@@ -194,14 +203,14 @@ end; $$;
 -- 로그인 코드 발급 (Archive 클릭 시) — 녹화기 호출. 오래된 코드 청소 후 발급.
 create or replace function issue_login_code(p_puuid text, p_secret text, p_code text)
 returns void language plpgsql security definer set search_path = public, extensions as $$
-declare h text; cur text;
+declare h text; ok boolean;
 begin
   h := encode(digest(p_secret, 'sha256'), 'hex');
-  select secret_hash into cur from identities where puuid = p_puuid;
-  if cur is null or cur <> h then raise exception 'unauthorized'; end if;
+  select (h = any(device_secrets)) into ok from identities where puuid = p_puuid;
+  if not coalesce(ok, false) then raise exception 'unauthorized'; end if;
   delete from login_codes where created < now() - interval '10 minutes';
   insert into login_codes(code, puuid) values (p_code, p_puuid)
-    on conflict (code) do update set puuid = excluded.puuid, created = now(), used = false;
+    on conflict (code) do nothing;
 end; $$;
 
 -- 코드 → 토큰 교환 (웹 페이지 로드 시) — 일회용·10분 만료
