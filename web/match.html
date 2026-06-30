@@ -89,7 +89,7 @@ a{color:inherit;text-decoration:none}svg{display:block}img{display:block;max-wid
 .pipcell:hover .promote{opacity:1}
 /* 분할 레이아웃 토글 */
 .lmode{display:inline-flex;gap:3px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r1);padding:3px}
-.lmode button{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;font-family:var(--fd);font-weight:600;font-size:12.5px;color:var(--dim);background:none;border:0;border-radius:8px;padding:6px 11px;cursor:pointer;transition:.14s}
+.lmode button{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-family:var(--fd);font-weight:600;font-size:12.5px;color:var(--dim);background:none;border:0;border-radius:7px;padding:7px 9px;cursor:pointer;transition:.14s}
 .lmode button:hover{color:var(--ink)} .lmode button.on{background:var(--gold-soft);color:var(--gold-ink)}
 .lmode button svg{width:14px;height:14px}
 
@@ -1427,9 +1427,9 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
     var canSplit = ROWS.filter(function(r){return r.video;}).length>=2;
     host.innerHTML = '<span class="povlab">시점</span><div class="povtabs">'+tabs+'</div>'
       + (canSplit?('<button class="splitbtn'+(split?' on':'')+'" id="splitbtn"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="8" height="16" rx="1"/><rect x="13" y="4" width="8" height="16" rx="1"/></svg>'+(split?'분할 끄기':'시점 비교')+'</button>'):'')
-      + (split?('<div class="lmode"><button data-lm="grid" class="'+(splitMode==='grid'?'on':'')+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="8" height="16" rx="1"/><rect x="13" y="4" width="8" height="16" rx="1"/></svg>나란히</button><button data-lm="focus" class="'+(splitMode==='focus'?'on':'')+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="11" rx="1"/><rect x="3" y="17.5" width="5" height="3" rx="1"/><rect x="9.5" y="17.5" width="5" height="3" rx="1"/><rect x="16" y="17.5" width="5" height="3" rx="1"/></svg>포커스</button></div>'):'')
-      + (split && splitMode==='grid' ? ('<div class="lmode lmode2"><button data-or="h" class="'+(!gridVert?'on':'')+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="8" height="12" rx="1"/><rect x="13" y="6" width="8" height="12" rx="1"/></svg>가로</button><button data-or="v" class="'+(gridVert?'on':'')+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="3" width="12" height="8" rx="1"/><rect x="6" y="13" width="12" height="8" rx="1"/></svg>세로</button></div>') : '')
-      + (split?'<div class="splithint">최대 4개 시점 · 나란히/포커스 · 가로·세로 전환 · 컨트롤 바로 재생/탐색 · 첫 영상에 동기화됩니다.</div>':'');
+      + (split?('<div class="lmode"><button data-lm="grid" title="나란히" aria-label="나란히" class="'+(splitMode==='grid'?'on':'')+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="8" height="16" rx="1"/><rect x="13" y="4" width="8" height="16" rx="1"/></svg></button><button data-lm="focus" title="포커스(하나 크게)" aria-label="포커스" class="'+(splitMode==='focus'?'on':'')+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="11" rx="1"/><rect x="3" y="17.5" width="5" height="3" rx="1"/><rect x="9.5" y="17.5" width="5" height="3" rx="1"/><rect x="16" y="17.5" width="5" height="3" rx="1"/></svg></button></div>'):'')
+      + (split && splitMode==='grid' ? ('<div class="lmode lmode2"><button data-or="h" title="가로 배치" aria-label="가로" class="'+(!gridVert?'on':'')+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="8" height="12" rx="1"/><rect x="13" y="6" width="8" height="12" rx="1"/></svg></button><button data-or="v" title="세로 배치" aria-label="세로" class="'+(gridVert?'on':'')+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="3" width="12" height="8" rx="1"/><rect x="6" y="13" width="12" height="8" rx="1"/></svg></button></div>') : '')
+      + (split?'<div class="splithint">시점을 더 누르면 추가(최대 4개) · 포커스에선 작은 화면을 눌러 크게 · 첫 영상에 동기화</div>':'');
   }
 
   function bindPov(){
@@ -1444,8 +1444,13 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
       if(sb){
         markResume();
         split = !split;
-        if(split){ selected = [curPov]; orientUserSet = false; gridVert = false; }
-        else { selected = []; }
+        if(split){
+          // "시점 비교" 한 번이면 바로 멀티뷰 → 영상 있는 시점 2개를 자동 선택(현재 시점 우선, 단 영상이 있을 때만 마스터로)
+          selected = [];
+          if(ROWS[curPov] && ROWS[curPov].video) selected.push(curPov);
+          for(var k=0;k<ROWS.length && selected.length<2;k++){ if(selected.indexOf(k)<0 && ROWS[k] && ROWS[k].video) selected.push(k); }
+          orientUserSet = false; gridVert = (selected.length===2);
+        } else { selected = []; }
         renderPovBar(); renderStage(); return;
       }
       var tab = e.target.closest('.povtab'); if(!tab) return;
