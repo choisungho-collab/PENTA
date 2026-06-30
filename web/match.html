@@ -260,6 +260,7 @@ h2.sec .ln{flex:1;height:1px;background:var(--line)}
 .kdtag.kc{color:#7fd9c5}.kdtag.kc .cdot{background:var(--win)}
 .kdtag.dc{color:#e8a0a8}.kdtag.dc .cdot{background:var(--loss)}
 .clabel.hc .cdot{background:var(--gold)}
+.kdtag.hc{color:var(--gold-ink)}.kdtag.hc .cdot{background:var(--gold)}
 .jbtn.hl{display:inline-flex;align-items:center;gap:6px;padding:4px 9px 4px 8px;border-color:var(--gold-line);color:var(--gold-ink);background:var(--gold-soft)}
 .jbtn.hl:hover{border-color:var(--gold);background:rgba(222,199,156,.16);color:var(--gold-ink)}
 .jbtn.hl .hi{width:13px;height:13px;flex-shrink:0;opacity:.9}
@@ -525,7 +526,7 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
 .sbcol{background:var(--surface);border:1px solid var(--line);border-radius:var(--r2);overflow:hidden}
 .sbcol.blue{border-top:2px solid var(--blue)}.sbcol.red{border-top:2px solid var(--red)}
 .sbhead{display:flex;align-items:center;gap:9px;padding:11px 14px;border-bottom:1px solid var(--line)}
-.sbhead .tn{font-family:var(--fs);font-weight:700;font-size:18px;letter-spacing:.05em}
+.sbhead .tn{font-family:var(--fs);font-weight:700;font-size:21px;letter-spacing:.05em}
 .sbcol.blue .tn{color:#9CC9EE}.sbcol.red .tn{color:#EFA593}
 .sbhead .wl{font-family:var(--fs);font-size:10px;font-weight:600;letter-spacing:.08em;padding:3px 8px;border-radius:5px}
 .sbhead .wl.w{color:var(--win);background:var(--win-soft);border:1px solid var(--win-line)}
@@ -533,24 +534,24 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
 .sbhead .wl.u{color:var(--dim);background:var(--well);border:1px solid var(--line2)}
 .sbhead .ts{margin-left:auto;display:flex;gap:11px;font-family:var(--fd);font-size:11px;color:var(--dim)}
 .sbhead .ts b{font-family:var(--fs);font-weight:600;color:var(--ink2);font-variant-numeric:tabular-nums}
-.prow2{display:flex;align-items:center;gap:8px;padding:8px 12px}
+.prow2{display:flex;align-items:center;gap:10px;padding:11px 14px}
 .prow2+.prow2{border-top:1px solid var(--line)}
 .prow2.me{background:var(--gold-soft)}
 .pc2{position:relative;flex-shrink:0}
-.pc2 img{width:30px;height:30px;border-radius:6px;border:1px solid var(--line2);object-fit:cover;display:block}
-.pc2 .lv{position:absolute;right:-3px;bottom:-3px;font-family:var(--fs);font-weight:500;font-size:8.5px;background:var(--bg);color:var(--ink2);border:1px solid var(--line2);border-radius:4px;padding:0 2px;line-height:1.35}
-.pw2{width:84px;min-width:84px;overflow:hidden}
-.pw2 .nm{font-family:var(--fd);font-weight:600;font-size:11.5px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pc2 img{width:38px;height:38px;border-radius:7px;border:1px solid var(--line2);object-fit:cover;display:block}
+.pc2 .lv{position:absolute;right:-3px;bottom:-3px;font-family:var(--fs);font-weight:500;font-size:10px;background:var(--bg);color:var(--ink2);border:1px solid var(--line2);border-radius:4px;padding:0 3px;line-height:1.4}
+.pw2{width:108px;min-width:108px;overflow:hidden}
+.pw2 .nm{font-family:var(--fd);font-weight:600;font-size:14px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .prow2.me .pw2 .nm{color:var(--gold-ink)}
-.pw2 .nm .mb{font-family:var(--fs);font-weight:700;font-size:8px;letter-spacing:.04em;color:#1a1206;background:linear-gradient(180deg,#EFDDBC,#DEC79C);border-radius:4px;padding:0 3px;margin-left:4px;vertical-align:middle}
-.pw2 .pp{font-family:var(--fd);font-size:10px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.kd2{font-family:var(--fs);font-weight:600;font-size:13px;color:var(--ink);font-variant-numeric:tabular-nums;width:96px;min-width:96px;text-align:center;flex-shrink:0;white-space:nowrap}
+.pw2 .nm .mb{font-family:var(--fs);font-weight:700;font-size:9px;letter-spacing:.04em;color:#1a1206;background:linear-gradient(180deg,#EFDDBC,#DEC79C);border-radius:4px;padding:0 3px;margin-left:4px;vertical-align:middle}
+.pw2 .pp{font-family:var(--fd);font-size:12px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kd2{font-family:var(--fs);font-weight:600;font-size:16px;color:var(--ink);font-variant-numeric:tabular-nums;width:116px;min-width:116px;text-align:center;flex-shrink:0;white-space:nowrap}
 .kd2 .s{color:var(--faint);font-weight:500}
-.kd2 .r{display:block;font-family:var(--fd);font-weight:500;font-size:9.5px;color:var(--dim);margin-top:1px;white-space:nowrap}
-.cs2{font-family:var(--fs);font-weight:600;font-size:13px;color:var(--ink2);width:40px;min-width:40px;text-align:center;font-variant-numeric:tabular-nums;flex-shrink:0}
-.cs2 .l{display:block;font-family:var(--fs);font-weight:500;font-size:9px;letter-spacing:.1em;color:var(--faint)}
-.it2{display:flex;gap:2px;margin-left:auto;flex-shrink:0}
-.it2 .it{width:18px;height:18px;border-radius:3px;background:var(--well);border:1px solid var(--line);overflow:hidden;flex-shrink:0}
+.kd2 .r{display:block;font-family:var(--fd);font-weight:500;font-size:11px;color:var(--dim);margin-top:2px;white-space:nowrap}
+.cs2{font-family:var(--fs);font-weight:600;font-size:16px;color:var(--ink2);width:50px;min-width:50px;text-align:center;font-variant-numeric:tabular-nums;flex-shrink:0}
+.cs2 .l{display:block;font-family:var(--fs);font-weight:500;font-size:10px;letter-spacing:.1em;color:var(--faint)}
+.it2{display:flex;gap:3px;margin-left:auto;flex-shrink:0}
+.it2 .it{width:27px;height:27px;border-radius:4px;background:var(--well);border:1px solid var(--line);overflow:hidden;flex-shrink:0}
 .it2 .it.trinket{border-color:var(--gold-line);border-radius:50%}
 .it2 .it img{width:100%;height:100%}
 @media(max-width:480px){.it2 .it{width:16px;height:16px}.pw2{width:72px;min-width:72px}.kd2{width:88px;min-width:88px}}
@@ -659,6 +660,7 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
   var orientUserSet = false;// 사용자가 가로/세로를 직접 고르면 true(디폴트 자동변경 중지)
   var resumeAt = 0;         // 레이아웃 전환 시 영상 시각 유지
   var resumePlay = false;   // 레이아웃/토글 전환 시 재생 상태 유지(멈춤 방지)
+  var _swapTok = 0;         // 단일뷰 POV 전환: 프레임 준비 후 전환(깜빡임 방지) + 빠른 연속 클릭 무효화
   function markResume(){ var a = activeVideo(); resumeAt = a ? (a.currentTime||0) : 0; resumePlay = a ? !a.paused : false; }
   var ME = null;            // 로그인 세션 {token,puuid,name,icon}
 
@@ -1019,6 +1021,23 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
     jumpTo(parseInt(b.getAttribute('data-jump'),10)||0);
   });
 
+  // 좌우 화살표로 영상 이동(±5초). 단일=활성 영상 / 멀티=마스터(나머지는 동기화로 따라옴).
+  function seekRel(d){
+    var v=activeVideo(); if(!v||v._err) return;
+    var nt=(v.currentTime||0)+d; if(nt<0) nt=0;
+    try{ var du=v.duration; if(isFinite(du)&&du>0.6) nt=Math.min(nt,du-0.1); v.currentTime=nt; }catch(_){}
+  }
+  document.addEventListener('keydown', function(e){
+    if(e.metaKey||e.ctrlKey||e.altKey) return;
+    var t=(e.target&&e.target.tagName||'').toLowerCase();
+    if(t==='input'||t==='textarea'||t==='select'||(e.target&&e.target.isContentEditable)) return;
+    if(e.key==='ArrowLeft' || e.key==='ArrowRight'){
+      if(!activeVideo()) return;
+      e.preventDefault();
+      seekRel(e.key==='ArrowLeft' ? -5 : 5);
+    }
+  });
+
   function goldChart(series){
     if(!series || series.length<2) return '';
     var W=1000, H=240, pad=8;
@@ -1137,7 +1156,9 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
     var dmg = damageHas()
       ? ('<div class="lckpanel"><div class="lcktt">TOTAL DAMAGE DEALT</div>'+damageBars()+'</div>')
       : (csHas() ? ('<div class="lckpanel"><div class="lcktt">CS</div>'+csBars()+'</div>') : '');
-    var gold = ANALYSIS.series ? ('<div class="lckpanel"><div class="lcktt">GOLD DIFFERENCE'+(ANALYSIS.series_est?' · 추정':'')+'</div>'+goldDiffChart(ANALYSIS.series)+'</div>') : '';
+    var _acc = ANALYSIS.series && !ANALYSIS.series_est;   // Riot API 정확 골드면 그대로, 아니면(추정/없음) 킬·오브젝트로 재계산
+    var _gds = _acc ? ANALYSIS.series : (goldDiffSeries() || ANALYSIS.series || null);
+    var gold = (_gds && _gds.length>1) ? ('<div class="lckpanel"><div class="lcktt">GOLD DIFFERENCE'+(_acc?'':' · 추정')+'</div>'+goldDiffChart(_gds)+'</div>') : '';
     var right = dmg+gold;
     var body = right
       ? ('<div class="lckgrid"><div class="lckL"><div class="lcktt">GAME STATS</div>'+gameStats()+'</div><div class="lckR">'+right+'</div></div>')
@@ -1203,6 +1224,37 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
     }
     return d;
   }
+  // 골드 차이(추정): 저장된 킬·어시·오브젝트 타임스탬프로 다시 계산. 보유 아이템 가치보다 실제 우위를 잘 반영(킬골드를 안 쓰고 들고 다니는 스노볼 팀 보정).
+  function goldDiffSeries(){
+    var byT=function(a,b){return a.t-b.t;};
+    var players=ANALYSIS.players||[];
+    function teamOf(pid){ var pp=players[pid-1]; return pp?pp.team:null; }
+    function objGold(kind,sub){ var k=(kind||'').toUpperCase(), su=(sub||'').toUpperCase();
+      if(k==='BARON_NASHOR'||k==='BARON') return 1400;
+      if(k==='DRAGON') return su==='ELDER_DRAGON'?260:110;
+      if(k==='RIFTHERALD'||k==='HERALD') return 150;
+      if(k==='TOWER') return 250;
+      if(k==='BUILDING'||k==='INHIBITOR') return 160;
+      if(k==='ATAKHAN') return 200;
+      return 0; }
+    var evs=[];
+    (ANALYSIS.kills||[]).forEach(function(e){
+      if(!e || typeof e.t!=='number') return;
+      var kt=teamOf(e.killer); if(kt===100||kt===200) evs.push({t:e.t, team:kt, g:300});
+      (e.assists||[]).forEach(function(a){ var at=teamOf(a); if(at===100||at===200) evs.push({t:e.t, team:at, g:150}); });
+    });
+    (ANALYSIS.objs||[]).forEach(function(o){
+      if(!o || typeof o.t!=='number') return;
+      var g=objGold(o.kind,o.sub); if(g && (o.team===100||o.team===200)) evs.push({t:o.t, team:o.team, g:g});
+    });
+    if(!evs.length) return null;
+    evs.sort(byT);
+    var g100=0,g200=0, out=[{t:0,g100:0,g200:0}];
+    evs.forEach(function(e){ if(e.team===100) g100+=e.g; else g200+=e.g; out.push({t:e.t,g100:g100,g200:g200}); });
+    var dur=ANALYSIS.duration||0; if(dur>out[out.length-1].t) out.push({t:dur,g100:g100,g200:g200});
+    return out.length>1?out:null;
+  }
+
   function goldDiffChart(series){
     if(!series || series.length<2) return '';
     var W=1000, H=250, pad=12, padB=34, padT=14;
@@ -1467,12 +1519,28 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
     }
     curPov=i;
     var ov2=POOL.querySelector('.poolempty'); if(ov2) ov2.classList.remove('on');
-    if(old&&old!==target){ old.classList.remove('on'); old.removeAttribute('controls'); old.muted=true; }
-    target.classList.add('on'); target.setAttribute('controls',''); target.muted=false;
+    if(target===old){ target.setAttribute('controls',''); target.muted=false; return; }
     var want=oldT+(oldG-vG0(target)); if(want<0) want=0;
-    var applyT=function(){ try{ if(Math.abs((target.currentTime||0)-want)>0.25) target.currentTime=want; }catch(_){} };
-    if(target.readyState>=1) applyT(); else { POOL.classList.add('loading'); target.addEventListener('loadedmetadata',applyT,{once:true}); }
-    if(playing){ var p=target.play(); if(p&&p.catch)p.catch(function(){}); }
+    var needSeek=false;
+    try{ if(Math.abs((target.currentTime||0)-want)>0.25){ target.currentTime=want; needSeek=true; } }catch(_){}
+    if(playing){ var pp=target.play(); if(pp&&pp.catch)pp.catch(function(){}); }   // 목표를 음소거 상태로 돌려 프레임을 미리 디코드
+    // ★ 깜빡임 제거: 목표 프레임이 실제로 준비된 다음에 화면 전환(크로스페이드). 그 전까진 이전 화면 유지(소리도 이전 것만 → 더블 오디오 없음).
+    var _tok=(++_swapTok), _done=false;
+    var _swap=function(){
+      if(_done || _tok!==_swapTok) return; _done=true;
+      if(old&&old!==target){ old.classList.remove('on'); old.removeAttribute('controls'); old.muted=true; }
+      target.classList.add('on'); target.setAttribute('controls',''); target.muted=false;
+      POOL.classList.remove('loading');
+    };
+    if(needSeek || target.readyState<2){          // 새 위치로 점프했거나 아직 버퍼 전 → 준비되면 전환(그동안 이전 화면+스피너 유지)
+      POOL.classList.add('loading');
+      ['seeked','canplay','loadeddata'].forEach(function(ev){ target.addEventListener(ev, _swap, {once:true}); });
+      if(target.requestVideoFrameCallback){ try{ target.requestVideoFrameCallback(function(){ _swap(); }); }catch(_){} }
+      setTimeout(_swap, 1200);                     // 폴백: 너무 오래 걸리면 전환(스피너가 버퍼링 표시)
+    } else {                                       // 이미 올바른 프레임이 디코드돼 있음(동기 재생 중) → 다음 프레시 프레임에 맞춰 즉시 전환
+      if(target.requestVideoFrameCallback){ try{ target.requestVideoFrameCallback(function(){ _swap(); }); }catch(_){} setTimeout(_swap, 100); }
+      else { _swap(); }
+    }
   }
 
   function startSync(){
@@ -1705,7 +1773,7 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
     if(K.length && K[0].t<=480) cand.push({disp:K[0].t, lead:4, label:'선취점', score:2.5});
     cand.sort(function(a,b){return b.score-a.score;});
     var picked=[];
-    cand.forEach(function(h){ if(picked.length<7 && !picked.some(function(p){return Math.abs(p.disp-h.disp)<8;})) picked.push(h); });
+    cand.forEach(function(h){ if(picked.length<5 && !picked.some(function(p){return Math.abs(p.disp-h.disp)<8;})) picked.push(h); });
     picked.sort(function(a,b){return a.disp-b.disp;});
     return picked.map(function(h){ return {t:Math.max(0,h.disp-h.lead), disp:h.disp, label:h.label}; });
   }
@@ -1721,7 +1789,7 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
     if(hls.length){
       var spark='<svg class="hi" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>';
       var hb=hls.map(function(h){ return '<button class="jbtn hl" data-jump="'+Math.round(h.t)+'">'+spark+'<span class="hl-l">'+h.label+'</span><span class="hl-t">'+fmtT(h.disp)+'</span></button>'; }).join('');
-      hlHTML='<div class="clabel hc"><span class="cdot"></span>하이라이트 <b>'+hls.length+'</b> · 가장 극적인 장면</div><div class="kdrow"><div class="kdstrip">'+hb+'</div></div>';
+      hlHTML='<div class="kdrow hl"><span class="kdtag hc"><span class="cdot"></span>하이라이트</span><div class="kdstrip">'+hb+'</div></div>';
     }
     // 내 킬·데스
     var kdHTML='';
@@ -1732,10 +1800,10 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
       var row=function(arr,kind,labelko,tagcls){
         if(!arr.length) return '';
         var btns=arr.map(function(e){ return '<button class="jbtn '+kind+'" data-jump="'+Math.max(0,e.t-4)+'">'+fmtT(e.t)+'</button>'; }).join('');
-        return '<div class="kdrow '+kind+'"><span class="kdtag '+tagcls+'"><span class="cdot"></span>'+labelko+' '+arr.length+'</span><div class="kdstrip">'+btns+'</div></div>';
+        return '<div class="kdrow '+kind+'"><span class="kdtag '+tagcls+'"><span class="cdot"></span>'+labelko+'</span><div class="kdstrip">'+btns+'</div></div>';
       };
       if(myKills.length||myDeaths.length){
-        kdHTML='<div class="clabel">내 킬·데스 · 클릭하면 영상으로</div>'+row(myKills,'kill','킬','kc')+row(myDeaths,'death','데스','dc');
+        kdHTML=row(myKills,'kill','킬','kc')+row(myDeaths,'death','데스','dc');
       }
     }
     if(!hlHTML && !kdHTML) return '';

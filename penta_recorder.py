@@ -963,7 +963,8 @@ def load_or_make_config():
             "preset": "auto",    # auto | ultrafast | superfast | veryfast | fast ...  (libx264 속도/품질)
             "output_idx": "auto",   # auto | 0 | 1 | 2  (멀티모니터면 게임 있는 모니터 번호)
             "capture": "auto",   # auto | wgc | ddagrab | gdigrab   (wgc=OBS식, 전체화면도 잡힘)
-            "postgame_tail": 6,  # 넥서스 터진 뒤 결과 화면을 몇 초 더 녹화할지(초)
+            "postgame_tail": 6,  # (GameEnd 미감지 시 폴백) 프로세스 종료 후 결과 화면을 몇 초 더 녹화할지(초)
+            "result_tail": 8,  # 승리/패배(GameEnd) 화면을 몇 초 담고 정지할지(초) - 끝나고 늘어지는 것 방지
             "audio": "system",   # system = 시스템 전체 소리 | game-only = 롤 소리만(실험적, 실패 시 시스템으로 폴백)
             "port": free_port(8000),
             "fps": FPS,
@@ -2117,7 +2118,7 @@ def recorder_loop(cfg):
     proc = cfg.get("league_process", "League of Legends.exe")
     proxy = (cfg.get("proxy_url") or "").strip() or PROXY_DEFAULT; platform = cfg.get("platform", "kr")
     poll = float(cfg.get("poll_seconds", 4)); rec = Recorder(int(cfg.get("fps", FPS)))
-    active = False; riot_id = None; start_ts = None; last_hb = 0.0; saw_game = False; cs_grace = 0.0; started_cs = False
+    active = False; riot_id = None; start_ts = None; last_hb = 0.0; saw_game = False; cs_grace = 0.0; started_cs = False; ended_at = 0.0
     live_snaps = []; live_evts = []; last_snap_t = -999.0   # 게임 중 Live Client 스냅샷 수집용
     try: ensure_audio()
     except Exception: pass
@@ -2144,7 +2145,7 @@ def recorder_loop(cfg):
                     log("Champion select detected \u2014 recording from draft.")
                     started_cs = True
                 start_ts = time.time(); active = rec.start(); last_hb = time.time()
-                saw_game = run; cs_grace = 0.0
+                saw_game = run; cs_grace = 0.0; ended_at = 0.0
                 live_snaps = []; live_evts = []; last_snap_t = -999.0
 
             if active and run:
@@ -2160,17 +2161,22 @@ def recorder_loop(cfg):
                     if snap and (float(snap.get("t") or 0) - last_snap_t) >= 25:
                         snap["w"] = time.time(); live_snaps.append(snap); last_snap_t = float(snap.get("t") or 0)
                     _ev = penta_lol.live_events()      # 매 루프(4초) 폴링 → 게임 끝 GameEnd(승패) 안 놓침
-                    if _ev: live_evts = _ev
+                    if _ev:
+                        if len(_ev) >= len(live_evts): live_evts = _ev   # 누락 방지: 가장 긴(누적) 이벤트 목록 유지 → 타워/전령 등 오브젝트 안 놓침
+                        if not ended_at and any((e.get("EventName") == "GameEnd") for e in _ev):
+                            ended_at = time.time(); log("Victory/Defeat screen detected - finishing recording.")
                 except Exception: pass
 
-            elif active and not run and saw_game:
-                # 게임을 봤는데 이제 프로세스 없음 = 게임 종료
-                _tail = float(cfg.get("postgame_tail", 6))   # 넥서스 터진 뒤 결과 화면을 몇 초 더 담기
+            # 게임 종료: "계속" 클릭(프로세스 종료) 또는 GameEnd(승리/패배 화면) 후 잠깐 - 둘 중 먼저. 늘어짐 방지.
+            _game_over = active and saw_game and ((not run) or (ended_at and (time.time()-ended_at) >= float(cfg.get("result_tail", 8))))
+            if _game_over:
+                # GameEnd로 결과 화면을 이미 담았으면 추가 tail 생략, 아니면(감지 실패) 기존처럼 잠깐 더.
+                _tail = (0.0 if ended_at else float(cfg.get("postgame_tail", 6)))
                 if _tail > 0:
                     log("Game over \u2014 capturing post-game screen\u2026")   # (매직 문자열 없음 → 녹화 상태 유지)
                     time.sleep(_tail)
                 log("Game ended \u2014 recorded %d:%02d." % divmod(int(time.time()-(start_ts or time.time())),60))
-                _vt0 = rec._vt0; vid = rec.stop(); active = False; rec.verified = False; saw_game = False; cs_grace = 0.0
+                _vt0 = rec._vt0; vid = rec.stop(); active = False; rec.verified = False; saw_game = False; cs_grace = 0.0; ended_at = 0.0
                 end_ts = time.time()
                 if vid and os.path.isfile(vid):
                     threading.Thread(target=ingest_lol, args=(vid, riot_id, start_ts, end_ts, proxy, platform), kwargs={"live_data": {"snaps": list(live_snaps), "events": list(live_evts)}, "started_cs": started_cs, "vt0": _vt0}, daemon=True).start()
