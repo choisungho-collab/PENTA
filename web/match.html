@@ -593,6 +593,8 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
   var gridVert = false;     // grid 방향: true=세로(쌓기)/false=가로(나란히). 2인이면 세로 디폴트.
   var orientUserSet = false;// 사용자가 가로/세로를 직접 고르면 true(디폴트 자동변경 중지)
   var resumeAt = 0;         // 레이아웃 전환 시 영상 시각 유지
+  var resumePlay = false;   // 레이아웃/토글 전환 시 재생 상태 유지(멈춤 방지)
+  function markResume(){ var a = activeVideo(); resumeAt = a ? (a.currentTime||0) : 0; resumePlay = a ? !a.paused : false; }
   var ME = null;            // 로그인 세션 {token,puuid,name,icon}
 
   function qs(name){ return new URLSearchParams(location.search).get(name); }
@@ -1195,6 +1197,12 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
   // ── 영상 엔진: POV 즉시 전환 + 분할 동기화 (워밍 풀 + 드리프트 보정) ──
   var POOL = null;        // 단일뷰 비디오 풀 컨테이너(#vpool)
   var MAX_LIVE = 4;       // 동시 워밍(디코드/버퍼) 상한
+  var VSALV = {};         // 분할 재렌더 시 보존할 video element (idx -> <video>) — 끊김 없는 시점 전환용
+  function unwireSplitVid(v){   // 마스터로 붙였던 리스너 제거(보존 후 다른 영상이 마스터가 될 때 중복 방지)
+    if(!v) return;
+    (v._splitH||[]).forEach(function(h){ try{ v.removeEventListener(h.ev,h.fn); }catch(_){} });
+    v._splitH = [];
+  }
 
   function stageSingle(){
     if(!ROWS.some(function(r){ return r.video; })){
@@ -1268,12 +1276,14 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
     }
     function paintPlay(){ playBtn.innerHTML = master.paused ? PLAY : PAUSE; }
     function paintMute(){ muteBtn.innerHTML = master.muted ? MUTED : VOL; }
-    master.addEventListener('timeupdate', paintTime);
-    master.addEventListener('loadedmetadata', paintTime);
-    master.addEventListener('durationchange', paintTime);
-    master.addEventListener('play', paintPlay);
-    master.addEventListener('pause', paintPlay);
-    master.addEventListener('volumechange', paintMute);
+    master._splitH = master._splitH || [];
+    var _addM=function(ev,fn){ master.addEventListener(ev,fn); master._splitH.push({ev:ev,fn:fn}); };
+    _addM('timeupdate', paintTime);
+    _addM('loadedmetadata', paintTime);
+    _addM('durationchange', paintTime);
+    _addM('play', paintPlay);
+    _addM('pause', paintPlay);
+    _addM('volumechange', paintMute);
     seek.addEventListener('input', function(){ seeking=true; var d=master.duration||0; if(isFinite(d)&&d>0) tEl.textContent=fmt(d*seek.value/1000)+' / '+fmt(d); });
     seek.addEventListener('change', function(){ var d=master.duration||0; if(isFinite(d)&&d>0){ try{ master.currentTime=d*seek.value/1000; }catch(_){} } seeking=false; });
     playBtn.addEventListener('click', function(){ if(master.paused){ var p=master.play&&master.play(); if(p&&p.catch)p.catch(function(){}); } else master.pause(); });
@@ -1298,24 +1308,40 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
     if(syncRAF){ cancelAnimationFrame(syncRAF); syncRAF=null; }
     POOL = null;
     var multi = split && selected.length>=2;
+    // ★ 분할 재렌더: 재생 중인 video element를 버리지 않고 보존했다가 새 레이아웃에 옮겨 끼움 → 끊김 없음.
+    var wasPlaying=false, salv={};
+    if(multi){
+      stageVideos().forEach(function(v){ var ix=+v.dataset.idx; if(ix>=0){ if(!v.paused) wasPlaying=true; unwireSplitVid(v); if(v.parentNode) v.parentNode.removeChild(v); salv[ix]=v; } });
+    } else {
+      Object.keys(VSALV).forEach(function(k){ try{ VSALV[k].pause(); }catch(_){} });   // 단일 모드로 가면 분할 영상 정지
+    }
     host.innerHTML = multi ? ((splitMode==='focus'?stageFocus():stageSplit()) + mvBar()) : stageSingle();
     if(multi){
+      // 새로 만들어진 <video> 자리표시를 보존본으로 교체(있으면 재생 그대로 유지). 없으면 새 시점만 로드.
+      VSALV={};
+      host.querySelectorAll('video[data-idx]').forEach(function(fresh){
+        var ix=+fresh.dataset.idx, keep=salv[ix], el=fresh;
+        if(keep && fresh.parentNode){ fresh.parentNode.replaceChild(keep, fresh); el=keep; }
+        el.muted=true;            // 일단 전부 음소거 → wireMvBar 가 마스터만 켬
+        VSALV[ix]=el;
+      });
+      Object.keys(salv).forEach(function(ix){ if(!VSALV[ix]){ try{ salv[ix].pause(); }catch(_){} } });   // 빠진 시점 정지
       wireMaster();
       wireMvBar();
       host.querySelectorAll('.pipcell[data-promote]').forEach(function(c){
         c.addEventListener('click', function(){
           var idx=+c.dataset.promote, pos=selected.indexOf(idx);
-          if(pos>0){ resumeAt=curT(); selected.splice(pos,1); selected.unshift(idx); renderPovBar(); renderStage(); }
+          if(pos>0){ markResume(); selected.splice(pos,1); selected.unshift(idx); renderPovBar(); renderStage(); }
         });
       });
+      if(wasPlaying){ playLive(); }   // 재생 중이었으면 계속 재생(새로 추가된 시점도 동기 재생)
     } else {
       wirePool();
     }
-    if(resumeAt>0){
-      var m=activeVideo(), rt=resumeAt;
-      if(m){ var seek=function(){ try{m.currentTime=rt;}catch(_){} }; if(m.readyState>=1) seek(); else m.addEventListener('loadedmetadata',seek,{once:true}); }
-      resumeAt=0;
-    }
+    var _m=activeVideo();
+    if(_m && resumeAt>0){ var rt=resumeAt; var seek=function(){ try{_m.currentTime=rt;}catch(_){} }; if(_m.readyState>=1) seek(); else _m.addEventListener('loadedmetadata',seek,{once:true}); }
+    resumeAt=0;
+    if(resumePlay){ resumePlay=false; if(split){ playLive(); } else if(_m){ var _pp=_m.play(); if(_pp&&_pp.catch)_pp.catch(function(){}); } }   // 토글 직전 재생 중이었으면 이어서 재생(단일=보이는 영상만, 분할=전체) → 멈추지 않음
     startSync();
   }
 
@@ -1333,9 +1359,11 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
   }
   function wireMaster(){
     var master = stageVideos()[0]; if(!master) return;
-    master.addEventListener('play',  function(){ playLive(); });
-    master.addEventListener('pause', function(){ pauseLive(); });
-    master.addEventListener('seeked',function(){ var base=master.currentTime, gm=vG0(master); stageVideos().forEach(function(v){ if(v!==master){ var want=base+(gm-vG0(v)); if(want<0)want=0; try{v.currentTime=want;}catch(_){} } }); });
+    master._splitH = master._splitH || [];
+    var _addW=function(ev,fn){ master.addEventListener(ev,fn); master._splitH.push({ev:ev,fn:fn}); };
+    _addW('play',  function(){ playLive(); });
+    _addW('pause', function(){ pauseLive(); });
+    _addW('seeked',function(){ var base=master.currentTime, gm=vG0(master); stageVideos().forEach(function(v){ if(v!==master){ var want=base+(gm-vG0(v)); if(want<0)want=0; try{v.currentTime=want;}catch(_){} } }); });
   }
 
   function setActive(i){
@@ -1409,12 +1437,12 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
     if(!host) return;
     host.addEventListener('click', function(e){
       var lm = e.target.closest('[data-lm]');
-      if(lm){ resumeAt = curT(); splitMode = lm.dataset.lm; renderPovBar(); renderStage(); return; }
+      if(lm){ markResume(); splitMode = lm.dataset.lm; renderPovBar(); renderStage(); return; }
       var orb = e.target.closest('[data-or]');
-      if(orb){ resumeAt = curT(); orientUserSet = true; gridVert = (orb.dataset.or==='v'); renderPovBar(); renderStage(); return; }
+      if(orb){ markResume(); orientUserSet = true; gridVert = (orb.dataset.or==='v'); renderPovBar(); renderStage(); return; }
       var sb = e.target.closest('#splitbtn');
       if(sb){
-        resumeAt = curT();
+        markResume();
         split = !split;
         if(split){ selected = [curPov]; orientUserSet = false; gridVert = false; }
         else { selected = []; }
@@ -1423,7 +1451,7 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
       var tab = e.target.closest('.povtab'); if(!tab) return;
       var i = +tab.dataset.idx;
       if(split){
-        resumeAt = curT();
+        markResume();
         var pos = selected.indexOf(i);
         if(pos>=0){ if(selected.length>1) selected.splice(pos,1); }
         else if(selected.length<4 && ROWS[i].video){ selected.push(i); }
