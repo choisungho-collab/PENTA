@@ -15,6 +15,5 @@
   "capture": "auto",
   "output_idx": "auto",
   "fps": 30,
-  "min_game_sec": 300,
-  "autostart": true
+  "min_game_sec": 300
 }

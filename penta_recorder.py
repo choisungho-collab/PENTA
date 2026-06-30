@@ -945,7 +945,7 @@ def load_or_make_config():
             "port": free_port(8000),
             "fps": FPS,
             "poll_seconds": 4,
-            "autostart": True, "min_game_sec": 300,
+            "min_game_sec": 300,
         }
         _atomic_write_json(CONFIG_PATH, cfg)
         log(f"Config created → {CONFIG_PATH}")
@@ -2106,8 +2106,8 @@ def recorder_loop(cfg):
             try: in_cs = lcu_in_champ_select()   # LCU: 챔피언 선택 중? (실패하면 False → 게임 감지로 폴백)
             except Exception: in_cs = False
 
-            # ── 녹화 시작: 게임 또는 (게임 전이면) 챔피언 선택 ──
-            if (run or in_cs) and not active:
+            # ── 녹화 시작: 게임(로딩 화면)부터. 밴픽(챔피언 선택)은 녹화하지 않음 ──
+            if run and not active:
                 if run:
                     log("Game detected. Checking your info\u2026")
                     for _ in range(20):
@@ -2174,8 +2174,10 @@ def recorder_loop(cfg):
                 REC_STATE.update(rec=True, text=("Recording" if saw_game else "Recording (champ select)"))
                 if start_ts and (time.time()-last_hb)>=300:    # 녹화 중 5분마다 진행 로그(타임라인에 살아있음)
                     last_hb=time.time(); log("Recording\u2026 %d:%02d elapsed." % divmod(int(time.time()-start_ts),60))
-            elif run or in_cs:
+            elif run:
                 REC_STATE.update(rec=False, text="Game detected")
+            elif in_cs:
+                REC_STATE.update(rec=False, text="Champion select (recording starts at game)")
             else:
                 REC_STATE.update(rec=False, text="Idle \u2014 auto-records when a game starts")
             time.sleep(poll)
@@ -2239,11 +2241,14 @@ def is_autostart():
         return False
 
 def _apply_autostart(cfg):
-    """frozen .exe 에서만, config 값에 맞춰 자동 실행 등록/해제."""
+    """더 이상 시작프로그램에 자동 등록하지 않는다. 이전 버전이 등록해 둔 항목이 있으면 제거한다."""
     if not getattr(sys, "frozen", False): return
-    want = bool(cfg.get("autostart", True))
-    if want != is_autostart():
-        set_autostart(want)
+    try:
+        if is_autostart():
+            set_autostart(False)
+            log("Removed PENTA from Windows startup programs.")
+    except Exception:
+        pass
 
 def _hide_console():
     if sys.platform != "win32": return

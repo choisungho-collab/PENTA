@@ -148,6 +148,13 @@
   function pickPrimary(group) {
     var withVid = group.filter(function (r) { return r.video; });
     var pool = withVid.length ? withVid : group;
+    // 로그인한 본인이 올린 시점이 이 게임에 있으면 그걸 대표로(예: innocentsword 로그인 → 본인 갈리오 시점).
+    // 없으면(비로그인/내 시점 없음) 기존대로 영상 있는 시점 중 최신 업로드.
+    var myId = (typeof sessionPuuid === 'function') ? sessionPuuid() : null;
+    if (myId) {
+      var mine = pool.filter(function (r) { return r.owner_puuid && r.owner_puuid === myId; });
+      if (mine.length) pool = mine;
+    }
     return pool.slice().sort(function (a, b) {
       return String(b.uploaded || '').localeCompare(String(a.uploaded || ''));
     })[0];

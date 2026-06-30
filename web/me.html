@@ -21,7 +21,7 @@
  --fm:'IBM Plex Mono',ui-monospace,monospace;
  --r1:10px;--r2:14px;--r3:18px;--sh:0 18px 44px -22px rgba(0,0,0,.8);
 }
-*{box-sizing:border-box}html,body{margin:0}
+*{box-sizing:border-box}html,body{margin:0;overflow-x:clip}
 body{background:var(--bg);color:var(--ink);font-family:var(--fd);font-size:15px;line-height:1.65;word-break:keep-all;overflow-wrap:break-word;-webkit-font-smoothing:antialiased;letter-spacing:.005em}
 a{color:inherit;text-decoration:none}svg{display:block}img{display:block;max-width:100%}
 .ic{width:1em;height:1em;flex-shrink:0}
@@ -224,6 +224,20 @@ footer{border-top:1px solid var(--line);margin-top:70px}
 .gate .cta .ic{width:16px;height:16px}
 .gempty{grid-column:1/-1;padding:50px 20px;text-align:center;border:1px dashed var(--line2);border-radius:var(--r2);color:var(--dim);font-family:var(--fd)}
 .gempty b{color:var(--gold-ink)}
+
+/* ── 모바일 헤더 최적화(≤560px): 네비를 아랫줄 전체 폭으로 → 메뉴(다운로드 등) 잘림 해결 ── */
+@media(max-width:560px){
+  .bar-in{flex-wrap:wrap;padding:10px 12px;gap:8px 10px}
+  .brand{order:1}
+  .brand b{font-size:17px}
+  .auth{order:2;margin-left:auto}
+  .nav{order:3;flex-basis:100%;margin-left:0;gap:2px;overflow-x:auto}
+  .nav::-webkit-scrollbar{display:none}
+  .nav a{font-size:13px;padding:6px 8px 7px}
+}
+
+/* 모바일/태블릿: 레코더 로그인은 PC 전용 → 모바일에선 버튼 숨김 ── */
+@media(max-width:768px){.auth{display:none}}
 </style></head>
 <body>
 

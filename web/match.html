@@ -22,7 +22,7 @@
  --fm:'IBM Plex Mono',ui-monospace,monospace;
  --r1:10px;--r2:14px;--r3:18px;--sh:0 18px 44px -22px rgba(0,0,0,.8);
 }
-*{box-sizing:border-box}html,body{margin:0}
+*{box-sizing:border-box}html,body{margin:0;overflow-x:clip}
 body{background:var(--bg);color:var(--ink);font-family:var(--fd);font-size:15px;line-height:1.65;word-break:keep-all;overflow-wrap:break-word;-webkit-font-smoothing:antialiased}
 a{color:inherit;text-decoration:none}svg{display:block}img{display:block;max-width:100%}
 .ic{width:1em;height:1em;flex-shrink:0}
@@ -555,6 +555,51 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
 .mvbar .mvseek::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:var(--gold);border:none;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.5)}
 .mvbar .mvtime{flex:0 0 auto;font-family:var(--fm);font-size:11.5px;color:var(--dim);font-variant-numeric:tabular-nums;white-space:nowrap}
 .lmode2{margin-left:2px}
+
+/* ── 모바일 최적화(≤560px): 헤더 nav · 경기분석 헤더 · 스코어보드 가로 넘침 해결 ── */
+@media(max-width:560px){
+  /* 헤더: 브랜드+로그인은 윗줄, 네비는 아랫줄 전체 폭으로 → '다운로드' 잘림 해결 */
+  .bar-in{flex-wrap:wrap;padding:10px 12px;gap:8px 10px}
+  .brand{order:1}
+  .brand b{font-size:17px}
+  .auth{order:2;margin-left:auto}
+  .nav{order:3;flex-basis:100%;margin-left:0;gap:2px;overflow-x:auto}
+  .nav::-webkit-scrollbar{display:none}
+  .nav a{font-size:13px;padding:6px 8px 7px}
+  /* 경기분석 헤더(BLUE/시간/RED): 폰트·여백 축소 → RED 점수 잘림 해결 */
+  .lckhead{gap:8px;padding:16px 12px}
+  .lhrow1{gap:7px}
+  .lhteam{font-size:18px}
+  .lhsc{font-size:25px}
+  .lhtv{font-size:22px}
+  .lhtl{font-size:8px;letter-spacing:.16em;margin-top:4px}
+  .lhtime{padding:0 2px}
+  .lhwl{font-size:10px;letter-spacing:.16em}
+  /* 팀 스코어보드: 챔프·이름·KDA·CS는 한 줄, 아이템은 아랫줄 → 가로 넘침 해결 */
+  .prow2{flex-wrap:wrap;gap:5px 8px;padding:9px 12px}
+  .pw2{flex:1 1 auto;width:auto;min-width:0}
+  .kd2{width:auto;min-width:0;flex-shrink:0;font-size:12.5px}
+  .cs2{flex-shrink:0}
+  .it2{flex-basis:100%;margin-left:0;justify-content:flex-start;gap:3px}
+  .it2 .it{width:22px;height:22px;border-radius:4px}
+}
+
+/* ── 모바일 폴리시(≤560px): 분석·카드 좌우 여백 축소로 좁은 화면 공간 확보(넘침 아님, 가독성) ── */
+@media(max-width:560px){
+  .wrap{padding:0 12px 70px}
+  .lckL,.lckone,.lckpanel{padding-left:14px;padding-right:14px}
+  .objbars{padding:15px 14px}
+  .chartcard{padding:15px 13px 11px}
+  .chartcard .lg{flex-wrap:wrap;gap:6px 14px}
+  .grade{padding:14px 15px;gap:13px}
+  .grade .gv{font-size:34px;width:44px}
+  .cmts{padding:16px 14px}
+  .hero{padding:13px 16px}
+  .objgrid{padding:14px 12px}
+}
+
+/* 모바일/태블릿: 레코더 로그인은 PC 전용 → 모바일에선 버튼 숨김 ── */
+@media(max-width:768px){.auth{display:none}}
 </style>
 </head>
 <body>
@@ -1220,7 +1265,7 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
     var live = liveSet();
     var vids = live.map(function(i){
       var r=ROWS[i], on=(i===curPov);
-      return '<video data-pv="'+i+'" class="pvid'+(on?' on':'')+'" '+(on?'controls':'muted')+' playsinline preload="auto" poster="'+(r.thumb||'')+'" src="'+r.video+'"></video>';
+      return '<video data-pv="'+i+'" class="pvid'+(on?' on':'')+'" '+(on?'controls':'muted')+' playsinline webkit-playsinline disablepictureinpicture controlslist="nodownload noplaybackrate noremoteplayback" preload="auto" poster="'+(r.thumb||'')+'" src="'+r.video+'"></video>';
     }).join('');
     var noCur = !(ROWS[curPov] && ROWS[curPov].video);
     return '<div class="stage pool" id="vpool"><div class="vspin"></div>'+vids
@@ -1239,7 +1284,7 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
   }
 
   function cellTag(r){ return '<span class="tag"><i style="background:'+(r._team===100?'var(--blue)':'var(--red)')+'"></i>'+esc(r.saver||'시점')+'</span>'; }
-  function cellVideo(idx,ctrl){ var r=ROWS[idx]||{}; return '<video data-idx="'+idx+'" '+(ctrl?'controls':'muted')+' playsinline preload="auto" poster="'+(r.thumb||'')+'" src="'+(r.video||'')+'"></video>'; }
+  function cellVideo(idx,ctrl){ var r=ROWS[idx]||{}; return '<video data-idx="'+idx+'" '+(ctrl?'controls':'muted')+' playsinline webkit-playsinline disablepictureinpicture controlslist="nodownload noplaybackrate noremoteplayback" preload="auto" poster="'+(r.thumb||'')+'" src="'+(r.video||'')+'"></video>'; }
   function stageSplit(){
     var cells = selected.map(function(idx){
       var r = ROWS[idx];
@@ -1347,10 +1392,16 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
     } else {
       wirePool();
     }
+    // 레이아웃 전환: 보던 시점(시간)을 그대로 이어가기. 새 마스터가 로드 전이면 메타데이터 로드 후 seek→재생으로 묶어
+    // '0초부터 재생됐다가 튀는' 현상을 막는다(= 처음으로 리셋되는 것처럼 보이던 버그).
     var _m=activeVideo();
-    if(_m && resumeAt>0){ var rt=resumeAt; var seek=function(){ try{_m.currentTime=rt;}catch(_){} }; if(_m.readyState>=1) seek(); else _m.addEventListener('loadedmetadata',seek,{once:true}); }
-    resumeAt=0;
-    if(resumePlay){ resumePlay=false; if(split){ playLive(); } else if(_m){ var _pp=_m.play(); if(_pp&&_pp.catch)_pp.catch(function(){}); } }   // 토글 직전 재생 중이었으면 이어서 재생(단일=보이는 영상만, 분할=전체) → 멈추지 않음
+    var _rt=resumeAt, _wantPlay=resumePlay; resumeAt=0; resumePlay=false;
+    var _resume=function(){
+      if(_rt>0 && _m){ try{ _m.currentTime=_rt; }catch(_){} }
+      if(_wantPlay){ if(split){ playLive(); } else if(_m){ var _pp=_m.play&&_m.play(); if(_pp&&_pp.catch)_pp.catch(function(){}); } }
+    };
+    if(_m && _rt>0 && _m.readyState<1){ _m.addEventListener('loadedmetadata', _resume, {once:true}); }
+    else { _resume(); }
     startSync();
   }
 
