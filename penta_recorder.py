@@ -868,6 +868,20 @@ def free_port(pref=8000):
     except OSError:
         s2 = socket.socket(); s2.bind(("0.0.0.0", 0)); p = s2.getsockname()[1]; s2.close(); return p
 
+def _screen_size():
+    """기본 모니터 작업영역(작업표시줄 제외) (left, top, width, height) px. 실패하면 None."""
+    try:
+        import ctypes
+        u = ctypes.windll.user32
+        class _R(ctypes.Structure):
+            _fields_ = [("l", ctypes.c_long), ("t", ctypes.c_long), ("r", ctypes.c_long), ("b", ctypes.c_long)]
+        rc = _R()
+        if u.SystemParametersInfoW(0x0030, 0, ctypes.byref(rc), 0):   # SPI_GETWORKAREA
+            return (rc.l, rc.t, rc.r - rc.l, rc.b - rc.t)
+        return (0, 0, u.GetSystemMetrics(0), u.GetSystemMetrics(1))
+    except Exception:
+        return None
+
 def open_app(url):
     """주소창·탭 없는 단독 앱 창으로 갤러리를 연다 (Edge/Chrome --app 모드).
     윈도우엔 Edge 가 항상 깔려 있어 별도 설치 불필요. 못 찾으면 일반 브라우저로 폴백."""
@@ -887,9 +901,18 @@ def open_app(url):
         except Exception: pass
         for _exe in cand:
             if _exe and os.path.isfile(_exe):
-                subprocess.Popen([_exe, "--app=" + url, "--user-data-dir=" + _prof,
-                                  "--no-first-run", "--no-default-browser-check",
-                                  "--window-size=1240,840"])
+                _args = [_exe, "--app=" + url, "--user-data-dir=" + _prof,
+                         "--no-first-run", "--no-default-browser-check"]
+                _wa = _screen_size()
+                if _wa:
+                    _wl, _wt, _ww, _wh = _wa
+                    _W = min(1280, _ww)                       # 콘텐츠(최대 1160px)에 맞춘 너비
+                    _X = _wl + max(0, (_ww - _W) // 2)        # 가로 중앙
+                    _args += ["--window-size=%d,%d" % (_W, _wh),   # 세로는 작업영역 꽉
+                              "--window-position=%d,%d" % (_X, _wt)]
+                else:
+                    _args.append("--start-maximized")         # 화면 크기 못 읽으면 최대화로 폴백
+                subprocess.Popen(_args)
                 return True
     except Exception:
         pass
@@ -1958,7 +1981,7 @@ def _live_gid(analysis, start_ts):
     return "live_" + hashlib.sha1(key.encode("utf-8")).hexdigest()[:12]
 
 
-def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr", live_data=None, started_cs=False):
+def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr", live_data=None, started_cs=False, vt0=None):
     # 화면 녹화 + (게임 종료 후) Riot 매치를 연결해 분석·업로드한다.
     # Riot 매치 연결이 안 되더라도(개발키 만료/레이트리밋/타이밍 등) 영상은 업로드하고 아카이브에 올린다.
     if not video_path or not os.path.isfile(video_path) or os.path.getsize(video_path) < 10000:
@@ -2053,7 +2076,8 @@ def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr", 
         saver = (me or {}).get("name") or riot_id.split("#")[0]
         try:
             _snaps = (live_data or {}).get("snaps") or []
-            _cs = [float(s.get("t") or 0) - (float(s["w"]) - start_ts) for s in _snaps if s.get("w") and start_ts]
+            _anchor = vt0 if (vt0 and start_ts and vt0 >= start_ts) else start_ts   # 영상 첫 프레임 시각(_vt0) 기준 → 캡처/인코더 워밍업 간극 제거(없거나 stale면 start_ts로 폴백)
+            _cs = [float(s.get("t") or 0) - (float(s["w"]) - _anchor) for s in _snaps if s.get("w") and _anchor]
             if _cs:
                 _cs.sort(); analysis["g0"] = round(_cs[len(_cs)//2] + (trimmed or 0.0), 2)   # 영상 t=0의 gameTime(멀티뷰 정밀 정렬용)
         except Exception: pass
@@ -2146,10 +2170,10 @@ def recorder_loop(cfg):
                     log("Game over \u2014 capturing post-game screen\u2026")   # (매직 문자열 없음 → 녹화 상태 유지)
                     time.sleep(_tail)
                 log("Game ended \u2014 recorded %d:%02d." % divmod(int(time.time()-(start_ts or time.time())),60))
-                vid = rec.stop(); active = False; rec.verified = False; saw_game = False; cs_grace = 0.0
+                _vt0 = rec._vt0; vid = rec.stop(); active = False; rec.verified = False; saw_game = False; cs_grace = 0.0
                 end_ts = time.time()
                 if vid and os.path.isfile(vid):
-                    threading.Thread(target=ingest_lol, args=(vid, riot_id, start_ts, end_ts, proxy, platform), kwargs={"live_data": {"snaps": list(live_snaps), "events": list(live_evts)}, "started_cs": started_cs}, daemon=True).start()
+                    threading.Thread(target=ingest_lol, args=(vid, riot_id, start_ts, end_ts, proxy, platform), kwargs={"live_data": {"snaps": list(live_snaps), "events": list(live_evts)}, "started_cs": started_cs, "vt0": _vt0}, daemon=True).start()
                 riot_id = None; start_ts = None; started_cs = False; log("Idle.")
 
             elif active and not run and in_cs:

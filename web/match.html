@@ -87,6 +87,11 @@ a{color:inherit;text-decoration:none}svg{display:block}img{display:block;max-wid
 .pipcell .promote{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(5,8,11,.42);opacity:0;transition:.14s;color:var(--gold-ink)}
 .pipcell .promote svg{width:22px;height:22px}
 .pipcell:hover .promote{opacity:1}
+.stage.grid .cell.zoomable{cursor:pointer}
+.stage.focusmain{position:relative;cursor:pointer}
+.cell .ovl,.stage.focusmain .ovl{position:absolute;top:8px;right:8px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;background:rgba(5,8,11,.6);border:1px solid var(--line2);border-radius:8px;color:#fff;opacity:0;transition:.14s;z-index:3;pointer-events:none}
+.cell .ovl svg,.stage.focusmain .ovl svg{width:16px;height:16px}
+.cell.zoomable:hover .ovl,.stage.focusmain:hover .ovl{opacity:.95}
 /* 분할 레이아웃 토글 */
 .lmode{display:inline-flex;gap:3px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r1);padding:3px}
 .lmode button{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-family:var(--fd);font-weight:600;font-size:12.5px;color:var(--dim);background:none;border:0;border-radius:7px;padding:7px 9px;cursor:pointer;transition:.14s}
@@ -254,13 +259,19 @@ h2.sec .ln{flex:1;height:1px;background:var(--line)}
 .kdtag .cdot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
 .kdtag.kc{color:#7fd9c5}.kdtag.kc .cdot{background:var(--win)}
 .kdtag.dc{color:#e8a0a8}.kdtag.dc .cdot{background:var(--loss)}
+.clabel.hc .cdot{background:var(--gold)}
+.jbtn.hl{display:inline-flex;align-items:center;gap:6px;padding:4px 9px 4px 8px;border-color:var(--gold-line);color:var(--gold-ink);background:var(--gold-soft)}
+.jbtn.hl:hover{border-color:var(--gold);background:rgba(222,199,156,.16);color:var(--gold-ink)}
+.jbtn.hl .hi{width:13px;height:13px;flex-shrink:0;opacity:.9}
+.jbtn.hl .hl-l{font-family:var(--fd);font-weight:600;white-space:nowrap}
+.jbtn.hl .hl-t{font-family:var(--fm);font-size:10.5px;color:var(--dim);letter-spacing:.02em}
 .kdstrip{flex:1 1 auto;min-width:0;display:flex;gap:7px;overflow-x:auto;overflow-y:hidden;padding:2px 0 7px;scrollbar-width:thin;scrollbar-color:var(--line2) transparent;-webkit-overflow-scrolling:touch}
 .kdstrip::-webkit-scrollbar{height:5px}
 .kdstrip::-webkit-scrollbar-thumb{background:var(--line2);border-radius:3px}
 .kdstrip::-webkit-scrollbar-track{background:transparent}
 .kdstrip .jbtn{flex:0 0 auto}
 .jumps{display:flex;flex-wrap:wrap;gap:7px}
-.jbtn{font-family:var(--fm);font-size:12.5px;font-weight:500;background:var(--surface);border:1px solid var(--line2);color:var(--ink);padding:6px 11px;border-radius:7px;cursor:pointer;font-variant-numeric:tabular-nums;transition:border-color .14s,color .14s,background .14s}
+.jbtn{font-family:var(--fm);font-size:11.5px;font-weight:500;background:var(--surface);border:1px solid var(--line2);color:var(--ink);padding:5px 10px;border-radius:6px;cursor:pointer;font-variant-numeric:tabular-nums;letter-spacing:.02em;transition:border-color .14s,color .14s,background .14s}
 .jbtn:hover{border-color:var(--gold-line);color:var(--gold-ink);background:var(--gold-soft)}
 .jbtn.kill{border-color:rgba(82,195,172,.34);color:#7fd9c5}
 .jbtn.kill:hover{background:rgba(82,195,172,.12);color:#a6ffe9;border-color:rgba(82,195,172,.55)}
@@ -1288,7 +1299,7 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
   function stageSplit(){
     var cells = selected.map(function(idx){
       var r = ROWS[idx];
-      return '<div class="cell">'+cellTag(r)+cellVideo(idx, false)+'</div>';
+      return '<div class="cell zoomable" title="크게 보기">'+cellTag(r)+cellVideo(idx, false)+'<span class="ovl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H3v6M21 9V3h-6M3 15v6h6M15 21h6v-6"/></svg></span></div>';
     }).join('');
     return '<div class="stage grid mv-'+selected.length+(gridVert?' vert':'')+'">'+cells+'</div>';
   }
@@ -1299,7 +1310,7 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
       return '<div class="pipcell" data-promote="'+idx+'" title="크게 보기">'+cellTag(rr)+cellVideo(idx,false)
         +'<span class="promote"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H3v6M21 9V3h-6M3 15v6h6M15 21h6v-6"/></svg></span></div>';
     }).join('');
-    return '<div class="stage">'+cellTag(r)+cellVideo(mainIdx,false)+'</div><div class="piprow">'+pips+'</div>';
+    return '<div class="stage focusmain" title="격자로">'+cellTag(r)+cellVideo(mainIdx,false)+'<span class="ovl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg></span></div><div class="piprow">'+pips+'</div>';
   }
 
   function mvBar(){
@@ -1388,6 +1399,21 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
           if(pos>0){ markResume(); selected.splice(pos,1); selected.unshift(idx); renderPovBar(); renderStage(); }
         });
       });
+      // 멀티: 격자 셀을 누르면 그 시점을 크게(포커스), 포커스의 큰 화면을 누르면 다시 격자로
+      if(splitMode==='grid'){
+        host.querySelectorAll('.stage.grid .cell').forEach(function(c){
+          c.addEventListener('click', function(){
+            var v=c.querySelector('video'); if(!v) return;
+            var idx=+v.dataset.idx, pos=selected.indexOf(idx);
+            markResume();
+            if(pos>0){ selected.splice(pos,1); selected.unshift(idx); }
+            splitMode='focus'; renderPovBar(); renderStage();
+          });
+        });
+      } else {
+        var _fm=host.querySelector('.stage.focusmain');
+        if(_fm) _fm.addEventListener('click', function(){ markResume(); splitMode='grid'; renderPovBar(); renderStage(); });
+      }
       if(wasPlaying){ playLive(); }   // 재생 중이었으면 계속 재생(새로 추가된 시점도 동기 재생)
     } else {
       wirePool();
@@ -1490,10 +1516,9 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
     var seg='';
     if(canSplit){
       var icS='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="14" rx="1.5"/></svg>';
-      var icG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="8" height="16" rx="1"/><rect x="13" y="4" width="8" height="16" rx="1"/></svg>';
-      var icF='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="11" rx="1"/><rect x="3" y="17.5" width="5" height="3" rx="1"/><rect x="9.5" y="17.5" width="5" height="3" rx="1"/><rect x="16" y="17.5" width="5" height="3" rx="1"/></svg>';
-      var mk=function(m,lab,ic){ var act=(m==='single'&&!split)||(split&&splitMode===m); return '<button data-vm="'+m+'" class="'+(act?'on':'')+'" title="'+lab+'">'+ic+'<span>'+lab+'</span></button>'; };
-      seg='<div class="vmode">'+mk('single','단일',icS)+mk('grid','나란히',icG)+mk('focus','포커스',icF)+'</div>';
+      var icM='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg>';
+      var mk=function(m,lab,ic){ var act=(m==='single'&&!split)||(m==='multi'&&split); return '<button data-vm="'+m+'" class="'+(act?'on':'')+'" title="'+lab+'">'+ic+'<span>'+lab+'</span></button>'; };
+      seg='<div class="vmode">'+mk('single','단일',icS)+mk('multi','멀티',icM)+'</div>';
     }
     var orient='';
     if(split && splitMode==='grid'){
@@ -1502,7 +1527,7 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
       orient='<div class="vmode vsub"><button data-or="v" title="위아래" aria-label="위아래" class="'+(gridVert?'on':'')+'">'+icV+'</button><button data-or="h" title="좌우" aria-label="좌우" class="'+(!gridVert?'on':'')+'">'+icH+'</button></div>';
     }
     host.innerHTML = '<span class="povlab">시점</span><div class="povtabs">'+tabs+'</div>' + seg + orient
-      + (split?('<div class="splithint">'+(selected.length<4?'시점을 더 누르면 추가':'최대 4명')+' · 누른 시점을 다시 누르면 제외(최소 2명)'+(splitMode==='focus'?' · 작은 화면을 누르면 크게':'')+'</div>'):'');
+      + (split?('<div class="splithint">'+(selected.length<4?'시점을 더 누르면 추가(최대 4)':'최대 4명')+' · 영상을 누르면 크게'+(splitMode==='focus'?'(다시 누르면 격자)':'')+'</div>'):'');
   }
 
   function bindPov(){
@@ -1518,14 +1543,17 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
         markResume();
         if(vm==='single'){
           if(split){ if(selected.length) curPov = selected[0]; split=false; selected=[]; orientUserSet=false; }
-        } else {
-          split=true; splitMode=vm;
-          if(selected.length<2){   // 비교 진입 시 영상 있는 시점 2개 자동 선택 → 클릭 한 번에 바로 멀티뷰
-            selected=[];
-            if(ROWS[curPov] && ROWS[curPov].video) selected.push(curPov);
-            for(var k=0;k<ROWS.length && selected.length<2;k++){ if(selected.indexOf(k)<0 && ROWS[k] && ROWS[k].video) selected.push(k); }
-            orientUserSet=false;
+        } else {   // 멀티 → 격자 보기. 처음 진입이면 영상 2개 자동 선택
+          if(!split){
+            split=true;
+            if(selected.length<2){
+              selected=[];
+              if(ROWS[curPov] && ROWS[curPov].video) selected.push(curPov);
+              for(var k=0;k<ROWS.length && selected.length<2;k++){ if(selected.indexOf(k)<0 && ROWS[k] && ROWS[k].video) selected.push(k); }
+              orientUserSet=false;
+            }
           }
+          splitMode='grid';
           if(!orientUserSet) gridVert = (selected.length===2);   // 2명=위아래 기본 / 3·4명=그리드
         }
         renderPovBar(); renderStage(); return;
@@ -1637,26 +1665,81 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
       +side+'</div>';
   }
 
+  // 하이라이트: 이미 업로드된 이벤트(킬·오브젝트)만으로 가장 극적인 장면을 골라낸다(서버/재분석 불필요 → 기존 영상에도 적용).
+  // 한타(킬 밀집)·바론/장로 교전·내 멀티킬·선취점을 점수화해 상위 몇 개만. (죽음 위기 구출 등은 체력 데이터가 없어 제외)
+  function computeHighlights(myPid){
+    var K=(ANALYSIS.kills||[]).filter(function(e){return e&&typeof e.t==='number'&&(e.killer||e.victim);}).slice().sort(function(a,b){return a.t-b.t;});
+    var O=(ANALYSIS.objs||[]).filter(function(e){return e&&typeof e.t==='number';});
+    var dur=ANALYSIS.duration||0;
+    if(!K.length && !O.length) return [];
+    function objIn(t0,t1,kind,sub){ for(var i=0;i<O.length;i++){var o=O[i]; if(o.t>=t0&&o.t<=t1&&o.kind===kind&&(sub==null||(o.sub||'')===sub)) return o;} return null; }
+    var GAP=12, clusters=[], cur=null;
+    K.forEach(function(k){
+      if(cur && k.t-cur.end<=GAP){ cur.kills.push(k); cur.end=k.t; }
+      else { cur={start:k.t,end:k.t,kills:[k]}; clusters.push(cur); }
+    });
+    var cand=[];
+    clusters.forEach(function(c){
+      var n=c.kills.length; if(n<2) return;   // 1킬은 한타가 아님(킬 줄에 이미 있음)
+      var myK=0, mine=false;
+      c.kills.forEach(function(k){ if(myPid>0){ if(k.killer===myPid){myK++;mine=true;} if(k.victim===myPid)mine=true; if((k.assists||[]).indexOf(myPid)>=0)mine=true; } });
+      var baron=objIn(c.start-16,c.end+16,'BARON_NASHOR',null);
+      var elder=objIn(c.start-16,c.end+16,'DRAGON','ELDER_DRAGON');
+      var dragon=objIn(c.start-16,c.end+16,'DRAGON',null);
+      var score=n, label;
+      if(baron){ score+=5; label='바론 한타'; }
+      else if(elder){ score+=4; label='장로 한타'; }
+      else if(n>=4){ score+=2; label='대규모 한타 '+n+'킬'; }
+      else if(dragon){ score+=1.5; label='용 교전 '+n+'킬'; }
+      else label='한타 '+n+'킬';
+      if(myK>=2){ label=({2:'더블킬',3:'트리플킬',4:'쿼드라킬',5:'펜타킬'}[Math.min(5,myK)])+(baron?' · 바론':(elder?' · 장로':'')); score+=myK*2.5; }
+      if(mine) score+=2;
+      if(dur && c.end>=dur-80) score+=3;   // 후반 결정적 교전 가중
+      cand.push({disp:c.start, lead:5, label:label, score:score});
+    });
+    function inFight(t){ return clusters.some(function(c){ return c.kills.length>=2 && t>=c.start-13 && t<=c.end+13; }); }
+    O.forEach(function(o){
+      if(o.kind==='BARON_NASHOR' && !inFight(o.t)) cand.push({disp:o.t, lead:8, label:'바론 획득', score:5});
+      else if(o.kind==='DRAGON' && (o.sub||'')==='ELDER_DRAGON' && !inFight(o.t)) cand.push({disp:o.t, lead:8, label:'장로 드래곤', score:4});
+    });
+    if(K.length && K[0].t<=480) cand.push({disp:K[0].t, lead:4, label:'선취점', score:2.5});
+    cand.sort(function(a,b){return b.score-a.score;});
+    var picked=[];
+    cand.forEach(function(h){ if(picked.length<7 && !picked.some(function(p){return Math.abs(p.disp-h.disp)<8;})) picked.push(h); });
+    picked.sort(function(a,b){return a.disp-b.disp;});
+    return picked.map(function(h){ return {t:Math.max(0,h.disp-h.lead), disp:h.disp, label:h.label}; });
+  }
+
   function jumpsBlock(){
     var saver=(ROWS[curPov]||{}).saver;
     var players=ANALYSIS.players||[];
     var meIdx=-1, i;
     for(i=0;i<players.length;i++){ if(players[i].name===saver){ meIdx=i; break; } }
-    if(meIdx<0) return '';
-    var pid=meIdx+1;
-    var allK=(ANALYSIS.kills||[]);
-    var myKills=allK.filter(function(e){ return e.killer===pid; }).sort(function(a,b){return a.t-b.t;});
-    var myDeaths=allK.filter(function(e){ return e.victim===pid; }).sort(function(a,b){return a.t-b.t;});
-    if(!myKills.length && !myDeaths.length) return '';
-    function row(arr,kind,labelko,tagcls){
-      if(!arr.length) return '';
-      var btns=arr.map(function(e){ return '<button class="jbtn '+kind+'" data-jump="'+Math.max(0,e.t-4)+'">'+fmtT(e.t)+'</button>'; }).join('');
-      return '<div class="kdrow '+kind+'"><span class="kdtag '+tagcls+'"><span class="cdot"></span>'+labelko+' '+arr.length+'</span><div class="kdstrip">'+btns+'</div></div>';
+    var pid = meIdx>=0 ? meIdx+1 : -1;
+    // 하이라이트(게임 전체 · 내가 낀 장면은 가중)
+    var hls=computeHighlights(pid), hlHTML='';
+    if(hls.length){
+      var spark='<svg class="hi" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>';
+      var hb=hls.map(function(h){ return '<button class="jbtn hl" data-jump="'+Math.round(h.t)+'">'+spark+'<span class="hl-l">'+h.label+'</span><span class="hl-t">'+fmtT(h.disp)+'</span></button>'; }).join('');
+      hlHTML='<div class="clabel hc"><span class="cdot"></span>하이라이트 <b>'+hls.length+'</b> · 가장 극적인 장면</div><div class="kdrow"><div class="kdstrip">'+hb+'</div></div>';
     }
-    var jp='<div class="clabel">내 킬·데스 · 클릭하면 영상으로</div>'
-         + row(myKills,'kill','킬','kc')
-         + row(myDeaths,'death','데스','dc');
-    return '<div class="vjumps">'+jp+'</div>';
+    // 내 킬·데스
+    var kdHTML='';
+    if(pid>0){
+      var allK=(ANALYSIS.kills||[]);
+      var myKills=allK.filter(function(e){ return e.killer===pid; }).sort(function(a,b){return a.t-b.t;});
+      var myDeaths=allK.filter(function(e){ return e.victim===pid; }).sort(function(a,b){return a.t-b.t;});
+      var row=function(arr,kind,labelko,tagcls){
+        if(!arr.length) return '';
+        var btns=arr.map(function(e){ return '<button class="jbtn '+kind+'" data-jump="'+Math.max(0,e.t-4)+'">'+fmtT(e.t)+'</button>'; }).join('');
+        return '<div class="kdrow '+kind+'"><span class="kdtag '+tagcls+'"><span class="cdot"></span>'+labelko+' '+arr.length+'</span><div class="kdstrip">'+btns+'</div></div>';
+      };
+      if(myKills.length||myDeaths.length){
+        kdHTML='<div class="clabel">내 킬·데스 · 클릭하면 영상으로</div>'+row(myKills,'kill','킬','kc')+row(myDeaths,'death','데스','dc');
+      }
+    }
+    if(!hlHTML && !kdHTML) return '';
+    return '<div class="vjumps">'+hlHTML+kdHTML+'</div>';
   }
 
   // ── 내 영상 관리(소유자만: 제목 수정 / 삭제) ──
