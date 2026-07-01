@@ -566,6 +566,17 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
 .mvbar .mvseek::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:15px;height:15px;border-radius:50%;background:var(--gold);border:2px solid var(--bg);cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.5)}
 .mvbar .mvseek::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:var(--gold);border:none;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.5)}
 .mvbar .mvtime{flex:0 0 auto;font-family:var(--fm);font-size:11.5px;color:var(--dim);font-variant-numeric:tabular-nums;white-space:nowrap}
+/* 전체화면(멀티뷰) 컨트롤 바 자동 숨김 — 일반/단일뷰엔 미적용 */
+#stagehost:fullscreen{display:flex;flex-direction:column;width:100vw;height:100vh;background:#000}
+#stagehost:-webkit-full-screen{display:flex;flex-direction:column;width:100vw;height:100vh;background:#000}
+#stagehost:fullscreen .stage{flex:1 1 auto;min-height:0;border:0;border-radius:0;aspect-ratio:auto}
+#stagehost:-webkit-full-screen .stage{flex:1 1 auto;min-height:0;border:0;border-radius:0;aspect-ratio:auto}
+#stagehost:fullscreen .mvbar{position:absolute;left:0;right:0;bottom:0;margin:0;border:0;border-radius:0;z-index:6;padding:18px 22px calc(14px + env(safe-area-inset-bottom));background:linear-gradient(to top,rgba(5,8,11,.92),rgba(5,8,11,.5) 62%,transparent);transition:opacity .26s ease,transform .26s ease}
+#stagehost:-webkit-full-screen .mvbar{position:absolute;left:0;right:0;bottom:0;margin:0;border:0;border-radius:0;z-index:6;padding:18px 22px calc(14px + env(safe-area-inset-bottom));background:linear-gradient(to top,rgba(5,8,11,.92),rgba(5,8,11,.5) 62%,transparent);transition:opacity .26s ease,transform .26s ease}
+#stagehost.idle:fullscreen .mvbar{opacity:0;transform:translateY(14px);pointer-events:none}
+#stagehost.idle:-webkit-full-screen .mvbar{opacity:0;transform:translateY(14px);pointer-events:none}
+#stagehost.idle:fullscreen{cursor:none}
+#stagehost.idle:-webkit-full-screen{cursor:none}
 .lmode2{margin-left:2px}
 
 /* ── 모바일 최적화(≤560px): 헤더 nav · 경기분석 헤더 · 스코어보드 가로 넘침 해결 ── */
@@ -655,6 +666,7 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
   var split = false;
   var selected = [];      // 분할 선택 인덱스
   var syncRAF = null;
+  var _seekLock = 0;   // performance.now 기준 이 시각까지 드리프트 동기화 루프 정지 → 시크 중 끊김 방지
   var splitMode = 'grid';   // 'grid' | 'focus'
   var gridVert = false;     // grid 방향: true=세로(쌓기)/false=가로(나란히). 2인이면 세로 디폴트.
   var orientUserSet = false;// 사용자가 가로/세로를 직접 고르면 true(디폴트 자동변경 중지)
@@ -668,7 +680,6 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
   function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
 
   // 소환사 주문 아이콘(있으면)
-  function spellImg(id){ var u=P.spellIcon(ver,id); return u?('<img src="'+u+'" alt="" onerror="this.style.visibility=\'hidden\'">'):'<span style="width:19px;height:19px"></span>'; }
   function itemCell(id,trinket){
     var u=P.itemIcon(ver,id);
     return '<div class="it'+(trinket?' trinket':'')+'">'+(u?'<img src="'+u+'" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">':'')+'</div>';
@@ -1038,52 +1049,9 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
     }
   });
 
-  function goldChart(series){
-    if(!series || series.length<2) return '';
-    var W=1000, H=240, pad=8;
-    var maxT = series[series.length-1].t || 1;
-    var maxG = 1; series.forEach(function(s){ maxG=Math.max(maxG, s.g100, s.g200); });
-    function x(t){ return pad + (t/maxT)*(W-2*pad); }
-    function y(g){ return H-pad - (g/maxG)*(H-2*pad); }
-    function path(key){ return series.map(function(s,i){ return (i?'L':'M')+x(s.t).toFixed(1)+' '+y(s[key]).toFixed(1); }).join(' '); }
-    // 골드 차이 영역(블루-레드)
-    var diffTop = series.map(function(s,i){ return (i?'L':'M')+x(s.t).toFixed(1)+' '+y(Math.max(s.g100,s.g200)).toFixed(1); }).join(' ');
-    // x축 라벨(분)
-    var ticks=''; var step = maxT>1800?600:300;
-    for(var t=0;t<=maxT;t+=step){ ticks += '<text class="gx" x="'+x(t).toFixed(1)+'" y="'+(H-2)+'" text-anchor="middle">'+Math.round(t/60)+'분</text>'; }
-    return '<div class="chartcard"><div class="lg"><span><i style="background:var(--blue)"></i>블루팀</span><span><i style="background:var(--red)"></i>레드팀</span><span style="margin-left:auto;color:var(--faint)">누적 획득 골드</span></div>'
-      + '<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none">'
-      + '<path d="'+path('g100')+'" fill="none" stroke="var(--blue)" stroke-width="2.5"/>'
-      + '<path d="'+path('g200')+'" fill="none" stroke="var(--red)" stroke-width="2.5"/>'
-      + ticks + '</svg></div>';
-  }
 
-  // 오브젝트 한 줄
-  function obar(label, b, r, icon){
-    var tot=b+r, bp=tot?Math.round(b/tot*100):50;
-    var lead=b>r?'blead':(r>b?'rlead':'');
-    return '<div class="obar '+lead+'"><div class="bn b">'+b+'</div>'
-      + '<div class="track"><div class="fb" style="width:'+bp+'%"></div><div class="fr" style="width:'+(100-bp)+'%"></div><div class="lbl">'+icon+label+'</div></div>'
-      + '<div class="bn r">'+r+'</div></div>';
-  }
   function kills(o,k){ var v=(o||{})[k]; return (v&&typeof v==='object')?(v.kills||0):(v||0); }
 
-  function objectivesBlock(){
-    var o100=(ANALYSIS.objectives||{})[100]||(ANALYSIS.objectives||{})['100']||{};
-    var o200=(ANALYSIS.objectives||{})[200]||(ANALYSIS.objectives||{})['200']||{};
-    var dragon='<svg class="ic" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c2 3 5 3 7 2-1 4-3 5-3 5s3 1 4 4c-3 0-5-1-5-1s1 4-2 7c-1-3-2-4-2-4s-1 1-2 4c-3-3-2-7-2-7s-2 1-5 1c1-3 4-4 4-4S4 8 3 4c2 1 5 1 7-2 1 1 1 2 2 2s1-1 0 0z"/></svg>';
-    var baron='<svg class="ic" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 5 5-1-2 5 3 4-5 1-2 5-3-4-3 4-2-5-5-1 3-4-2-5 5 1z"/></svg>';
-    var tower='<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 21V9l6-5 6 5v12M9 21v-6h6v6"/></svg>';
-    var herald='<svg class="ic" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9"/></svg>';
-    var inhib='<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
-    return '<div class="objbars">'
-      + obar('드래곤', kills(o100,'dragon'), kills(o200,'dragon'), dragon)
-      + obar('바론', kills(o100,'baron'), kills(o200,'baron'), baron)
-      + obar('전령', kills(o100,'riftHerald'), kills(o200,'riftHerald'), herald)
-      + obar('타워', kills(o100,'tower'), kills(o200,'tower'), tower)
-      + obar('억제기', kills(o100,'inhibitor'), kills(o200,'inhibitor'), inhib)
-      + '</div>';
-  }
 
   // ── 경기 요약 (LCK식 팀 비교) ──
   function teamSum(team){
@@ -1320,6 +1288,11 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
     (v._splitH||[]).forEach(function(h){ try{ v.removeEventListener(h.ev,h.fn); }catch(_){} });
     v._splitH = [];
   }
+  function unwirePoolVid(v){   // 풀로 붙였던 리스너 제거(보존 후 재사용 시 중복/오작동 방지)
+    if(!v) return;
+    (v._poolH||[]).forEach(function(h){ try{ v.removeEventListener(h.ev,h.fn); }catch(_){} });
+    v._poolH = [];
+  }
 
   function stageSingle(){
     if(!ROWS.some(function(r){ return r.video; })){
@@ -1402,7 +1375,7 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
     _addM('pause', paintPlay);
     _addM('volumechange', paintMute);
     seek.addEventListener('input', function(){ seeking=true; var d=master.duration||0; if(isFinite(d)&&d>0) tEl.textContent=fmt(d*seek.value/1000)+' / '+fmt(d); });
-    seek.addEventListener('change', function(){ var d=master.duration||0; if(isFinite(d)&&d>0){ try{ master.currentTime=d*seek.value/1000; }catch(_){} } seeking=false; });
+    seek.addEventListener('change', function(){ var d=master.duration||0; if(isFinite(d)&&d>0){ seekAllTo(d*seek.value/1000, 1400); } seeking=false; });
     playBtn.addEventListener('click', function(){ if(master.paused){ var p=master.play&&master.play(); if(p&&p.catch)p.catch(function(){}); } else master.pause(); });
     muteBtn.addEventListener('click', function(){ master.muted=!master.muted; });
     fsBtn.addEventListener('click', function(){
@@ -1413,11 +1386,49 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
   }
   function stageVideos(){ var h=document.getElementById('stagehost'); return h?Array.prototype.slice.call(h.querySelectorAll('video')):[]; }
   function activeVideo(){ return split ? (stageVideos()[0]||null) : (POOL?POOL.querySelector('.pvid.on'):null); }
-  function curT(){ var v=activeVideo(); return v?(v.currentTime||0):0; }
   function rowG0(i){ var r=ROWS[i]; var g=r&&r.analysis&&r.analysis.g0; return (typeof g==='number'&&isFinite(g))?g:0; }
   function vG0(v){ if(!v) return 0; var i=v.getAttribute('data-pv'); if(i===null) i=v.getAttribute('data-idx'); return rowG0(+i); }
   function playLive(){ stageVideos().forEach(function(v){ if(!v._err){ var p=v.play(); if(p&&p.catch)p.catch(function(){}); } }); }
   function pauseLive(){ stageVideos().forEach(function(v){ try{v.pause();}catch(_){} }); }
+
+  // 모든 분할 영상을 병렬로 목표 시각으로 시크 + 잠깐 드리프트 루프 정지 → '멈칫하고 이동' 방지
+  function seekAllTo(masterTime, lockMs){
+    var vids=stageVideos(), master=vids[0]; if(!master) return;
+    var gm=vG0(master), base=masterTime<0?0:masterTime;
+    _seekLock=performance.now()+(lockMs||1400);
+    vids.forEach(function(v){
+      var want=(v===master)?base:base+(gm-vG0(v)); if(want<0)want=0;
+      try{ if(Math.abs((v.currentTime||0)-want)>0.05) v.currentTime=want; }catch(_){}
+    });
+  }
+
+  // ── 전체화면(멀티뷰) 컨트롤 바 자동 숨김: 무동작 ~2.8s 후 바+커서 숨김, 움직이면 복귀 ──
+  (function(){
+    var idleT=null;
+    function fsEl(){ return document.fullscreenElement||document.webkitFullscreenElement||null; }
+    function inFs(){ var h=document.getElementById('stagehost'); return !!(h && fsEl()===h); }
+    function wake(){
+      var h=document.getElementById('stagehost'); if(!h) return;
+      h.classList.remove('idle');
+      if(idleT){ clearTimeout(idleT); idleT=null; }
+      if(inFs()) idleT=setTimeout(function(){ var hh=document.getElementById('stagehost'); if(hh && inFs()) hh.classList.add('idle'); }, 2800);
+    }
+    function onFs(){
+      var h=document.getElementById('stagehost'); if(!h) return;
+      if(inFs()){ h.classList.add('fs'); wake(); }
+      else { h.classList.remove('fs'); h.classList.remove('idle'); if(idleT){ clearTimeout(idleT); idleT=null; } }
+    }
+    document.addEventListener('fullscreenchange', onFs);
+    document.addEventListener('webkitfullscreenchange', onFs);
+    document.addEventListener('mousemove', function(){ if(inFs()) wake(); });
+    document.addEventListener('keydown', function(){ if(inFs()) wake(); });
+    document.addEventListener('pointerdown', function(e){
+      if(!inFs()) return;
+      var h=document.getElementById('stagehost');
+      if(h && h.classList.contains('idle')){ wake(); e.stopPropagation(); e.preventDefault(); }
+      else wake();
+    }, true);
+  })();
 
   function renderStage(){
     var host = document.getElementById('stagehost');
@@ -1427,22 +1438,33 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
     var multi = split && selected.length>=2;
     // ★ 분할 재렌더: 재생 중인 video element를 버리지 않고 보존했다가 새 레이아웃에 옮겨 끼움 → 끊김 없음.
     var wasPlaying=false, salv={};
-    if(multi){
-      stageVideos().forEach(function(v){ var ix=+v.dataset.idx; if(ix>=0){ if(!v.paused) wasPlaying=true; unwireSplitVid(v); if(v.parentNode) v.parentNode.removeChild(v); salv[ix]=v; } });
-    } else {
-      Object.keys(VSALV).forEach(function(k){ try{ VSALV[k].pause(); }catch(_){} });   // 단일 모드로 가면 분할 영상 정지
-    }
+    // 현재 스테이지의 모든 영상을 POV 인덱스로 캡처(단일↔멀티 양방향 보존) — 리스너 정리 후 DOM에서 분리(재생 상태 유지)
+    stageVideos().forEach(function(v){
+      var _ix=v.getAttribute('data-idx'); if(_ix===null) _ix=v.getAttribute('data-pv');
+      var ix=(_ix===null?NaN:+_ix);
+      if(ix>=0){
+        if(!v.paused) wasPlaying=true;
+        if(v._splitH && v._splitH.length) unwireSplitVid(v);
+        if(v._poolH && v._poolH.length) unwirePoolVid(v);
+        if(v.parentNode) v.parentNode.removeChild(v);
+        salv[ix]=v;
+      }
+    });
     host.innerHTML = multi ? ((splitMode==='focus'?stageFocus():stageSplit()) + mvBar()) : stageSingle();
+    // 새 자리표시(단일 data-pv / 멀티 data-idx)에 보존본 이식: fresh의 식별 속성을 보존본에 복사 → 그대로 재사용(콜드마운트 없음)
+    host.querySelectorAll('video[data-pv], video[data-idx]').forEach(function(fresh){
+      var _ix=fresh.getAttribute('data-idx'); if(_ix===null) _ix=fresh.getAttribute('data-pv');
+      var ix=+_ix, keep=salv[ix];
+      if(keep && keep!==fresh && fresh.parentNode){
+        ['data-pv','data-idx','class','controls'].forEach(function(a){ var val=fresh.getAttribute(a); if(val===null) keep.removeAttribute(a); else keep.setAttribute(a,val); });
+        try{ keep.muted=fresh.muted; }catch(_){}
+        fresh.parentNode.replaceChild(keep, fresh);
+        salv[ix]=null;
+      }
+    });
+    Object.keys(salv).forEach(function(k){ if(salv[k]){ try{ salv[k].pause(); }catch(_){} } });   // 사용 안 된 보존본 정지
     if(multi){
-      // 새로 만들어진 <video> 자리표시를 보존본으로 교체(있으면 재생 그대로 유지). 없으면 새 시점만 로드.
-      VSALV={};
-      host.querySelectorAll('video[data-idx]').forEach(function(fresh){
-        var ix=+fresh.dataset.idx, keep=salv[ix], el=fresh;
-        if(keep && fresh.parentNode){ fresh.parentNode.replaceChild(keep, fresh); el=keep; }
-        el.muted=true;            // 일단 전부 음소거 → wireMvBar 가 마스터만 켬
-        VSALV[ix]=el;
-      });
-      Object.keys(salv).forEach(function(ix){ if(!VSALV[ix]){ try{ salv[ix].pause(); }catch(_){} } });   // 빠진 시점 정지
+      VSALV={}; host.querySelectorAll('video[data-idx]').forEach(function(v){ VSALV[+v.getAttribute('data-idx')]=v; });
       wireMaster();
       wireMvBar();
       host.querySelectorAll('.pipcell[data-promote]').forEach(function(c){
@@ -1475,7 +1497,7 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
     var _m=activeVideo();
     var _rt=resumeAt, _wantPlay=resumePlay; resumeAt=0; resumePlay=false;
     var _resume=function(){
-      if(_rt>0 && _m){ try{ _m.currentTime=_rt; }catch(_){} }
+      if(split){ if(_rt>0) seekAllTo(_rt, 1600); } else if(_rt>0 && _m){ try{ _m.currentTime=_rt; }catch(_){} }
       if(_wantPlay){ if(split){ playLive(); } else if(_m){ var _pp=_m.play&&_m.play(); if(_pp&&_pp.catch)_pp.catch(function(){}); } }
     };
     if(_m && _rt>0 && _m.readyState<1){ _m.addEventListener('loadedmetadata', _resume, {once:true}); }
@@ -1487,12 +1509,14 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
     POOL = document.getElementById('vpool'); if(!POOL) return;
     POOL.querySelectorAll('.pvid').forEach(function(v){
       var i=+v.getAttribute('data-pv');
-      v.addEventListener('error', function(){ v._err=true; if(i===curPov){ var ov=POOL.querySelector('.poolempty'); if(ov)ov.classList.add('on'); POOL.classList.remove('loading'); } });
-      v.addEventListener('waiting', function(){ if(i===curPov) POOL.classList.add('loading'); });
-      v.addEventListener('seeking', function(){ if(i===curPov) POOL.classList.add('loading'); });
-      ['playing','seeked','canplay','timeupdate'].forEach(function(ev){ v.addEventListener(ev, function(){ if(i===curPov) POOL.classList.remove('loading'); }); });
-      v.addEventListener('play',  function(){ if(i===curPov) playLive(); });
-      v.addEventListener('pause', function(){ if(i===curPov) pauseLive(); });
+      v._poolH = v._poolH || [];
+      var _addP=function(ev,fn){ v.addEventListener(ev,fn); v._poolH.push({ev:ev,fn:fn}); };
+      _addP('error', function(){ v._err=true; if(i===curPov){ var ov=POOL.querySelector('.poolempty'); if(ov)ov.classList.add('on'); POOL.classList.remove('loading'); } });
+      _addP('waiting', function(){ if(i===curPov) POOL.classList.add('loading'); });
+      _addP('seeking', function(){ if(i===curPov) POOL.classList.add('loading'); });
+      ['playing','seeked','canplay','timeupdate'].forEach(function(ev){ _addP(ev, function(){ if(i===curPov) POOL.classList.remove('loading'); }); });
+      _addP('play',  function(){ if(i===curPov) playLive(); });
+      _addP('pause', function(){ if(i===curPov) pauseLive(); });
     });
   }
   function wireMaster(){
@@ -1501,7 +1525,7 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
     var _addW=function(ev,fn){ master.addEventListener(ev,fn); master._splitH.push({ev:ev,fn:fn}); };
     _addW('play',  function(){ playLive(); });
     _addW('pause', function(){ pauseLive(); });
-    _addW('seeked',function(){ var base=master.currentTime, gm=vG0(master); stageVideos().forEach(function(v){ if(v!==master){ var want=base+(gm-vG0(v)); if(want<0)want=0; try{v.currentTime=want;}catch(_){} } }); });
+    _addW('seeked',function(){ var base=master.currentTime, gm=vG0(master); stageVideos().forEach(function(v){ if(v!==master){ var want=base+(gm-vG0(v)); if(want<0)want=0; try{ if(Math.abs((v.currentTime||0)-want)>0.25) v.currentTime=want; }catch(_){} } }); });
   }
 
   function setActive(i){
@@ -1546,13 +1570,14 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
   function startSync(){
     if(syncRAF){ cancelAnimationFrame(syncRAF); syncRAF=null; }
     function loop(){
+      if(performance.now() < _seekLock){ syncRAF=requestAnimationFrame(loop); return; }   // 시크 정착 중엔 교정 생략
       var a=activeVideo();
       if(a){
         var base=a.currentTime||0, ga=vG0(a);
         stageVideos().forEach(function(v){
           if(v!==a && !v._err && !v.paused){
             var want=base+(ga-vG0(v)); if(want<0) want=0;
-            if(Math.abs((v.currentTime||0)-want)>0.2){ try{v.currentTime=want;}catch(_){} }
+            if(Math.abs((v.currentTime||0)-want)>0.28){ try{v.currentTime=want;}catch(_){} }
           }
         });
       }
@@ -1937,8 +1962,10 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
     ANALYSIS = rep.analysis || {};
     // 각 행에 _team(녹화자 팀) 부착(분할 태그 색)
     ROWS.forEach(function(r){ var c=P.saverCard(r); r._team = c?c.team:100; });
-    // 대표를 curPov로
-    curPov = Math.max(0, ROWS.indexOf(rep));
+    // 시작 시점: URL ?pov={rowId} 있으면 그 시점부터, 없으면 대표
+    var _pov = qs('pov');
+    var _pi = _pov ? ROWS.findIndex(function(x){ return String(x.id)===String(_pov); }) : -1;
+    curPov = _pi>=0 ? _pi : Math.max(0, ROWS.indexOf(rep));
     renderAll();
     bumpView();
   }
