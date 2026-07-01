@@ -1962,8 +1962,10 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
     ANALYSIS = rep.analysis || {};
     // 각 행에 _team(녹화자 팀) 부착(분할 태그 색)
     ROWS.forEach(function(r){ var c=P.saverCard(r); r._team = c?c.team:100; });
-    // 대표를 curPov로
-    curPov = Math.max(0, ROWS.indexOf(rep));
+    // 시작 시점: URL ?pov={rowId} 있으면 그 시점부터, 없으면 대표
+    var _pov = qs('pov');
+    var _pi = _pov ? ROWS.findIndex(function(x){ return String(x.id)===String(_pov); }) : -1;
+    curPov = _pi>=0 ? _pi : Math.max(0, ROWS.indexOf(rep));
     renderAll();
     bumpView();
   }

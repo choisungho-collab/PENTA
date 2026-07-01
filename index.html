@@ -1,0 +1,443 @@
+<!doctype html><html lang="ko"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>myPENTA — League of Legends Replay Archive</title>
+<meta name="description" content="리그 오브 레전드 게임을 자동으로 녹화하고 분석해 모아보는 커뮤니티 아카이브">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2 L15 9 L22 9 L16.5 13.5 L18.5 21 L12 16.5 L5.5 21 L7.5 13.5 L2 9 L9 9 Z' fill='%23DEC79C'/%3E%3C/svg%3E">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira:wght@500;600;700&family=Space+Grotesk:wght@500;600;700&family=Sora:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+ --bg:#080A0E;--surface:#0F131A;--surface2:#161B23;--hover:#1C2530;--well:#0B0E13;
+ --ink:#ECE7DD;--ink2:#C2BBAD;--dim:#867F71;--faint:#564F44;
+ --line:#1F252E;--line2:#2B323C;
+ --gold:#DEC79C;--gold-ink:#EFDDBC;--gold-soft:rgba(222,199,156,.11);--gold-line:rgba(222,199,156,.32);
+ --win:#52C3AC;--win-soft:rgba(82,195,172,.12);--win-line:rgba(82,195,172,.42);
+ --loss:#DE7480;--loss-soft:rgba(222,116,128,.12);--loss-line:rgba(222,116,128,.42);
+ --blue:#2D9BD6;--red:#D6452F;
+ --fd:'Pretendard Variable','Pretendard','Apple SD Gothic Neo',system-ui,sans-serif;
+ --fs:'Saira','Space Grotesk','Pretendard Variable',sans-serif;
+ --fg:'Sora',sans-serif;
+ --fm:'IBM Plex Mono',ui-monospace,monospace;
+ --r1:10px;--r2:14px;--r3:18px;--sh:0 18px 44px -22px rgba(0,0,0,.8);
+}
+*{box-sizing:border-box}html,body{margin:0;overflow-x:clip}
+body{background:var(--bg);color:var(--ink);font-family:var(--fd);font-size:15px;line-height:1.65;word-break:keep-all;overflow-wrap:break-word;-webkit-font-smoothing:antialiased;letter-spacing:.005em}
+a{color:inherit;text-decoration:none}svg{display:block}img{display:block;max-width:100%}
+.ic{width:1em;height:1em;flex-shrink:0}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:var(--line2);border-radius:6px;border:3px solid var(--bg)}
+.wrap{max-width:1160px;margin:0 auto;padding:0 24px 110px}
+
+/* 상단 바 */
+.bar{position:sticky;top:0;z-index:50;background:rgba(8,10,14,.86);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.bar-in{max-width:1160px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;gap:16px}
+.brand{display:flex;align-items:center;gap:10px}
+.brand .mk{width:22px;height:22px;color:var(--gold);filter:drop-shadow(0 0 9px rgba(222,199,156,.4))}
+.brand b{font-family:var(--fg);font-weight:600;font-size:20px;letter-spacing:.15em;color:var(--gold)}
+.auth{display:flex;align-items:center;gap:8px;margin-left:10px;flex:0 0 auto}
+.auth .me-link{font-family:var(--fd);font-weight:600;font-size:13px;color:var(--gold-ink);padding:5px 9px;border-radius:8px;border:1px solid var(--gold-line);background:var(--gold-soft);transition:.14s}
+.auth .me-link:hover{filter:brightness(1.12)}
+.auth .who{font-size:13px;font-weight:600;color:var(--gold);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.auth .lo{font-size:12px;color:var(--dim,#867F71);background:none;border:1px solid var(--line2,#2B323C);border-radius:8px;padding:5px 9px;cursor:pointer}
+.auth .lo:hover{color:var(--ink,#ECE7DD);border-color:var(--gold-line,#3a3526)}
+.bar .sp{flex:1}
+.nav{display:flex;gap:2px;margin-left:14px}
+.nav a{font-family:var(--fd);font-weight:600;font-size:14px;color:var(--dim);padding:7px 9px 9px;border-bottom:2px solid transparent;transition:.14s}
+.nav a:hover{color:var(--ink)}
+.nav a.on{color:var(--ink);border-bottom-color:var(--gold)}
+.search{display:flex;align-items:center;gap:9px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r1);padding:9px 14px;width:240px;transition:.15s}
+.search:focus-within{border-color:var(--gold-line);box-shadow:0 0 0 3px var(--gold-soft)}
+.search .ic{width:15px;height:15px;color:var(--faint)}
+.search input{background:none;border:0;outline:0;color:var(--ink);font-family:var(--fd);font-size:14px;width:100%}
+.search input::placeholder{color:var(--faint)}
+.dl{display:inline-flex;align-items:center;gap:8px;font-family:var(--fd);font-weight:600;font-size:13.5px;color:var(--bg);background:linear-gradient(180deg,#D8BC82,#DEC79C);border:0;padding:10px 16px;border-radius:var(--r1);cursor:pointer;transition:.15s;box-shadow:0 4px 14px -5px rgba(222,199,156,.5)}
+.dl:hover{filter:brightness(1.08)}.dl .ic{width:15px;height:15px}
+
+/* 헤더 */
+.head{padding:54px 0 30px;position:relative}
+.head .eb{font-family:var(--fm);font-size:11px;letter-spacing:.3em;color:var(--gold);text-transform:uppercase;margin-bottom:18px;display:flex;align-items:center;gap:10px}
+.head .eb .dd{width:6px;height:6px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 4px var(--gold-soft)}
+.head h1{font-family:var(--fs);font-weight:400;font-size:clamp(38px,6vw,62px);margin:0;letter-spacing:.01em;color:var(--ink);line-height:1.04}
+.head h1 .g{color:var(--gold)}
+.head .desc{font-family:var(--fd);font-size:17px;line-height:1.7;color:var(--ink2);margin:20px 0 0;max-width:660px}
+.head .desc b{color:var(--ink);font-weight:600}
+
+/* 통계 줄 */
+.toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:30px 0 26px;padding-bottom:22px;border-bottom:1px solid var(--line)}
+.stats{display:flex;gap:0}
+.stat{padding:0 22px;border-left:1px solid var(--line)}
+.stat:first-child{padding-left:0;border-left:0}
+.stat .v{font-family:var(--fs);font-weight:400;font-size:26px;line-height:1;font-variant-numeric:tabular-nums;color:var(--ink)}
+.stat .v.g{color:var(--gold)}.stat .v.t{color:var(--win)}
+.stat .k{font-family:var(--fd);font-weight:600;font-size:11.5px;letter-spacing:.02em;color:var(--dim);margin-top:9px}
+.filters{display:flex;gap:7px}
+.fchip{font-family:var(--fd);font-weight:600;font-size:13px;color:var(--dim);background:var(--surface);border:1px solid var(--line);padding:9px 15px;border-radius:100px;cursor:pointer;transition:.14s}
+.fchip:hover{color:var(--ink);border-color:var(--line2)}
+.fchip.on{color:var(--bg);background:var(--gold);border-color:var(--gold)}
+
+/* 그리드 */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:22px}
+
+.card{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:var(--r2);overflow:hidden;cursor:pointer;transition:.17s;display:flex;flex-direction:column}
+.card:hover{border-color:var(--line2);transform:translateY(-4px);box-shadow:var(--sh)}
+.card.win{border-top:2px solid var(--win-line)}
+.card.loss{border-top:2px solid var(--loss-line)}
+
+.thumb{position:relative;aspect-ratio:16/9;background:radial-gradient(120% 90% at 50% 0,#16212e,#0a0e13);overflow:hidden}
+.thumb .bgimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.62;filter:saturate(1.05)}
+.thumb .scrim{position:absolute;inset:0;background:linear-gradient(to top,rgba(8,12,17,.94) 6%,rgba(8,12,17,.36) 46%,rgba(8,12,17,.1) 100%);z-index:1}
+.thumb .play{position:absolute;inset:0;display:grid;place-items:center;opacity:0;transition:.2s;z-index:3}
+.card:hover .thumb .play{opacity:1}
+.thumb .play span{width:54px;height:54px;border-radius:50%;background:rgba(222,199,156,.16);border:1px solid var(--gold-line);display:grid;place-items:center;backdrop-filter:blur(3px)}
+.thumb .play .ic{width:20px;height:20px;color:var(--gold-ink);margin-left:3px}
+.thumb .povstrip{position:absolute;right:8px;bottom:8px;z-index:4;display:flex;gap:4px;align-items:center}
+.povchip{width:30px;height:30px;border-radius:50%;overflow:hidden;border:1.5px solid var(--line2);background:#0a0e13;cursor:pointer;transition:transform .15s,border-color .15s,box-shadow .15s;box-shadow:0 1px 4px rgba(0,0,0,.5);flex:0 0 auto}
+.povchip img{width:100%;height:100%;object-fit:cover;display:block}
+.povchip:hover{transform:scale(1.14);border-color:var(--gold-line);z-index:5}
+.povchip.me{border-color:var(--gold-line);width:34px;height:34px;box-shadow:0 0 0 2px rgba(222,199,156,.28),0 1px 5px rgba(0,0,0,.55)}
+
+/* 좌상단 승/패 */
+.res{position:absolute;left:12px;top:12px;z-index:2;display:inline-flex;align-items:center;gap:5px;font-family:var(--fm);font-size:11px;font-weight:600;letter-spacing:.06em;padding:5px 10px;border-radius:7px;backdrop-filter:blur(4px)}
+.res.w{color:var(--win);background:rgba(82,195,172,.15);border:1px solid var(--win-line)}
+.res.l{color:var(--loss);background:rgba(222,116,128,.15);border:1px solid var(--loss-line)}
+.res.u{color:var(--dim);background:rgba(150,150,160,.12);border:1px solid var(--line2)}
+
+/* 우상단 시간 */
+.dur{position:absolute;right:12px;top:12px;z-index:2;font-family:var(--fm);font-size:11px;color:var(--ink);background:rgba(8,12,17,.72);padding:4px 9px;border-radius:6px;backdrop-filter:blur(4px);font-variant-numeric:tabular-nums}
+/* 우상단 종합 등급 */
+.cgrade{position:absolute;right:12px;top:12px;z-index:3;min-width:32px;height:32px;padding:0 7px;display:flex;align-items:center;justify-content:center;font-family:var(--fs);font-weight:400;font-size:20px;line-height:1;border-radius:9px;background:rgba(8,12,17,.66);backdrop-filter:blur(5px);border:1px solid var(--line2)}
+.cgrade.g-s{color:var(--gold-ink);border-color:var(--gold-line);box-shadow:0 0 16px -3px rgba(222,199,156,.6)}
+.cgrade.g-a{color:var(--win);border-color:var(--win-line)}
+.cgrade.g-b{color:var(--blue);border-color:rgba(45,155,214,.42)}
+.cgrade.g-c{color:var(--ink2)}
+.cgrade.g-d{color:var(--loss);border-color:var(--loss-line)}
+
+/* 멀티킬 시그니처 뱃지 */
+.multi{position:absolute;right:12px;bottom:64px;z-index:3;display:inline-flex;align-items:center;gap:6px;font-family:var(--fm);font-weight:600;font-size:10.5px;letter-spacing:.1em;color:#1a1206;background:linear-gradient(180deg,#EFDDBC,#DEC79C);padding:5px 10px;border-radius:6px;box-shadow:0 4px 16px -4px rgba(222,199,156,.7),0 0 0 1px rgba(255,255,255,.2) inset;animation:pentaPulse 2.6s ease-in-out infinite}
+.multi .ic{width:11px;height:11px}
+@keyframes pentaPulse{0%,100%{box-shadow:0 4px 16px -4px rgba(222,199,156,.6),0 0 0 1px rgba(255,255,255,.2) inset}50%{box-shadow:0 4px 22px -2px rgba(222,199,156,.95),0 0 0 1px rgba(255,255,255,.35) inset}}
+
+/* 챔피언 아이덴티티(썸네일 하단) */
+.heroline{position:absolute;left:13px;right:13px;bottom:12px;z-index:2;display:flex;align-items:center;gap:11px}
+.champ{width:42px;height:42px;border-radius:9px;border:1.5px solid var(--gold-line);background:var(--well);object-fit:cover;flex-shrink:0;box-shadow:0 2px 10px rgba(0,0,0,.5)}
+.heroline .nm{min-width:0;flex:1}
+.heroline .cn{font-family:var(--fs);font-weight:400;font-size:18px;line-height:1.1;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.8);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.heroline .role{font-family:var(--fd);font-size:11px;color:var(--ink2);margin-top:3px;letter-spacing:.02em}
+
+/* 카드 본문 */
+.cbody{padding:13px 15px 15px;display:flex;flex-direction:column;gap:11px;flex:1}
+.kda{display:flex;align-items:baseline;gap:10px}
+.kda .nums{font-family:var(--fm);font-weight:500;font-size:16px;color:var(--ink);font-variant-numeric:tabular-nums;letter-spacing:.01em}
+.kda .nums .s{color:var(--faint);margin:0 1px}
+.kda .ratio{font-family:var(--fd);font-size:12px;color:var(--dim)}
+.kda .ratio b{color:var(--gold-ink);font-weight:600}
+.meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tag{font-family:var(--fd);font-size:11.5px;color:var(--dim);background:var(--well);border:1px solid var(--line);padding:4px 9px;border-radius:6px;font-variant-numeric:tabular-nums}
+.tag.q{color:var(--gold-ink);background:var(--gold-soft);border-color:var(--gold-line)}
+.foot{margin-top:auto;padding-top:11px;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:8px}
+.upl{font-family:var(--fd);font-size:12px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.upl b{color:var(--ink2);font-weight:600}
+.fr{display:flex;align-items:center;gap:11px;flex-shrink:0}
+.pov{display:inline-flex;align-items:center;gap:5px;font-family:var(--fd);font-size:11.5px;font-weight:600;color:var(--gold-ink);background:var(--gold-soft);border:1px solid var(--gold-line);padding:3px 8px;border-radius:6px}
+.pov .ic{width:12px;height:12px}
+.vw{display:inline-flex;align-items:center;gap:5px;font-family:var(--fd);font-size:12px;color:var(--faint)}
+.vw .ic{width:13px;height:13px}
+
+/* 상태(빈/로딩/에러) */
+.state{padding:90px 24px;text-align:center;display:none}
+.state.on{display:block}
+.state .mk{width:54px;height:54px;color:var(--line2);margin:0 auto 22px}
+.state h3{font-family:var(--fs);font-weight:400;font-size:24px;color:var(--ink);margin:0 0 12px;letter-spacing:.01em}
+.state p{font-family:var(--fd);font-size:15px;color:var(--dim);margin:0 auto;max-width:440px;line-height:1.7}
+.state .cta{margin-top:26px;display:inline-flex;align-items:center;gap:9px;font-family:var(--fd);font-weight:600;font-size:14px;color:var(--bg);background:linear-gradient(180deg,#D8BC82,#DEC79C);padding:12px 22px;border-radius:var(--r1);box-shadow:0 4px 16px -5px rgba(222,199,156,.5)}
+.state .cta .ic{width:16px;height:16px}
+.sk{background:linear-gradient(100deg,var(--surface) 30%,var(--hover) 50%,var(--surface) 70%);background-size:200% 100%;animation:sh 1.3s linear infinite;border-radius:var(--r2);aspect-ratio:.78}
+@keyframes sh{to{background-position:-200% 0}}
+
+footer{border-top:1px solid var(--line);margin-top:70px}
+.foot-in{max-width:1160px;margin:0 auto;padding:28px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.foot-in .l{font-family:var(--fd);font-size:13px;color:var(--faint);line-height:1.6}
+.foot-in .l b{font-family:var(--fg);color:var(--gold);font-weight:600;letter-spacing:.13em}
+.foot-in .r{font-family:var(--fd);font-size:12px;color:var(--faint);max-width:520px;text-align:right;line-height:1.6}
+
+@media(max-width:680px){
+ .wrap{padding:0 16px 80px}.bar-in{padding:12px 16px;gap:12px}
+ .search{display:none}.nav{margin-left:6px}.nav a{padding:6px 7px 7px;font-size:13px}
+ .head{padding:38px 0 22px}.toolbar{flex-direction:column;align-items:flex-start;gap:18px}
+ .stat{padding:0 16px}.stat:first-child{padding-left:0}
+ .grid{grid-template-columns:1fr 1fr;gap:13px}
+ .heroline .cn{font-size:15px}.champ{width:36px;height:36px}
+ .foot-in .r{text-align:left}
+}
+@media(max-width:420px){.grid{grid-template-columns:1fr}}
+.brand b .my,.fbrand b .my,.l b .my{font-weight:300;color:var(--ink);letter-spacing:.01em}
+.foot-bottom{max-width:1160px;margin:0 auto;padding:2px 24px 0}
+.foot-links{display:flex;gap:16px;max-width:1160px;margin:16px auto 0;padding:0 24px;font-size:13px}
+.foot-links a{color:var(--dim);border-bottom:1px solid transparent;transition:.14s}
+.foot-links a:hover{color:var(--gold-ink);border-bottom-color:var(--gold-line)}
+.foot-in .fnav{display:flex;gap:16px;font-size:13px}
+.foot-in .fnav a{color:var(--dim);transition:.14s;border-bottom:1px solid transparent}
+.foot-in .fnav a:hover{color:var(--gold-ink);border-bottom-color:var(--gold-line)}
+
+/* ── 모바일 헤더 최적화(≤560px): 네비를 아랫줄 전체 폭으로 → 메뉴(다운로드 등) 잘림 해결 ── */
+@media(max-width:560px){
+  .bar-in{flex-wrap:wrap;padding:10px 12px;gap:8px 10px}
+  .brand{order:1}
+  .brand b{font-size:17px}
+  .auth{order:2;margin-left:auto}
+  .nav{order:3;flex-basis:100%;margin-left:0;gap:2px;overflow-x:auto}
+  .nav::-webkit-scrollbar{display:none}
+  .nav a{font-size:13px;padding:6px 8px 7px}
+}
+
+/* 모바일/태블릿: 레코더 로그인은 PC 전용 → 모바일에선 버튼 숨김 ── */
+@media(max-width:768px){.auth{display:none}}
+</style>
+</head>
+<body>
+
+<header class="bar" id="bar">
+ <div class="bar-in">
+  <a class="brand" href="index.html">
+   <svg class="mk" viewBox="0 0 24 24"><path d="M12 2 L15 9 L22 9 L16.5 13.5 L18.5 21 L12 16.5 L5.5 21 L7.5 13.5 L2 9 L9 9 Z" fill="currentColor"/></svg>
+   <b><span class="my">my</span>PENTA</b>
+  </a>
+  <nav class="nav"><a class="on" href="index.html">아카이브</a><a href="board.html">게시판</a><a href="manual.html">메뉴얼</a><a href="download.html">다운로드</a></nav>
+  <div class="sp"></div>
+  <label class="search">
+   <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+   <input id="q" placeholder="챔피언 · 소환사 검색" autocomplete="off">
+  </label>
+  <div class="auth" id="auth"></div>
+ </div>
+</header>
+
+<main class="wrap">
+ <section class="head">
+  <div class="eb"><span class="dd"></span>League of Legends Replay Archive</div>
+  <h1>당신의 협곡을,<br><span class="g">다시 본다</span></h1>
+  <p class="desc">게임이 끝나면 <b>myPENTA 레코더</b>가 영상과 전적을 알아서 모읍니다. 한 판을 여러 명이 녹화하면 <b>각자의 시점</b>으로 묶여, 같은 교전을 다른 자리에서 다시 볼 수 있습니다.</p>
+ </section>
+
+ <div class="toolbar">
+  <div class="stats" id="stats">
+   <div class="stat"><div class="v g" id="s-games">—</div><div class="k">기록된 게임</div></div>
+   <div class="stat"><div class="v t" id="s-penta">—</div><div class="k">펜타킬</div></div>
+   <div class="stat"><div class="v" id="s-pov">—</div><div class="k">멀티 시점</div></div>
+  </div>
+  <div class="filters" id="filters">
+   <button class="fchip on" data-f="all">전체</button>
+   <button class="fchip" data-f="win">승리</button>
+   <button class="fchip" data-f="penta">펜타킬</button>
+  </div>
+ </div>
+
+ <div class="grid" id="grid"></div>
+
+ <div class="state" id="loading">
+  <svg class="mk" viewBox="0 0 24 24"><path d="M12 2 L15 9 L22 9 L16.5 13.5 L18.5 21 L12 16.5 L5.5 21 L7.5 13.5 L2 9 L9 9 Z" fill="currentColor"/></svg>
+  <h3>불러오는 중…</h3>
+ </div>
+
+ <div class="state" id="empty">
+  <svg class="mk" viewBox="0 0 24 24"><path d="M12 2 L15 9 L22 9 L16.5 13.5 L18.5 21 L12 16.5 L5.5 21 L7.5 13.5 L2 9 L9 9 Z" fill="currentColor"/></svg>
+  <h3>아직 기록된 게임이 없습니다</h3>
+  <p>myPENTA 레코더를 켜두고 게임을 플레이하면, 끝나는 순간 영상과 전적이 이곳에 자동으로 올라옵니다.</p>
+  <a class="cta" href="download.html">
+   <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg>
+   레코더 내려받기
+  </a>
+ </div>
+
+ <div class="state" id="failed">
+  <svg class="mk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.01"/></svg>
+  <h3>목록을 불러오지 못했습니다</h3>
+  <p>잠시 후 새로고침해 주세요. 문제가 계속되면 네트워크 연결을 확인해 주세요.</p>
+ </div>
+</main>
+
+<footer>
+ <div class="foot-in">
+  <nav class="fnav"><a href="terms.html">이용약관</a><a href="privacy.html">개인정보처리방침</a></nav>
+  <div class="r">myPENTA isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing League of Legends.</div>
+ </div>
+</footer>
+
+<script src="penta-common.js"></script>
+<script>
+(function(){
+  var P = window.PENTA;
+  var grid = document.getElementById('grid');
+  // POV 아바타 클릭 → 카드 링크 대신 그 시점부터 시작
+  if(grid) grid.addEventListener('click', function(e){
+    var chip = e.target && e.target.closest && e.target.closest('.povchip[data-pov]');
+    if(chip){
+      e.preventDefault(); e.stopPropagation();
+      var mid = chip.getAttribute('data-mid'), pov = chip.getAttribute('data-pov');
+      if(mid && pov) location.href = 'match.html?id='+encodeURIComponent(mid)+'&pov='+encodeURIComponent(pov);
+    }
+  }, true);
+  var elLoading = document.getElementById('loading'),
+      elEmpty = document.getElementById('empty'),
+      elFailed = document.getElementById('failed');
+  var ver = '15.1.1';
+  var GROUPS = [];          // 전체 그룹
+  var STATS = {};           // match_id → {likes, views}
+  var filter = 'all';
+  var search = '';
+
+  function show(el){ [elLoading,elEmpty,elFailed].forEach(function(e){ e.classList.toggle('on', e===el); }); }
+
+  // 챔피언/멀티킬/요약을 카드 1장으로
+  function cardHTML(group){
+    var r = P.pickPrimary(group);
+    var me = P.heroCard(r);
+    var won = (r.won != null) ? r.won : (me.win != null ? me.win : null);  // 미확인은 null 유지
+    var champ = me.champion || '';
+    var icon = P.champIcon(ver, champ);
+    var bg = r.thumb || (champ ? P.champLoading(champ) : '');
+    var k = me.kills||0, d = me.deaths||0, a = me.assists||0;
+    var len = r.length || P.mmss(r.length_sec);
+    var q = P.queueName(r.type);
+    var role = P.posKo(me.position);
+    var povN = group.length;
+    var bm = P.bestMulti(me);
+    var gk = P.groupKeyOf(r);
+    var views = (STATS[gk] && STATS[gk].views) || group.reduce(function(s,x){ return s + (x.views||0); }, 0);
+
+    // 매치 페이지와 동일 기준의 종합 등급(분석 데이터 사용)
+    var ana = r.analysis || {}, aps = ana.players || [], anaMe = null;
+    for(var ai=0; ai<aps.length; ai++){ if(aps[ai] && aps[ai].name===r.saver){ anaMe=aps[ai]; break; } }
+    if(!anaMe) anaMe = aps[0] || null;
+    var G = anaMe ? P.grade(anaMe, ana.duration || r.length_sec || 0) : null;
+    var gradeHTML = G ? '<div class="cgrade g-'+G.letter.toLowerCase()+'" title="측정 지표 종합 '+G.score+'/100">'+G.letter+'</div>' : '';
+
+    var multiHTML = bm ? ('<div class="multi"><svg class="ic" viewBox="0 0 24 24"><path d="M13 2 L4 14 H11 L9 22 L20 9 H13 Z" fill="currentColor"/></svg>'
+        + bm.label + (bm.n>1 ? (' ×'+bm.n) : '') + '</div>') : '';
+    var povHTML = povN>1 ? ('<span class="pov"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3.2"/><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/></svg>'
+        + povN + '시점</span>') : '';
+    var viewHTML = views>0 ? ('<span class="vw"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3.2"/><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/></svg>'
+        + P.compact(views) + '</span>') : '';
+
+    // POV 아바타 스트립: 영상 있는 각 시점의 챔프(대표=me 강조). 클릭 시 그 시점부터 시작(위임 처리).
+    var vpovs = group.filter(function(x){ return x.video; });
+    var stripHTML = vpovs.length>1 ? ('<div class="povstrip">' + vpovs.map(function(row){
+      var pc = P.saverCard(row) || {}, pch = pc.champion || '';
+      return '<span class="povchip'+(row===r?' me':'')+'" data-mid="'+esc(gk)+'" data-pov="'+esc(String(row.id==null?'':row.id))+'" title="'+esc(pch||'시점')+' · '+((pc.kills||0)+'/'+(pc.deaths||0)+'/'+(pc.assists||0))+'">'
+        + '<img src="'+P.champIcon(ver,pch)+'" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">'
+        + '</span>';
+    }).join('') + '</div>') : '';
+
+    return '<a class="card '+(won===true?'win':won===false?'loss':'')+'" href="match.html?id='+encodeURIComponent(P.groupKeyOf(r))+'">'
+      + '<div class="thumb">'
+        + (bg ? '<img class="bgimg" src="'+bg+'" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '')
+        + '<div class="scrim"></div>'
+        + '<div class="res '+(won===true?'w':won===false?'l':'u')+'">'+(won===true?'승리':won===false?'패배':'미확인')+'</div>'
+        + gradeHTML
+        + multiHTML
+        + stripHTML
+        + '<div class="heroline">'
+          + '<img class="champ" src="'+icon+'" alt="'+champ+'" loading="lazy" onerror="this.style.visibility=\'hidden\'">'
+          + '<div class="nm"><div class="cn">'+esc(champ||'알 수 없음')+'</div>'+(role?'<div class="role">'+role+'</div>':'')+'</div>'
+        + '</div>'
+        + '<div class="play"><span><svg class="ic" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></span></div>'
+      + '</div>'
+      + '<div class="cbody">'
+        + '<div class="kda"><span class="nums">'+k+'<span class="s">/</span>'+d+'<span class="s">/</span>'+a+'</span>'
+          + '<span class="ratio"><b>'+P.kdaRatio(k,d,a)+'</b> 평점</span></div>'
+        + '<div class="meta"><span class="tag q">'+q+'</span><span class="tag">'+len+'</span><span class="tag">CS '+(me.cs||0)+'</span><span class="tag">'+(me.level?('Lv '+me.level):'')+'</span></div>'
+        + '<div class="foot">'
+          + '<div class="upl"><b>'+esc(r.saver||r.uploader||'소환사')+'</b> · '+(P.ago(r.uploaded)||'')+'</div>'
+          + '<div class="fr">'+viewHTML+'</div>'
+        + '</div>'
+      + '</div>'
+    + '</a>';
+  }
+
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+  function matchFilter(group){
+    var r = P.pickPrimary(group), me = P.heroCard(r);
+    if(filter==='win' && !((r.won!=null)?r.won:me.win)) return false;
+    if(filter==='penta' && !(me.pentas>0)) return false;
+    if(search){
+      var hay = (me.champion||'') + ' ' + (r.saver||'') + ' ' + (r.uploader||'');
+      // 모든 참가자 이름/챔피언도 검색 대상
+      (r.players||[]).forEach(function(p){ hay += ' '+(p.name||'')+' '+(p.champion||''); });
+      if(hay.toLowerCase().indexOf(search.toLowerCase())<0) return false;
+    }
+    return true;
+  }
+
+  function render(){
+    var list = GROUPS.filter(matchFilter);
+    if(!list.length){
+      grid.innerHTML='';
+      if(!GROUPS.length){ show(elEmpty); }
+      else { grid.innerHTML='<div class="state on" style="grid-column:1/-1;padding:60px 20px"><h3>조건에 맞는 게임이 없습니다</h3><p>필터나 검색어를 바꿔보세요.</p></div>'; show(null); }
+      return;
+    }
+    show(null);
+    grid.innerHTML = list.map(cardHTML).join('');
+  }
+
+  function setStats(){
+    var games = GROUPS.length;
+    var penta = 0, pov = 0;
+    GROUPS.forEach(function(g){
+      if(g.length>1) pov++;
+      g.forEach(function(r){ (r.players||[]).forEach(function(p){ penta += (p.pentas||0); }); });
+    });
+    document.getElementById('s-games').textContent = games;
+    document.getElementById('s-penta').textContent = penta;
+    document.getElementById('s-pov').textContent = pov;
+  }
+
+  async function load(){
+    show(elLoading);
+    try{ ver = await P.ddVersion(); }catch(e){}
+    try{ await P.ddChampMap(ver); }catch(e){}
+    var rows;
+    try{
+      rows = await P.sbSelect('matches', 'select=*&order=uploaded.desc&limit=120');
+    }catch(e){
+      show(elFailed); return;
+    }
+    GROUPS = P.clusterByMatch(rows || []);
+    try{ STATS = await P.statsAll(); }catch(e){ STATS = {}; }
+    setStats();
+    render();
+  }
+
+  // 필터 칩
+  document.getElementById('filters').addEventListener('click', function(e){
+    var b = e.target.closest('.fchip'); if(!b) return;
+    filter = b.dataset.f;
+    document.querySelectorAll('.fchip').forEach(function(x){ x.classList.toggle('on', x===b); });
+    render();
+  });
+  // 검색
+  var qi = document.getElementById('q');
+  if(qi) qi.addEventListener('input', function(){ search = qi.value.trim(); render(); });
+  // 스크롤 시 바 그림자
+  addEventListener('scroll', function(){ document.getElementById('bar').classList.toggle('scrolled', scrollY>4); });
+
+  // 로그인 칩 (#code 소비 → 토큰; 자동 로그인)
+  async function renderAuth(){
+    var host=document.getElementById('auth'); if(!host) return;
+    var me=null; try{ me=await P.initAuth(); }catch(e){}
+    if(me && me.puuid){
+      host.innerHTML='<a class="me-link" href="me.html">나의 협곡</a><span class="who"></span><button class="lo" id="loBtn">로그아웃</button>';
+      var nm=(me.name||'').split('#')[0] || '소환사';
+      var w=host.querySelector('.who'); w.textContent=nm; w.title=me.name||'';
+      var b=document.getElementById('loBtn');
+      if(b) b.addEventListener('click', async function(){ try{ await P.logout(); }catch(e){} host.innerHTML=''; if(typeof rows!=='undefined'&&rows&&rows.length) render(); });
+    } else { host.innerHTML='<span class="hint" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--dim,#867F71);white-space:nowrap" title="myPENTA 레코더의 Archive 버튼을 누르면 이 브라우저가 로그인됩니다"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>레코더로 로그인</span>'; }
+    if (typeof rows !== 'undefined' && rows && rows.length) render();   // 인증 확정 후 대표 시점 갱신(로그인한 본인 시점 우선)
+  }
+
+  load();
+  renderAuth();
+})();
+</script>
+</body></html>
