@@ -2390,6 +2390,8 @@ def run_gui(cfg, url):
                     _code = secrets.token_urlsafe(24)
                     sb_rpc("issue_login_code", {"p_puuid": _pu, "p_secret": _sec, "p_code": _code})
                     open_app(url + "/#code=" + _code); return
+                else:
+                    log("Login skipped: riot_id=" + ("set" if _pu else "MISSING (play one game first)") + ", cloud=" + cloud_state())
             except Exception as e:
                 log(f"Login code skipped (gallery still opens): {e}")
             try: open_app(url)
