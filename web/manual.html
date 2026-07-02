@@ -110,6 +110,27 @@ footer{border-top:1px solid var(--line);margin-top:58px}
   .nav::-webkit-scrollbar{display:none}
   .nav a{font-size:13px;padding:6px 8px 7px}
 }
+
+.auth{display:flex;align-items:center;gap:8px;margin-left:auto;flex:0 0 auto}
+.auth .me-link{font-weight:600;font-size:13px;color:var(--gold-ink,#DEC79C);padding:5px 9px;border-radius:8px;border:1px solid var(--gold-line,#3a3526);background:rgba(222,199,156,.06);transition:.14s;text-decoration:none}
+.auth .me-link:hover{filter:brightness(1.12)}
+.auth .lo{font-size:12px;color:var(--dim,#867F71);background:none;border:1px solid var(--line2,#2B323C);border-radius:8px;padding:5px 9px;cursor:pointer}
+.auth .lo:hover{color:var(--ink,#ECE7DD);border-color:var(--gold-line,#3a3526)}
+.auth .authwrap{position:relative;display:inline-block}
+.auth .authstat{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;padding:5px 11px;border-radius:999px;border:1px solid var(--line2,#2B323C);background:var(--surface,#12161c);white-space:nowrap;font-family:inherit}
+.auth .authstat .dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto}
+.auth .authstat.in{color:var(--gold-ink,#DEC79C);cursor:default;max-width:160px;overflow:hidden;text-overflow:ellipsis}
+.auth .authstat.in .dot{background:#57C98A;box-shadow:0 0 0 3px rgba(87,201,138,.16)}
+.auth .authstat.out{color:var(--dim,#867F71);cursor:pointer}
+.auth .authstat.out .dot{background:#6b6459}
+.auth .authstat.out:hover{border-color:var(--gold-line,#3a3526);color:var(--ink,#ECE7DD)}
+.auth .authpop{position:absolute;top:calc(100% + 8px);right:0;width:250px;background:var(--surface,#12161c);border:1px solid var(--line2,#2B323C);border-radius:10px;padding:12px 14px;font-size:12px;line-height:1.55;color:var(--dim,#867F71);box-shadow:0 10px 28px rgba(0,0,0,.55);opacity:0;visibility:hidden;transform:translateY(-4px);transition:opacity .15s,transform .15s,visibility .15s;z-index:60;text-align:left;white-space:normal}
+.auth .authpop.on{opacity:1;visibility:visible;transform:translateY(0)}
+.auth .authpop b{color:var(--ink,#ECE7DD)}
+.auth .authpop .poperr{margin-top:9px;padding-top:9px;border-top:1px solid var(--line2,#2B323C);color:#E8A0A0;font-size:11px;word-break:break-all}
+.auth .authpop .popsub{margin-top:9px;font-size:11px}
+.auth .authpop a{color:var(--gold-ink,#DEC79C)}
+@media(max-width:768px){.auth{display:none}}
 </style>
 </head>
 <body>
@@ -122,6 +143,7 @@ footer{border-top:1px solid var(--line);margin-top:58px}
   </a>
   <nav class="nav"><a href="index.html">아카이브</a><a href="board.html">게시판</a><a class="on" href="manual.html">메뉴얼</a><a href="download.html">다운로드</a></nav>
   <div class="sp"></div>
+  <div class="auth" id="auth"></div>
  </div>
 </header>
 
@@ -255,7 +277,7 @@ footer{border-top:1px solid var(--line);margin-top:58px}
    </div>
   </div>
   <p class="lead">계정은 Riot ID 기준이라, 같은 Riot ID로 플레이한 PC는 어디서든 같은 보관함으로 로그인됩니다 — 집·다른 PC에서 올린 영상이 한 계정으로 모여요.</p>
-  <p class="lead">로그인은 레코더의 <span class="k">Archive</span> 버튼으로만 됩니다(웹에서 아이디로 직접 로그인하는 화면은 당분간 없어요). 로그인되면 — 레코더는 내 Riot ID를 알고 있고, 웹은 오른쪽 위에 <b>내 닉네임과 로그아웃</b>이 떠서 로그인 상태를 바로 확인할 수 있어요. 로그아웃 상태면 그 자리에 <b>레코더로 로그인</b> 안내가 보입니다.</p>
+  <p class="lead">로그인은 레코더의 <span class="k">Archive</span> 버튼으로만 됩니다(웹에서 아이디로 직접 로그인하는 화면은 당분간 없어요). 로그인되면 — 레코더는 내 Riot ID를 알고 있고, 웹은 오른쪽 위에 <b>내 닉네임과 로그아웃</b>이 떠서 로그인 상태를 바로 확인할 수 있어요. 로그아웃 상태면 그 자리에 <b>로그인 안 됨</b> 상태가 보이고, 클릭하면 로그인 방법 안내가 뜽니다.</p>
  </section>
 
  <section class="sec" id="s-faq">
@@ -288,4 +310,27 @@ footer{border-top:1px solid var(--line);margin-top:58px}
  <nav class="fnav"><a href="terms.html">이용약관</a><a href="privacy.html">개인정보처리방침</a></nav>
  <div class="r">myPENTA isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing League of Legends.</div>
 </div></footer>
+
+<script src="penta-common.js"></script>
+<script>
+(function(){
+  var P=window.PENTA; if(!P) return;
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  async function renderAuth(){
+    var host=document.getElementById('auth'); if(!host) return;
+    var me=null; try{ me=await P.initAuth(); }catch(e){}
+    if(me&&me.puuid){
+      var nm=(me.name||'').split('#')[0]||'소환사';
+      host.innerHTML='<span class="authstat in" title="'+esc(me.name||'')+'"><span class="dot"></span>'+esc(nm)+'</span><a class="me-link" href="me.html">나의 협곡</a><button class="lo" id="loBtn">로그아웃</button>';
+      var b=document.getElementById('loBtn'); if(b) b.addEventListener('click', async function(){ try{ await P.logout(); }catch(e){} renderAuth(); });
+    } else {
+      var _le=(P.lastLoginError&&P.lastLoginError());
+      host.innerHTML='<div class="authwrap"><button class="authstat out" id="authOut" type="button"><span class="dot"></span>로그인 안 됨</button><div class="authpop" id="authPop"><b>로그인하려면</b><br>PC에서 <b>myPENTA 레코더</b>를 켜고 <b>Archive</b> 버튼을 누르면 이 브라우저가 자동으로 로그인됩니다.'+(_le?'<div class="poperr">최근 시도 실패: '+esc(_le)+'</div>':'')+'<div class="popsub">레코더가 없다면 <a href="download.html">다운로드</a> · <a href="manual.html">사용법</a></div></div></div>';
+      var o=document.getElementById('authOut'), pop=document.getElementById('authPop');
+      if(o&&pop){ o.addEventListener('click', function(e){ e.stopPropagation(); pop.classList.toggle('on'); }); document.addEventListener('click', function(){ pop.classList.remove('on'); }); }
+    }
+  }
+  renderAuth();
+})();
+</script>
 </body></html>

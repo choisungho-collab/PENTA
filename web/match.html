@@ -1389,6 +1389,16 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
   function rowG0(i){ var r=ROWS[i]; var g=r&&r.analysis&&r.analysis.g0; return (typeof g==='number'&&isFinite(g))?g:0; }
   function vG0(v){ if(!v) return 0; var i=v.getAttribute('data-pv'); if(i===null) i=v.getAttribute('data-idx'); return rowG0(+i); }
   function playLive(){ stageVideos().forEach(function(v){ if(!v._err){ var p=v.play(); if(p&&p.catch)p.catch(function(){}); } }); }
+
+  // 페이지 열자마자 자동재생: 소리로 시도 → 브라우저가 막으면 음소거로 재생(음소거 자동재생은 항상 허용). 사용자는 볼륨 버튼으로 소리 켬.
+  function autoplayNow(){
+    var v = activeVideo(); if(!v) return;
+    var p = v.play && v.play();
+    if(p && p.catch) p.catch(function(){
+      try{ v.muted = true; }catch(_){}
+      var p2 = v.play && v.play(); if(p2 && p2.catch) p2.catch(function(){});
+    });
+  }
   function pauseLive(){ stageVideos().forEach(function(v){ try{v.pause();}catch(_){} }); }
 
   // 모든 분할 영상을 병렬로 목표 시각으로 시크 + 잠깐 드리프트 루프 정지 → '멈칫하고 이동' 방지
@@ -1938,7 +1948,11 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
 
   function saverWon(rep){
     if(rep && rep.won!=null) return rep.won;
-    var c=P.saverCard(rep); return c?!!c.win:(ANALYSIS.win_team===100?null:null);
+    var c=P.saverCard(rep);
+    if(c && c.win!=null) return !!c.win;                    // 플레이어 승패가 있으면 그대로
+    var wt=(ANALYSIS.win_team!=null)?ANALYSIS.win_team:(rep&&rep.winner);   // 없으면 win_team+내팀으로 판정
+    if(wt!=null && c && c.team!=null) return c.team===wt;
+    return null;                                            // 진짜 알 수 없을 때만 미확인
   }
 
   async function load(){
@@ -1967,6 +1981,7 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
     var _pi = _pov ? ROWS.findIndex(function(x){ return String(x.id)===String(_pov); }) : -1;
     curPov = _pi>=0 ? _pi : Math.max(0, ROWS.indexOf(rep));
     renderAll();
+    autoplayNow();
     bumpView();
   }
 

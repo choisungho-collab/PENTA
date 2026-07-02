@@ -39,8 +39,13 @@
       headers: sbHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(body || {})
     });
-    if (!r.ok) throw new Error('supabase rpc ' + r.status);
     var t = await r.text();
+    if (!r.ok) {
+      var msg = 'supabase rpc ' + fn + ' ' + r.status;
+      try { var j = JSON.parse(t); if (j && (j.message || j.hint)) msg += ': ' + (j.message || j.hint); }
+      catch (e) { if (t) msg += ': ' + t.slice(0, 180); }
+      throw new Error(msg);
+    }
     try { return JSON.parse(t); } catch (e) { return t; }
   }
 
@@ -248,13 +253,16 @@
     _sessWrite(null);
   }
   // 페이지 로드시: #code 있으면 소비(→토큰, URL에서 제거), 그 뒤 토큰 검증. 세션 반환.
+  var _loginErr = null;
+  function lastLoginError() { return _loginErr; }
   async function initAuth() {
+    _loginErr = null;
     try {
       var m = (location.hash || '').match(/[#&]code=([^&]+)/);
       if (m) {
         var code = decodeURIComponent(m[1]);
         try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { location.hash = ''; }
-        try { await loginWithCode(code); } catch (e) {}
+        try { await loginWithCode(code); } catch (e) { _loginErr = String((e && e.message) || e); }
       }
     } catch (e) {}
     return await whoami();
@@ -273,7 +281,7 @@
     groupKeyOf: groupKeyOf, clusterByMatch: clusterByMatch, pickPrimary: pickPrimary,
     saverCard: saverCard, heroCard: heroCard, bestMulti: bestMulti, grade: grade,
     likeGroup: likeGroup, viewGroup: viewGroup, statsAll: statsAll, statsOne: statsOne,
-    session: session, sessionPuuid: sessionPuuid, loginWithCode: loginWithCode,
+    session: session, sessionPuuid: sessionPuuid, loginWithCode: loginWithCode, lastLoginError: lastLoginError,
     whoami: whoami, logout: logout, initAuth: initAuth,
     updateMatchMeta: updateMatchMeta, deleteMatch: deleteMatch
   };

@@ -238,6 +238,21 @@ footer{border-top:1px solid var(--line);margin-top:70px}
 
 /* 모바일/태블릿: 레코더 로그인은 PC 전용 → 모바일에선 버튼 숨김 ── */
 @media(max-width:768px){.auth{display:none}}
+
+.auth .authwrap{position:relative;display:inline-block}
+.auth .authstat{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;padding:5px 11px;border-radius:999px;border:1px solid var(--line2,#2B323C);background:var(--surface,#12161c);white-space:nowrap;font-family:inherit}
+.auth .authstat .dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto}
+.auth .authstat.in{color:var(--gold-ink,#DEC79C);cursor:default;max-width:160px;overflow:hidden;text-overflow:ellipsis}
+.auth .authstat.in .dot{background:#57C98A;box-shadow:0 0 0 3px rgba(87,201,138,.16)}
+.auth .authstat.out{color:var(--dim,#867F71);cursor:pointer}
+.auth .authstat.out .dot{background:#6b6459}
+.auth .authstat.out:hover{border-color:var(--gold-line,#3a3526);color:var(--ink,#ECE7DD)}
+.auth .authpop{position:absolute;top:calc(100% + 8px);right:0;width:250px;background:var(--surface,#12161c);border:1px solid var(--line2,#2B323C);border-radius:10px;padding:12px 14px;font-size:12px;line-height:1.55;color:var(--dim,#867F71);box-shadow:0 10px 28px rgba(0,0,0,.55);opacity:0;visibility:hidden;transform:translateY(-4px);transition:opacity .15s,transform .15s,visibility .15s;z-index:60;text-align:left;white-space:normal}
+.auth .authpop.on{opacity:1;visibility:visible;transform:translateY(0)}
+.auth .authpop b{color:var(--ink,#ECE7DD)}
+.auth .authpop .poperr{margin-top:9px;padding-top:9px;border-top:1px solid var(--line2,#2B323C);color:#E8A0A0;font-size:11px;word-break:break-all}
+.auth .authpop .popsub{margin-top:9px;font-size:11px}
+.auth .authpop a{color:var(--gold-ink,#DEC79C)}
 </style></head>
 <body>
 
@@ -326,12 +341,16 @@ footer{border-top:1px solid var(--line);margin-top:70px}
   function renderAuthChip(me){
     var host=document.getElementById('auth'); if(!host) return;
     if(me && me.puuid){
-      host.innerHTML='<a class="me-link on" href="me.html">나의 협곡</a><span class="who"></span><button class="lo" id="loBtn">로그아웃</button>';
       var nm=(me.name||'').split('#')[0]||'소환사';
-      var w=host.querySelector('.who'); w.textContent=nm; w.title=me.name||'';
+      host.innerHTML='<span class="authstat in" title="'+esc(me.name||'')+'"><span class="dot"></span>'+esc(nm)+'</span><a class="me-link on" href="me.html">나의 협곡</a><button class="lo" id="loBtn">로그아웃</button>';
       var b=document.getElementById('loBtn');
       if(b) b.addEventListener('click', async function(){ try{ await P.logout(); }catch(e){} location.href='index.html'; });
-    } else { host.innerHTML='<span class="hint" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--dim,#867F71);white-space:nowrap" title="myPENTA 레코더의 Archive 버튼을 누르면 이 브라우저가 로그인됩니다"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>레코더로 로그인</span>'; }
+    } else {
+      var _le=(P.lastLoginError&&P.lastLoginError());
+      host.innerHTML='<div class="authwrap"><button class="authstat out" id="authOut" type="button"><span class="dot"></span>로그인 안 됨</button><div class="authpop" id="authPop"><b>로그인하려면</b><br>PC에서 <b>myPENTA 레코더</b>를 켜고 <b>Archive</b> 버튼을 누르면 이 브라우저가 자동으로 로그인됩니다.'+(_le?'<div class="poperr">최근 시도 실패: '+esc(_le)+'</div>':'')+'<div class="popsub">레코더가 없다면 <a href="download.html">다운로드</a> · <a href="manual.html">사용법</a></div></div></div>';
+      var o=document.getElementById('authOut'), pop=document.getElementById('authPop');
+      if(o&&pop){ o.addEventListener('click', function(e){ e.stopPropagation(); pop.classList.toggle('on'); }); document.addEventListener('click', function(){ pop.classList.remove('on'); }); }
+    }
   }
 
   // 갤러리와 같은 형식의 카드(단순화 — 내 시점 대표)
