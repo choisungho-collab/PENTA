@@ -557,7 +557,10 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
 @media(max-width:480px){.it2 .it{width:16px;height:16px}.pw2{width:72px;min-width:72px}.kd2{width:88px;min-width:88px}}
 
 /* ===== 멀티뷰: 세로(쌓기) + 항상 보이는 커스텀 컨트롤 바 ===== */
-.stage.grid.vert{grid-template-columns:1fr}
+.stage.grid.vert{grid-template-columns:1fr;grid-auto-rows:1fr;aspect-ratio:16/18;max-height:calc(100vh - 150px)}
+.stage.grid.vert .cell{aspect-ratio:auto;min-height:0}
+#stagehost:fullscreen .stage.grid.vert{max-height:none;aspect-ratio:auto}
+#stagehost:-webkit-full-screen .stage.grid.vert{max-height:none;aspect-ratio:auto}
 .mvbar{display:flex;align-items:center;gap:11px;margin-top:8px;padding:9px 13px;background:var(--surface);border:1px solid var(--line);border-radius:11px}
 .mvbar .mvbtn{flex:0 0 auto;width:32px;height:32px;display:grid;place-items:center;background:var(--well);border:1px solid var(--line2);border-radius:8px;color:var(--ink2);cursor:pointer;padding:0;transition:border-color .14s,color .14s}
 .mvbar .mvbtn:hover{color:var(--ink);border-color:var(--gold-line)}
