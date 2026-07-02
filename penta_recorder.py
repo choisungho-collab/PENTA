@@ -1332,6 +1332,20 @@ def _encoder_args():
     log(f"Encoder: {name}")
     return _ENC_CACHE
 
+def _probe_height(src):
+    """ffprobe로 소스 영상 세로 해상도(px). 실패하면 0(안전하게 스케일 적용)."""
+    try:
+        fp = os.path.join(HERE, "ffprobe.exe")
+        if not os.path.isfile(fp): fp = "ffprobe"
+        r = _run([fp, "-v", "error", "-select_streams", "v:0",
+                  "-show_entries", "stream=height", "-of", "csv=p=0", src],
+                 capture_output=True, text=True, timeout=20)
+        out = (r.stdout or "").strip()
+        return int(out.splitlines()[0]) if out else 0
+    except Exception:
+        return 0
+
+
 def make_preview(src, dst):
     """원본을 갤러리용으로 재인코딩 — 최대 1080p(초과분만 다운스케일, 업스케일 안 함) + '또렷한' 화질.
     화질 노브: config.json 의 preview_cq(NVENC, 낮을수록 고화질, 기본 26) / preview_crf(x264, 기본 26).
@@ -1346,14 +1360,19 @@ def make_preview(src, dst):
                 "-b:v", "0", "-maxrate", "16M", "-bufsize", "32M"]
     else:
         venc = ["-c:v", "libx264", "-preset", "veryfast", "-crf", crf]
+    sh = _probe_height(src)
+    vf = [] if (sh and sh <= 1080) else ["-vf", "scale=-2:'min(1080,ih)':flags=lanczos"]
+    hws = ([["-hwaccel", "cuda"], []] if "h264_nvenc" in enc else [[]])   # NVENC: GPU decode first, CPU fallback
     try:
         log("Compressing for gallery (1080p, sharper)\u2026")
-        r = _run([FFMPEG, "-y", "-loglevel", "error", "-i", src,
-                  *venc, "-vf", "scale=-2:'min(1080,ih)':flags=lanczos",
-                  "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", dst],
-                 timeout=5400)
-        if r.returncode == 0 and os.path.isfile(dst) and os.path.getsize(dst) > 0:
-            return dst
+        for _hw in hws:
+            r = _run([FFMPEG, "-y", "-loglevel", "error", *_hw, "-i", src,
+                      *venc, *vf,
+                      "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", dst],
+                     timeout=5400)
+            if r.returncode == 0 and os.path.isfile(dst) and os.path.getsize(dst) > 0:
+                return dst
+            if _hw: log("GPU-decode attempt failed (code %s) - retrying with CPU decode." % r.returncode)
         log("Gallery re-encode returned code %s \u2014 uploading original instead." % r.returncode)
     except Exception as e:
         log("Gallery re-encode failed (%s) \u2014 uploading original instead." % e)
