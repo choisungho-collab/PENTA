@@ -278,6 +278,9 @@ footer{border-top:1px solid var(--line);margin-top:70px}
 .auth .authpop .poperr{margin-top:9px;padding-top:9px;border-top:1px solid var(--line2,#2B323C);color:#E8A0A0;font-size:11px;word-break:break-all}
 .auth .authpop .popsub{margin-top:9px;font-size:11px}
 .auth .authpop a{color:var(--gold-ink,#DEC79C)}
+.auth .authpop .bridgebtn{display:block;width:100%;margin-top:11px;padding:8px 10px;border-radius:8px;border:1px solid var(--gold-line,#3a3526);background:rgba(222,199,156,.08);color:var(--gold-ink,#DEC79C);font-size:12px;font-weight:600;cursor:pointer;transition:.14s}
+.auth .authpop .bridgebtn:hover{filter:brightness(1.15)}
+.auth .authpop .bridgebtn:disabled{opacity:.6;cursor:default}
 </style>
 </head>
 <body>
@@ -532,9 +535,15 @@ footer{border-top:1px solid var(--line);margin-top:70px}
       var b=$('loBtn'); if(b) b.addEventListener('click', async function(){ try{ await P.logout(); }catch(e){} ME=null; LIKED={}; renderAuth(); });
     } else {
       var _le=(P.lastLoginError&&P.lastLoginError());
-      host.innerHTML='<div class="authwrap"><button class="authstat out" id="authOut" type="button"><span class="dot"></span>로그인 안 됨</button><div class="authpop" id="authPop"><b>로그인하려면</b><br>PC에서 <b>myPENTA 레코더</b>를 켜고 <b>Archive</b> 버튼을 누르면 이 브라우저가 자동으로 로그인됩니다.'+(_le?'<div class="poperr">최근 시도 실패: '+esc(_le)+'</div>':'')+'<div class="popsub">레코더가 없다면 <a href="download.html">다운로드</a> · <a href="manual.html">사용법</a></div></div></div>';
+      host.innerHTML='<div class="authwrap"><button class="authstat out" id="authOut" type="button"><span class="dot"></span>로그인 안 됨</button><div class="authpop" id="authPop"><b>로그인하려면</b><br>PC에서 <b>myPENTA 레코더</b>를 켜고 <b>Archive</b> 버튼을 누르면 이 브라우저가 자동으로 로그인됩니다.'+(_le?'<div class="poperr">최근 시도 실패: '+esc(_le)+'</div>':'')+'<button class="bridgebtn" id="authBridge" type="button">이 PC의 레코더로 로그인</button>'+'<div class="popsub">레코더가 없다면 <a href="download.html">다운로드</a> · <a href="manual.html">사용법</a></div></div></div>';
       var o=document.getElementById('authOut'), pop=document.getElementById('authPop');
       if(o&&pop){ o.addEventListener('click', function(e){ e.stopPropagation(); pop.classList.toggle('on'); }); document.addEventListener('click', function(){ pop.classList.remove('on'); }); }
+      var bb=document.getElementById('authBridge');
+      if(bb) bb.addEventListener('click', async function(e){
+        e.stopPropagation(); bb.disabled=true; bb.textContent='로그인 중…';
+        try{ await P.loginViaRecorder(); location.reload(); }
+        catch(err){ bb.disabled=false; bb.textContent='실패: 레코더가 켜져 있나요?'; bb.title=String(err&&err.message||err); setTimeout(function(){ bb.textContent='이 PC의 레코더로 로그인'; }, 3200); }
+      });
     }
     applyAuthUI();
     await load();   // 로그인 상태 반영해서(내 좋아요/버튼) 다시 로드

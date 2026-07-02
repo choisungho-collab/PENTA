@@ -2321,6 +2321,54 @@ def _load_recorder_fonts():
     except Exception: pass
 
 
+def start_login_bridge(url):
+    """127.0.0.1 미니 서버: 웹의 [이 PC의 레코더로 로그인] 버튼이 여기로 코드를 받아 즉시 로그인."""
+    import http.server
+    allowed = {"https://mypenta.netlify.app"}
+    try:
+        from urllib.parse import urlparse
+        _u = urlparse(url if "://" in (url or "") else "https://" + (url or ""))
+        if _u.scheme and _u.netloc: allowed.add(_u.scheme + "://" + _u.netloc)
+    except Exception: pass
+    class _H(http.server.BaseHTTPRequestHandler):
+        def log_message(self, *a): pass
+        def do_GET(self):
+            if not self.path.startswith("/login"):
+                self.send_response(404); self.end_headers(); return
+            body = {}
+            try:
+                _pu = riot_key(device_get("riot_id")); _sec = device_secret()
+                if _pu and _sec and cloud_state() == "cloud":
+                    _code = secrets.token_urlsafe(24)
+                    sb_rpc("issue_login_code", {"p_puuid": _pu, "p_secret": _sec, "p_code": _code})
+                    body = {"code": _code}
+                elif not _pu:
+                    body = {"error": "no identity yet - play one game first"}
+                else:
+                    body = {"error": "cloud not configured"}
+            except Exception as e:
+                body = {"error": str(e)}
+            data = json.dumps(body).encode("utf-8")
+            _o = self.headers.get("Origin") or ""
+            self.send_response(200)
+            self.send_header("Access-Control-Allow-Origin", _o if _o in allowed else "null")
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            try: self.wfile.write(data)
+            except Exception: pass
+    for _port in (47821, 47822, 47823):
+        try:
+            _srv = http.server.ThreadingHTTPServer(("127.0.0.1", _port), _H)
+            threading.Thread(target=_srv.serve_forever, daemon=True).start()
+            log("Web login bridge ready on 127.0.0.1:%d" % _port)
+            return _srv
+        except Exception:
+            continue
+    log("Web login bridge could not start (ports busy) - Archive button still works")
+    return None
+
+
 def run_gui(cfg, url):
     """Compact status bar. Shows status only; expands the log when something needs attention."""
     import tkinter as tk
@@ -2563,7 +2611,7 @@ def run_gui(cfg, url):
         recorder_loop(cfg)
     threading.Thread(target=_prep_and_run,daemon=True).start()
 
-    _rec={"since":None,"blink":False}
+    _rec={"since":None,"blink":False,"psince":None}
     def poll():
         appended=False
         for _ in range(150):
@@ -2594,27 +2642,32 @@ def run_gui(cfg, url):
             except Exception: pass
         if _rng:
             if _rec["since"] is None: _rec["since"]=_now
+            _rec["psince"]=None
             _rec["blink"]=not _rec["blink"]
             cv.itemconfig(did,fill=(REC if _rec["blink"] else "#3a2230")); cv.itemconfig(halo,fill="#2e1622")
             _el=int(_now-_rec["since"]); _mm,_ss=divmod(_el,60)
             cv.itemconfig(status_lbl,text="Recording",fill=REC); cv.itemconfig(sub_lbl,text="%d:%02d"%(_mm,_ss),fill=INK)
         elif REC_STATE.get("uploading"):   # 업로드 중 — 진행률(파란 점멸)
             _rec["since"]=None
+            if _rec["psince"] is None: _rec["psince"]=_now
             _rec["blink"]=not _rec["blink"]
             cv.itemconfig(did,fill=(BLUE if _rec["blink"] else "#22344f")); cv.itemconfig(halo,fill="#162640")
             _pct=REC_STATE.get("upload_pct") or 0
+            _pm,_ps=divmod(int(_now-_rec["psince"]),60)
             cv.itemconfig(status_lbl,text=("Uploading %d%%"%_pct) if _pct>0 else "Uploading",fill=BLUE)
-            cv.itemconfig(sub_lbl,text="")          # 업로드 중엔 보조 라벨 제거(상태에 %가 있어 중복·겹침 방지)
+            cv.itemconfig(sub_lbl,text="%d:%02d"%(_pm,_ps),fill=SUB)
         elif _preparing:   # 업로드 준비중 — 분석·트림·인코딩(파란 점멸, 진행률 없음)
             _rec["since"]=None
+            if _rec["psince"] is None: _rec["psince"]=_now
             _rec["blink"]=not _rec["blink"]
             cv.itemconfig(did,fill=(BLUE if _rec["blink"] else "#22344f")); cv.itemconfig(halo,fill="#162640")
-            cv.itemconfig(status_lbl,text="Processing\u2026",fill=BLUE); cv.itemconfig(sub_lbl,text="",fill=SUB)
+            _pm,_ps=divmod(int(_now-_rec["psince"]),60)
+            cv.itemconfig(status_lbl,text="Processing\u2026",fill=BLUE); cv.itemconfig(sub_lbl,text="%d:%02d"%(_pm,_ps),fill=SUB)
         elif _up and (_now-_up < 5):   # 업로드 완료 토스트(5초)
-            _rec["since"]=None; _rec["blink"]=False
+            _rec["since"]=None; _rec["blink"]=False; _rec["psince"]=None
             cv.itemconfig(did,fill=TEAL); cv.itemconfig(halo,fill="#163029"); cv.itemconfig(status_lbl,text="Uploaded \u2713",fill=TEAL); cv.itemconfig(sub_lbl,text="added to your archive",fill=SUB)
         else:
-            _rec["since"]=None; _rec["blink"]=False
+            _rec["since"]=None; _rec["blink"]=False; _rec["psince"]=None
             cv.itemconfig(did,fill=GOLD); cv.itemconfig(halo,fill="#3a2f18")
             if REC_STATE.get("ready"):
                 cv.itemconfig(status_lbl,text="Ready",fill=INK); cv.itemconfig(sub_lbl,text="auto-records",fill=SUB)
@@ -2741,6 +2794,8 @@ def main():
     if mode in ("all", "server") and not use_gui:
         if not FFMPEG: FFMPEG = ensure_ffmpeg()
     url = (cfg.get("gallery_url") or "https://mypenta.netlify.app/").rstrip("/")
+    try: start_login_bridge(url)
+    except Exception as _e: log("Login bridge failed to start: %s" % _e)
     if mode == "all":
         log(f"Archive → {url}")
         # 시작 시 브라우저로 아카이브를 자동으로 열지 않음(번잡함). 아카이브는 GUI 버튼/트레이 메뉴로만 연다.

@@ -253,6 +253,15 @@ footer{border-top:1px solid var(--line);margin-top:70px}
 .auth .authpop .poperr{margin-top:9px;padding-top:9px;border-top:1px solid var(--line2,#2B323C);color:#E8A0A0;font-size:11px;word-break:break-all}
 .auth .authpop .popsub{margin-top:9px;font-size:11px}
 .auth .authpop a{color:var(--gold-ink,#DEC79C)}
+.auth .authpop .bridgebtn{display:block;width:100%;margin-top:11px;padding:8px 10px;border-radius:8px;border:1px solid var(--gold-line,#3a3526);background:rgba(222,199,156,.08);color:var(--gold-ink,#DEC79C);font-size:12px;font-weight:600;cursor:pointer;transition:.14s}
+.auth .authpop .bridgebtn:hover{filter:brightness(1.15)}
+.auth .authpop .bridgebtn:disabled{opacity:.6;cursor:default}
+.card .foot{display:flex;align-items:center;gap:8px}
+.card .foot .mg{margin-left:auto;display:flex;gap:6px}
+.mgbtn{font-size:11px;padding:4px 9px;border-radius:7px;border:1px solid var(--line2,#2B323C);background:transparent;color:var(--dim,#867F71);cursor:pointer;transition:.13s;font-family:inherit}
+.mgbtn:hover{color:var(--ink,#ECE7DD);border-color:var(--gold-line,#3a3526)}
+.mgbtn.del:hover{color:#E8A0A0;border-color:#5a2b33}
+.mgbtn.ok{color:#57C98A;border-color:#2b5a41}
 </style></head>
 <body>
 
@@ -347,9 +356,15 @@ footer{border-top:1px solid var(--line);margin-top:70px}
       if(b) b.addEventListener('click', async function(){ try{ await P.logout(); }catch(e){} location.href='index.html'; });
     } else {
       var _le=(P.lastLoginError&&P.lastLoginError());
-      host.innerHTML='<div class="authwrap"><button class="authstat out" id="authOut" type="button"><span class="dot"></span>로그인 안 됨</button><div class="authpop" id="authPop"><b>로그인하려면</b><br>PC에서 <b>myPENTA 레코더</b>를 켜고 <b>Archive</b> 버튼을 누르면 이 브라우저가 자동으로 로그인됩니다.'+(_le?'<div class="poperr">최근 시도 실패: '+esc(_le)+'</div>':'')+'<div class="popsub">레코더가 없다면 <a href="download.html">다운로드</a> · <a href="manual.html">사용법</a></div></div></div>';
+      host.innerHTML='<div class="authwrap"><button class="authstat out" id="authOut" type="button"><span class="dot"></span>로그인 안 됨</button><div class="authpop" id="authPop"><b>로그인하려면</b><br>PC에서 <b>myPENTA 레코더</b>를 켜고 <b>Archive</b> 버튼을 누르면 이 브라우저가 자동으로 로그인됩니다.'+(_le?'<div class="poperr">최근 시도 실패: '+esc(_le)+'</div>':'')+'<button class="bridgebtn" id="authBridge" type="button">이 PC의 레코더로 로그인</button>'+'<div class="popsub">레코더가 없다면 <a href="download.html">다운로드</a> · <a href="manual.html">사용법</a></div></div></div>';
       var o=document.getElementById('authOut'), pop=document.getElementById('authPop');
       if(o&&pop){ o.addEventListener('click', function(e){ e.stopPropagation(); pop.classList.toggle('on'); }); document.addEventListener('click', function(){ pop.classList.remove('on'); }); }
+      var bb=document.getElementById('authBridge');
+      if(bb) bb.addEventListener('click', async function(e){
+        e.stopPropagation(); bb.disabled=true; bb.textContent='로그인 중…';
+        try{ await P.loginViaRecorder(); location.reload(); }
+        catch(err){ bb.disabled=false; bb.textContent='실패: 레코더가 켜져 있나요?'; bb.title=String(err&&err.message||err); setTimeout(function(){ bb.textContent='이 PC의 레코더로 로그인'; }, 3200); }
+      });
     }
   }
 
@@ -381,10 +396,33 @@ footer{border-top:1px solid var(--line);margin-top:70px}
         + '<div class="kda"><span class="nums">'+k+'<span class="s">/</span>'+d+'<span class="s">/</span>'+a+'</span>'
           + '<span class="ratio"><b>'+P.kdaRatio(k,d,a)+'</b> 평점</span></div>'
         + '<div class="meta"><span class="tag q">'+q+'</span><span class="tag">'+len+'</span><span class="tag">CS '+(me.cs||0)+'</span></div>'
-        + '<div class="foot"><div class="upl">'+(P.ago(r.uploaded)||'')+'</div></div>'
+        + '<div class="foot"><div class="upl">'+(P.ago(r.uploaded)||'')+'</div>'
+          + '<div class="mg">'
+            + '<button class="mgbtn" type="button" data-act="edit" data-mid="'+esc(gk)+'" data-title="'+esc(r.title||'')+'" title="영상 제목 수정">제목</button>'
+            + '<button class="mgbtn del" type="button" data-act="del" data-mid="'+esc(gk)+'" title="내 영상 삭제">삭제</button>'
+          + '</div></div>'
       + '</div>'
     + '</a>';
   }
+
+  // 카드의 [제목]/[삭제] — 카드 링크 대신 관리 동작 (상세페이지와 같은 RPC)
+  var _mgGrid=document.getElementById('grid');
+  if(_mgGrid) _mgGrid.addEventListener('click', async function(e){
+    var b=e.target && e.target.closest && e.target.closest('.mgbtn'); if(!b) return;
+    e.preventDefault(); e.stopPropagation();
+    var mid=b.getAttribute('data-mid'), act=b.getAttribute('data-act');
+    if(act==='edit'){
+      var cur=b.getAttribute('data-title')||'';
+      var nv=prompt('영상 제목 (비우면 제목 없음)', cur);
+      if(nv===null) return;
+      try{ await P.updateMatchMeta(mid, nv.trim()); b.setAttribute('data-title', nv.trim()); b.classList.add('ok'); setTimeout(function(){ b.classList.remove('ok'); }, 1400); }
+      catch(err){ alert('저장 실패: '+String(err&&err.message||err)); }
+    } else if(act==='del'){
+      if(!confirm('이 게임에 올린 내 영상을 삭제할까요? 되돌릴 수 없습니다.')) return;
+      try{ await P.deleteMatch(mid); location.reload(); }
+      catch(err){ alert('삭제 실패: '+String(err&&err.message||err)); }
+    }
+  }, true);
 
   function computeAndRender(rows){
     var games=rows.length, wins=0, losses=0, totalSec=0, K=0, D=0, A=0, pentas=0;
@@ -446,6 +484,7 @@ footer{border-top:1px solid var(--line);margin-top:70px}
     if(!me || !me.puuid){ show('gate'); return; }
     setText('me-name', (me.name||'').split('#')[0] || '소환사');
     try{ ver = await P.ddVersion(); }catch(e){}
+    try{ await P.ddChampMap(ver); }catch(e){}   // 한글 챔피언명 → 영문 키 맵(아이콘 URL용) — 이게 없으면 초상화가 안 보임
     var rows=[];
     try{
       rows = await P.sbSelect('matches', 'owner_puuid=eq.'+encodeURIComponent(me.puuid)+'&select=*&order=uploaded.desc');

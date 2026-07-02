@@ -267,6 +267,20 @@
     } catch (e) {}
     return await whoami();
   }
+  // [이 PC의 레코더로 로그인] — 레코더의 127.0.0.1 브리지에서 코드 받아 즉시 로그인
+  async function loginViaRecorder() {
+    var ports = [47821, 47822, 47823], lastErr = null;
+    for (var i = 0; i < ports.length; i++) {
+      try {
+        var r = await fetch('http://127.0.0.1:' + ports[i] + '/login', { cache: 'no-store' });
+        if (!r.ok) { lastErr = new Error('bridge http ' + r.status); continue; }
+        var j = await r.json();
+        if (j && j.code) return await loginWithCode(j.code);
+        if (j && j.error) throw new Error(j.error);
+      } catch (e) { lastErr = e; }
+    }
+    throw (lastErr || new Error('recorder not running'));
+  }
   async function updateMatchMeta(mid, title) { var s = _sessRead(); if (!s || !s.token) throw new Error('not logged in'); return sbRpc('update_match_meta', { p_token: s.token, p_match_id: mid, p_title: title }); }
   async function deleteMatch(mid) { var s = _sessRead(); if (!s || !s.token) throw new Error('not logged in'); return sbRpc('delete_match', { p_token: s.token, p_match_id: mid }); }
 
@@ -281,7 +295,7 @@
     groupKeyOf: groupKeyOf, clusterByMatch: clusterByMatch, pickPrimary: pickPrimary,
     saverCard: saverCard, heroCard: heroCard, bestMulti: bestMulti, grade: grade,
     likeGroup: likeGroup, viewGroup: viewGroup, statsAll: statsAll, statsOne: statsOne,
-    session: session, sessionPuuid: sessionPuuid, loginWithCode: loginWithCode, lastLoginError: lastLoginError,
+    session: session, sessionPuuid: sessionPuuid, loginWithCode: loginWithCode, lastLoginError: lastLoginError, loginViaRecorder: loginViaRecorder,
     whoami: whoami, logout: logout, initAuth: initAuth,
     updateMatchMeta: updateMatchMeta, deleteMatch: deleteMatch
   };
