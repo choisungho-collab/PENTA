@@ -268,14 +268,17 @@ footer{border-top:1px solid var(--line);margin-top:70px}
 (function(){
   var P = window.PENTA;
   var grid = document.getElementById('grid');
-  // POV 아바타 클릭 → 카드 링크 대신 그 시점부터 시작
+  // POV 아바타 클릭 → 그 시점을 카드의 메인으로 교체(히어로라인·전적·썸네일·링크 갱신). 카드 본체 클릭은 현재 메인 시점으로 열림.
   if(grid) grid.addEventListener('click', function(e){
     var chip = e.target && e.target.closest && e.target.closest('.povchip[data-pov]');
-    if(chip){
-      e.preventDefault(); e.stopPropagation();
-      var mid = chip.getAttribute('data-mid'), pov = chip.getAttribute('data-pov');
-      if(mid && pov) location.href = 'match.html?id='+encodeURIComponent(mid)+'&pov='+encodeURIComponent(pov);
-    }
+    if(!chip) return;
+    e.preventDefault(); e.stopPropagation();
+    var card = chip.closest('.card'); if(!card) return;
+    var mid = chip.getAttribute('data-mid'), pov = chip.getAttribute('data-pov');
+    var group = GROUPS.find(function(g){ return String(P.groupKeyOf(g[0]))===String(mid); });
+    if(!group) return;
+    var row = group.find(function(x){ return String(x.id)===String(pov); });
+    if(row) card.outerHTML = cardHTML(group, row);
   }, true);
   var elLoading = document.getElementById('loading'),
       elEmpty = document.getElementById('empty'),
@@ -289,8 +292,8 @@ footer{border-top:1px solid var(--line);margin-top:70px}
   function show(el){ [elLoading,elEmpty,elFailed].forEach(function(e){ e.classList.toggle('on', e===el); }); }
 
   // 챔피언/멀티킬/요약을 카드 1장으로
-  function cardHTML(group){
-    var r = P.pickPrimary(group);
+  function cardHTML(group, mainRow){
+    var r = mainRow || P.pickPrimary(group);
     var me = P.heroCard(r);
     var won = (r.won != null) ? r.won : (me.win != null ? me.win : null);  // 미확인은 null 유지
     var champ = me.champion || '';
@@ -319,16 +322,16 @@ footer{border-top:1px solid var(--line);margin-top:70px}
     var viewHTML = views>0 ? ('<span class="vw"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3.2"/><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/></svg>'
         + P.compact(views) + '</span>') : '';
 
-    // POV 아바타 스트립: 영상 있는 각 시점의 챔프(대표=me 강조). 클릭 시 그 시점부터 시작(위임 처리).
-    var vpovs = group.filter(function(x){ return x.video; });
-    var stripHTML = vpovs.length>1 ? ('<div class="povstrip">' + vpovs.map(function(row){
+    // POV 아바타 스트립: 대표(메인)를 뺀 나머지 시점만 표시. 클릭 시 그 시점을 메인으로 교체(위임 처리).
+    var others = group.filter(function(x){ return x.video && x !== r; });
+    var stripHTML = others.length>=1 ? ('<div class="povstrip">' + others.map(function(row){
       var pc = P.saverCard(row) || {}, pch = pc.champion || '';
-      return '<span class="povchip'+(row===r?' me':'')+'" data-mid="'+esc(gk)+'" data-pov="'+esc(String(row.id==null?'':row.id))+'" title="'+esc(pch||'시점')+' · '+((pc.kills||0)+'/'+(pc.deaths||0)+'/'+(pc.assists||0))+'">'
+      return '<span class="povchip" data-mid="'+esc(gk)+'" data-pov="'+esc(String(row.id==null?'':row.id))+'" title="'+esc(pch||'시점')+' · '+((pc.kills||0)+'/'+(pc.deaths||0)+'/'+(pc.assists||0))+' · 클릭하면 메인 교체">'
         + '<img src="'+P.champIcon(ver,pch)+'" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">'
         + '</span>';
     }).join('') + '</div>') : '';
 
-    return '<a class="card '+(won===true?'win':won===false?'loss':'')+'" href="match.html?id='+encodeURIComponent(P.groupKeyOf(r))+'">'
+    return '<a class="card '+(won===true?'win':won===false?'loss':'')+'" href="match.html?id='+encodeURIComponent(P.groupKeyOf(r))+(r.id!=null?'&pov='+encodeURIComponent(r.id):'')+'">'
       + '<div class="thumb">'
         + (bg ? '<img class="bgimg" src="'+bg+'" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '')
         + '<div class="scrim"></div>'
