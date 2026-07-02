@@ -381,7 +381,7 @@ footer{border-top:1px solid var(--line);margin-top:70px}
       return;
     }
     show(null);
-    grid.innerHTML = list.map(cardHTML).join('');
+    grid.innerHTML = list.map(function(g){ return cardHTML(g); }).join('');   // map의 index가 mainRow로 새는 것 방지
   }
 
   function setStats(){
