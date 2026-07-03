@@ -64,7 +64,8 @@ a{color:inherit;text-decoration:none}svg{display:block}img{display:block;max-wid
 .manage .mmsg{font-size:12px;flex:0 0 auto}
 .manage .mmsg.ok{color:#52C3AC}
 .manage .mmsg.err{color:#DE7480}
-.stage{position:relative;background:#05080b;border:1px solid var(--line);border-radius:var(--r3);overflow:hidden;aspect-ratio:16/9}
+.stage{position:relative;background:#05080b;border:1px solid var(--line);border-radius:0;overflow:hidden;aspect-ratio:16/9}
+/* 각진 사각형: 둥근 모서리(18px)가 게임 화면 구석 정보(FPS·미니맵·스코어보드 모서리)를 가리는 문제 해결 */
 .stage video{width:100%;height:100%;object-fit:contain;background:#05080b;display:block}
 .stage.empty{display:grid;place-items:center}
 .stage .novid{text-align:center;color:var(--faint);font-family:var(--fd);font-size:14px;padding:24px}
@@ -1562,7 +1563,8 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
       var ix=+_ix, keep=salv[ix];
       if(keep && keep!==fresh && fresh.parentNode){
         ['data-pv','data-idx','class','controls'].forEach(function(a){ var val=fresh.getAttribute(a); if(val===null) keep.removeAttribute(a); else keep.setAttribute(a,val); });
-        try{ keep.muted=fresh.muted; }catch(_){}
+        // 멀티 마스터(selected[0])는 듣던 소리 유지 — 셀 템플릿의 muted 를 강제복사하면 전환 순간 무음이 됨
+        if(!(multi && ix===selected[0])){ try{ keep.muted=fresh.muted; }catch(_){} }
         fresh.parentNode.replaceChild(keep, fresh);
         salv[ix]=null;
       }
@@ -1601,9 +1603,15 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
     // '0초부터 재생됐다가 튀는' 현상을 막는다(= 처음으로 리셋되는 것처럼 보이던 버그).
     var _m=activeVideo();
     var _rt=resumeAt, _wantPlay=resumePlay; resumeAt=0; resumePlay=false;
+    var _kick=function(){
+      if(!_wantPlay) return;
+      if(split){ playLive(); }
+      else if(_m){ var _pp=_m.play&&_m.play(); if(_pp&&_pp.catch)_pp.catch(function(){}); }
+    };
     var _resume=function(){
       if(split){ if(_rt>0) seekAllTo(_rt, 1600); } else if(_rt>0 && _m){ try{ _m.currentTime=_rt; }catch(_){} }
-      if(_wantPlay){ if(split){ playLive(); } else if(_m){ var _pp=_m.play&&_m.play(); if(_pp&&_pp.catch)_pp.catch(function(){}); } }
+      _kick();
+      setTimeout(_kick, 140);   // 모바일: video 재부모화 시 자동 pause 가 play 뒤에 적용되는 브라우저가 있어 한 번 더
     };
     if(_m && _rt>0 && _m.readyState<1){ _m.addEventListener('loadedmetadata', _resume, {once:true}); }
     else { _resume(); }
