@@ -1,0 +1,319 @@
+<!doctype html><html lang="ko"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>레코더 받기 · myPENTA</title>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="myPENTA">
+<meta property="og:title" content="레코더 받기 — myPENTA">
+<meta property="og:description" content="설치 한 번이면 매 판이 자동으로 녹화됩니다. 파이썬 설치 불필요.">
+<meta property="og:image" content="https://mypenta.netlify.app/assets/og.png">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta property="og:url" content="https://mypenta.netlify.app/download.html">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="레코더 받기 — myPENTA">
+<meta name="twitter:description" content="설치 한 번이면 매 판이 자동으로 녹화됩니다. 파이썬 설치 불필요.">
+<meta name="twitter:image" content="https://mypenta.netlify.app/assets/og.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2 L15 9 L22 9 L16.5 13.5 L18.5 21 L12 16.5 L5.5 21 L7.5 13.5 L2 9 L9 9 Z' fill='%23DEC79C'/%3E%3C/svg%3E">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Sora:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+ --bg:#080A0E;--surface:#0F131A;--surface2:#161B23;--hover:#1C2530;--well:#0B0E13;
+ --ink:#ECE7DD;--ink2:#C2BBAD;--dim:#867F71;--faint:#6B6355;
+ --line:#1F252E;--line2:#2B323C;
+ --gold:#DEC79C;--gold-ink:#EFDDBC;--gold-soft:rgba(222,199,156,.11);--gold-line:rgba(222,199,156,.32);
+ --win:#52C3AC;--win-soft:rgba(82,195,172,.12);--win-line:rgba(82,195,172,.42);
+ --fd:'Pretendard Variable','Pretendard','Apple SD Gothic Neo',system-ui,sans-serif;
+ --fs:'Marcellus',serif;
+ --fg:'Sora',sans-serif;--fm:'IBM Plex Mono',ui-monospace,monospace;
+ --r1:10px;--r2:14px;--r3:18px;
+}
+*{box-sizing:border-box}html,body{margin:0;overflow-x:clip}
+body{background:var(--bg);color:var(--ink);font-family:var(--fd);font-size:15px;line-height:1.65;word-break:keep-all;overflow-wrap:break-word;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}svg{display:block}
+.wrap{max-width:1160px;margin:0 auto;padding:0 24px}
+
+.bar{position:sticky;top:0;z-index:50;background:rgba(8,10,14,.86);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.bar-in{max-width:1160px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;gap:16px}
+.brand{display:flex;align-items:center;gap:10px}
+.brand .mk{width:22px;height:22px;color:var(--gold);filter:drop-shadow(0 0 9px rgba(222,199,156,.4))}
+.brand b{font-family:var(--fg);font-weight:600;font-size:20px;letter-spacing:.15em;color:var(--gold)}
+.nav{display:flex;gap:2px;margin-left:14px}
+.nav a{font-family:var(--fd);font-weight:600;font-size:14px;color:var(--dim);padding:7px 9px 9px;border-bottom:2px solid transparent;transition:.14s}
+.nav a:hover{color:var(--ink)}
+.nav a.on{color:var(--ink);border-bottom-color:var(--gold)}
+.bar .sp{flex:1}
+
+.hero{padding:44px 0 6px}
+.ey{font-family:var(--fm);font-size:11px;letter-spacing:.3em;color:var(--gold);text-transform:uppercase;margin-bottom:16px}
+.h1{font-family:var(--fs);font-weight:400;font-size:clamp(34px,5.5vw,52px);letter-spacing:.01em;margin:0;line-height:1.06;color:var(--ink)}
+.lead{font-family:var(--fd);font-size:17px;line-height:1.75;color:var(--ink2);margin:20px 0 0;max-width:760px}
+.lead b{color:var(--ink);font-weight:600}
+.cta{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:30px}
+.btn{display:inline-flex;align-items:center;gap:10px;font-family:var(--fd);font-weight:600;font-size:15px;color:var(--bg);background:linear-gradient(180deg,#D8BC82,#DEC79C);padding:14px 24px;border-radius:var(--r1);box-shadow:0 6px 18px -6px rgba(222,199,156,.55)}
+.btn:hover{filter:brightness(1.07)}.btn .ic{width:18px;height:18px}
+.ctameta{font-family:var(--fm);font-size:12.5px;color:var(--faint)}
+
+.sec{margin:42px 0 0}
+.sec h2{font-family:var(--fs);font-weight:400;font-size:22px;letter-spacing:.02em;margin:0 0 18px;display:flex;align-items:baseline;gap:10px}
+.sec h2 .sub{font-family:var(--fm);font-size:12px;color:var(--faint);letter-spacing:0}
+
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.fcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r2);padding:22px}
+.fcard .fi{width:34px;height:34px;color:var(--gold);margin-bottom:14px}
+.fcard h3{font-family:var(--fd);font-weight:700;font-size:16px;margin:0 0 8px;color:var(--ink)}
+.fcard p{font-family:var(--fd);font-size:15px;color:var(--dim);margin:0;line-height:1.7}
+
+.steps{list-style:none;padding:0;margin:0;counter-reset:s;max-width:820px}
+.steps li{position:relative;padding:0 0 18px 44px;counter-increment:s;color:var(--ink2);font-size:15px;line-height:1.7}
+.steps li:last-child{padding-bottom:0}
+.steps li::before{content:counter(s);position:absolute;left:0;top:-1px;width:30px;height:30px;border-radius:9px;background:var(--gold-soft);border:1px solid var(--gold-line);color:var(--gold-ink);font-family:var(--fm);font-size:13px;display:grid;place-items:center;font-weight:600}
+.steps li b{color:var(--ink)}
+.k{font-family:var(--fm);font-size:13px;color:var(--gold-ink);background:var(--well);border:1px solid var(--line);padding:1px 6px;border-radius:5px}
+
+.code{background:var(--well);border:1px solid var(--line);border-radius:var(--r2);padding:18px 20px;overflow-x:auto;margin-top:16px}
+.code pre{margin:0;font-family:var(--fm);font-size:13px;line-height:1.7;color:var(--ink2);white-space:pre}
+.code .c{color:var(--faint)}.code .s{color:var(--win)}.code .key{color:var(--gold-ink)}
+
+.cfgnote{display:grid;gap:12px;margin-top:18px}
+.cfgrow{display:grid;grid-template-columns:160px 1fr;gap:16px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r1);padding:14px 18px}
+.cfgrow .ck{font-family:var(--fm);font-size:13px;color:var(--gold-ink);padding-top:1px}
+.cfgrow .cv{font-family:var(--fd);font-size:15px;color:var(--ink2);line-height:1.65}
+.cfgrow .cv b{color:var(--ink)}
+
+.note{background:var(--well);border:1px solid var(--line);border-radius:var(--r2);padding:18px 20px;margin-top:18px}
+.note p{margin:0 0 12px;font-size:15px;color:var(--dim);line-height:1.75}
+.note p:last-child{margin:0}.note p b{color:var(--ink2)}
+
+.callout{display:flex;gap:14px;background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:var(--r2);padding:18px 20px}
+.callout .ci{flex:0 0 auto;color:var(--gold-ink);width:22px;height:22px;margin-top:2px}
+.callout h3{font-family:var(--fd);font-weight:700;font-size:16px;margin:0 0 7px;color:var(--ink)}
+.callout p{margin:0 0 12px;font-size:15px;color:var(--ink2);line-height:1.7}.callout p:last-child{margin:0}
+.callout .acts{display:flex;gap:10px;flex-wrap:wrap}
+.dlink{display:inline-flex;align-items:center;gap:7px;font-family:var(--fd);font-weight:600;font-size:13.5px;padding:9px 15px;border-radius:var(--r1);border:1px solid var(--gold-line);color:var(--gold-ink);background:rgba(222,199,156,.05)}
+.dlink:hover{background:rgba(222,199,156,.13)}.dlink svg{width:14px;height:14px}
+.dlink.solid{background:var(--gold);color:var(--bg);border-color:transparent}
+
+.spec{border:1px solid var(--line);border-radius:var(--r2);overflow:hidden;background:var(--surface)}
+.specrow{display:grid;grid-template-columns:130px 1fr;gap:18px;padding:14px 20px;border-top:1px solid var(--line)}
+.specrow:first-child{border-top:0}
+.speck{font-family:var(--fm);font-size:12.5px;color:var(--dim)}
+.specv{color:var(--ink2);font-size:15px;line-height:1.6}.specv b{color:var(--ink);font-weight:600}
+.shot{margin:28px 0 0;border:1px solid var(--line);border-radius:var(--r2);overflow:hidden;background:var(--well);max-width:520px}
+.shot img,.shot svg{width:100%;height:auto;display:block}
+.shot .cap{font-family:var(--fm);font-size:11px;color:var(--faint);padding:8px 13px;border-top:1px solid var(--line);letter-spacing:.01em}
+
+footer{border-top:1px solid var(--line);margin-top:58px}
+.foot-in{max-width:1160px;margin:0 auto;padding:26px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.foot-in .fnav{display:flex;gap:16px;font-size:13px}
+.foot-in .fnav a{color:var(--dim);transition:.14s;border-bottom:1px solid transparent}
+.foot-in .fnav a:hover{color:var(--gold-ink);border-bottom-color:var(--gold-line)}
+.foot-in .fnav a.on{color:var(--ink)}
+.foot-in .r{font-family:var(--fd);font-size:12px;color:var(--faint);max-width:540px;text-align:right;line-height:1.6}
+
+@media(max-width:760px){
+ .wrap{padding:0 16px}.bar-in{padding:12px 16px}.nav{margin-left:6px}.nav a{padding:6px 7px 7px;font-size:13px}
+ .cards{grid-template-columns:1fr}.cfgrow{grid-template-columns:1fr;gap:4px}.specrow{grid-template-columns:1fr;gap:4px}
+}
+.brand b .my{font-weight:300;color:var(--ink);letter-spacing:.01em}
+@media(max-width:600px){.foot-in{padding:24px 16px}.foot-in .r{text-align:left}}
+
+/* ── 모바일 헤더 최적화(≤560px): 네비를 아랫줄 전체 폭으로 → 메뉴(다운로드 등) 잘림 해결 ── */
+@media(max-width:560px){
+  .bar-in{flex-wrap:wrap;padding:10px 12px;gap:8px 10px}
+  .brand{order:1}
+  .brand b{font-size:17px}
+  .auth{order:2;margin-left:auto}
+  .nav{order:3;flex-basis:100%;margin-left:0;gap:2px;overflow-x:auto}
+  .nav::-webkit-scrollbar{display:none}
+  .nav a{font-size:13px;padding:6px 8px 7px}
+}
+
+.auth{display:flex;align-items:center;gap:8px;margin-left:auto;flex:0 0 auto}
+.auth .me-link{font-weight:600;font-size:13px;color:var(--gold-ink,#DEC79C);padding:5px 9px;border-radius:8px;border:1px solid var(--gold-line,#3a3526);background:rgba(222,199,156,.06);transition:.14s;text-decoration:none}
+.auth .me-link:hover{filter:brightness(1.12)}
+.auth .lo{font-size:12px;color:var(--dim,#867F71);background:none;border:1px solid var(--line2,#2B323C);border-radius:8px;padding:5px 9px;cursor:pointer}
+.auth .lo:hover{color:var(--ink,#ECE7DD);border-color:var(--gold-line,#3a3526)}
+.auth .authwrap{position:relative;display:inline-block}
+.auth .authstat{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;padding:5px 11px;border-radius:999px;border:1px solid var(--line2,#2B323C);background:var(--surface,#12161c);white-space:nowrap;font-family:inherit}
+.auth .authstat .dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto}
+.auth .authstat.in{color:var(--gold-ink,#DEC79C);cursor:default;max-width:160px;overflow:hidden;text-overflow:ellipsis}
+.auth .authstat.in .dot{background:#57C98A;box-shadow:0 0 0 3px rgba(87,201,138,.16)}
+.auth .authstat.out{color:var(--dim,#867F71);cursor:pointer}
+.auth .authstat.out .dot{background:#6b6459}
+.auth .authstat.out:hover{border-color:var(--gold-line,#3a3526);color:var(--ink,#ECE7DD)}
+.auth .authpop{position:absolute;top:calc(100% + 8px);right:0;width:250px;background:var(--surface,#12161c);border:1px solid var(--line2,#2B323C);border-radius:10px;padding:12px 14px;font-size:12px;line-height:1.55;color:var(--dim,#867F71);box-shadow:0 10px 28px rgba(0,0,0,.55);opacity:0;visibility:hidden;transform:translateY(-4px);transition:opacity .15s,transform .15s,visibility .15s;z-index:60;text-align:left;white-space:normal}
+.auth .authpop.on{opacity:1;visibility:visible;transform:translateY(0)}
+.auth .authpop b{color:var(--ink,#ECE7DD)}
+.auth .authpop .poperr{margin-top:9px;padding-top:9px;border-top:1px solid var(--line2,#2B323C);color:#E8A0A0;font-size:11px;word-break:break-all}
+.auth .authpop .popsub{margin-top:9px;font-size:11px}
+.auth .authpop a{color:var(--gold-ink,#DEC79C)}
+.auth .authpop .bridgebtn{display:block;width:100%;margin-top:11px;padding:8px 10px;border-radius:8px;border:1px solid var(--gold-line,#3a3526);background:rgba(222,199,156,.08);color:var(--gold-ink,#DEC79C);font-size:12px;font-weight:600;cursor:pointer;transition:.14s}
+.auth .authpop .bridgebtn:hover{filter:brightness(1.15)}
+.auth .authpop .bridgebtn:disabled{opacity:.6;cursor:default}
+@media(max-width:768px){.auth{display:none}}
+</style>
+</head>
+<body>
+
+<header class="bar">
+ <div class="bar-in">
+  <a class="brand" href="index.html">
+   <svg class="mk" viewBox="0 0 24 24"><path d="M12 2 L15 9 L22 9 L16.5 13.5 L18.5 21 L12 16.5 L5.5 21 L7.5 13.5 L2 9 L9 9 Z" fill="currentColor"/></svg>
+   <b><span class="my">my</span>PENTA</b>
+  </a>
+  <nav class="nav"><a href="index.html">아카이브</a><a href="board.html">게시판</a><a href="manual.html">메뉴얼</a><a class="on" href="download.html">다운로드</a></nav>
+  <div class="sp"></div>
+  <div class="auth" id="auth"></div>
+ </div>
+</header>
+
+<div class="wrap">
+
+ <section class="hero">
+  <div class="ey">Download</div>
+  <h1 class="h1">myPENTA 레코더</h1>
+  <p class="lead">리그 오브 레전드를 켜두면 알아서 녹화하고, 게임이 끝나면 <b>Riot 공식 기록</b>으로 전적을 분석해 아카이브에 올립니다. 설치 과정 없이, 압축을 풀면 나오는 exe 하나만 실행하면 됩니다.</p>
+  <div class="cta">
+   <a class="btn" href="https://github.com/choisungho-collab/PENTA/releases/latest/download/penta_recorder.zip" rel="noopener">
+    <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg>
+    레코더 받기 (.zip)
+   </a>
+   <span class="ctameta">Windows 10 / 11 · 무료 · 압축 풀고 실행</span>
+  </div>
+  <figure class="shot"><svg viewBox="0 0 466 160" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="myPENTA 레코더 — 대기 중 화면">
+   <defs>
+    <radialGradient id="rbA" cx="50%" cy="26%" r="92%"><stop offset="0" stop-color="#101c25"/><stop offset=".55" stop-color="#0a0e15"/><stop offset="1" stop-color="#06090d"/></radialGradient>
+    <radialGradient id="rcA" cx="50%" cy="4%" r="58%"><stop offset="0" stop-color="#2f7d74" stop-opacity=".20"/><stop offset="1" stop-color="#2f7d74" stop-opacity="0"/></radialGradient>
+    <linearGradient id="rdA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ECD8AD"/><stop offset="1" stop-color="#CDB27C"/></linearGradient>
+    <filter id="rsA" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="2.3"/></filter>
+   </defs>
+   <rect width="466" height="160" fill="url(#rbA)"/><rect width="466" height="160" fill="url(#rcA)"/>
+   <g stroke="#3c4c46" stroke-width="1" opacity=".10" fill="none"><path d="M52 160 C 150 108 232 92 372 34"/><path d="M128 160 C 214 118 306 100 446 56"/></g>
+   <rect x="14" y="0" width="438" height="2" rx="1" fill="#27313C"/>
+   <circle cx="24" cy="31" r="8.4" fill="#DEC79C" opacity=".14" filter="url(#rsA)"/><circle cx="24" cy="31" r="4.2" fill="url(#rdA)"/>
+   <text x="36" y="35.4" font-family="'Sora',sans-serif" font-weight="600" font-size="13.5" fill="#ECE7DD" letter-spacing=".2">Ready</text>
+   <text x="90" y="35.4" font-family="'Sora',sans-serif" font-weight="500" font-size="10" fill="#A7A192">auto-records</text>
+   <text x="380" y="35" text-anchor="end" font-family="'IBM Plex Mono',monospace" font-size="9.5" fill="#EFDDBC" letter-spacing=".4">1080p · NVENC</text>
+   <rect x="393" y="22.5" width="59" height="17.5" rx="8.75" fill="#12231E" stroke="#46A08F"/>
+   <text x="447" y="34.6" text-anchor="end" font-family="'Sora',sans-serif" font-weight="500" font-size="9.5" fill="#7ADCC6">Cloud</text>
+   <text x="411" y="34.6" text-anchor="end" font-family="'Sora',sans-serif" font-size="9" fill="#7ADCC6">☁</text>
+   <rect x="16" y="117" width="78" height="26" rx="8" fill="#16130C" stroke="#5D4F2E"/>
+   <g fill="#DEC79C"><rect x="27" y="125.2" width="3.1" height="3.1" rx=".5"/><rect x="31.4" y="125.2" width="3.1" height="3.1" rx=".5"/><rect x="27" y="129.6" width="3.1" height="3.1" rx=".5"/><rect x="31.4" y="129.6" width="3.1" height="3.1" rx=".5"/></g>
+   <text x="41" y="133.8" font-family="'Sora',sans-serif" font-weight="600" font-size="9.5" fill="#DEC79C">Archive</text>
+   <rect x="102" y="117" width="94" height="26" rx="8" fill="#10141B" stroke="#2B323C"/>
+   <path d="M110 125.6 h4.2 l1.5 1.8 h6 a1.2 1.2 0 0 1 1.2 1.2 v3.8 a1.2 1.2 0 0 1 -1.2 1.2 h-11.7 a1.2 1.2 0 0 1 -1.2 -1.2 z" fill="#CFC8BA"/>
+   <text x="127" y="133.8" font-family="'Sora',sans-serif" font-weight="600" font-size="9.5" fill="#CFC8BA">Open folder</text>
+   <rect x="384" y="117" width="28" height="26" rx="7" fill="#10141B" stroke="#232A34"/><text x="398" y="135" text-anchor="middle" font-family="'Sora',sans-serif" font-size="13.5" fill="#9A9282">⚙</text>
+   <rect x="420" y="117" width="28" height="26" rx="7" fill="#10141B" stroke="#232A34"/><text x="434" y="134.6" text-anchor="middle" font-family="'Sora',sans-serif" font-size="12.5" fill="#9A9282">▤</text>
+  </svg><div class="cap">압축을 풀고 실행하면 보이는 창 — 게임을 켜면 알아서 녹화합니다</div></figure>
+ </section>
+
+ <section class="sec">
+  <h2>무엇을 하나요</h2>
+  <div class="cards">
+   <div class="fcard">
+    <svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="9"/></svg>
+    <h3>자동 녹화</h3>
+    <p>챔피언 선택이 시작되면 녹화를 켜고, 게임이 끝나면 멈춥니다. 밴픽부터 담기며, 따로 누를 게 없습니다.</p>
+   </div>
+   <div class="fcard">
+    <svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 19V9m5 10V5m5 14v-7m5 7V11"/></svg>
+    <h3>Riot 기록 분석</h3>
+    <p>승패·KDA·CS·골드·아이템·룬, 골드 추이와 오브젝트까지 공식 데이터로 정리됩니다.</p>
+   </div>
+   <div class="fcard">
+    <svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3.2"/><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/></svg>
+    <h3>멀티 시점</h3>
+    <p>같은 게임을 여럿이 녹화하면 자동으로 묶여, 한 교전을 여러 자리에서 다시 봅니다.</p>
+   </div>
+  </div>
+ </section>
+
+ <section class="sec">
+  <h2>시작하기 <span class="sub">3단계</span></h2>
+  <ol class="steps">
+   <li><b>받은 <span class="k">penta_recorder.zip</span>의 압축을 풉니다.</b> 폴더 없이 <span class="k">penta_recorder.exe</span> 파일 하나만 나옵니다.</li>
+   <li><b><span class="k">penta_recorder.exe</span>를 더블클릭</b>합니다. 처음 한 번은 영상 도구(ffmpeg)를 자동으로 받아오니 1~2분 기다리면 됩니다. <b>따로 설정할 건 없습니다.</b></li>
+   <li><b>리그 오브 레전드를 플레이</b>하세요. 게임이 끝나면 영상과 전적이 아카이브에 자동으로 올라갑니다. 창은 켜둔 채로 두면 됩니다.</li>
+  </ol>
+ </section>
+
+ <section class="sec">
+  <h2>설정 <span class="sub">선택사항</span></h2>
+  <p class="lead">따로 만들 파일도, 입력할 정보도 없습니다. 압축을 풀고 실행하면 클라우드 연결·전적 분석·업로드가 모두 자동으로 동작합니다. (Riot ID도 게임에서 자동으로 인식합니다.)</p>
+  <p class="lead" style="margin-top:10px">화질이나 인코더를 직접 바꾸고 싶을 때만, 레코더 창의 <b>⚙ 설정</b>에서 고르면 다음 녹화부터 적용됩니다.</p>
+ </section>
+
+ <section class="sec">
+  <h2>권장 사양</h2>
+  <div class="spec">
+   <div class="specrow"><div class="speck">운영체제</div><div class="specv"><b>Windows 10 / 11</b> (64-bit)</div></div>
+   <div class="specrow"><div class="speck">그래픽카드</div><div class="specv"><b>NVIDIA 권장</b> — 하드웨어 인코딩(NVENC)으로 게임 끊김 없이 녹화됩니다. 내장 그래픽·AMD에서도 동작하지만 CPU 부담이 커집니다.</div></div>
+   <div class="specrow"><div class="speck">그래픽 드라이버</div><div class="specv"><b style="color:var(--gold-ink)">최신 버전 권장</b> — 오래된 드라이버에선 녹화가 시작되지 않을 수 있습니다.</div></div>
+   <div class="specrow"><div class="speck">메모리 / 저장공간</div><div class="specv"><b>8 GB</b> 이상 · 영상 임시 저장용 수 GB 여유(업로드 후 자동 정리)</div></div>
+   <div class="specrow"><div class="speck">인터넷</div><div class="specv">업로드 + 첫 실행 시 도구(ffmpeg) 다운로드에 필요</div></div>
+  </div>
+ </section>
+
+ <section class="sec">
+  <h2>그래픽 드라이버</h2>
+  <div class="callout">
+   <svg class="ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v2.5M15 2v2.5M9 19.5V22M15 19.5V22M2 9h2.5M2 15h2.5M19.5 9H22M19.5 15H22"/></svg>
+   <div>
+    <h3>NVIDIA 드라이버를 최신으로</h3>
+    <p>가장 자주 막히는 부분입니다. 드라이버가 오래됐으면 녹화가 시작되지 않습니다. <b>NVIDIA 앱</b>을 설치하면 그래픽카드를 자동으로 인식해 한 번에 최신으로 깔아줍니다.</p>
+    <div class="acts">
+     <a class="dlink solid" href="https://www.nvidia.com/en-us/software/nvidia-app/" target="_blank" rel="noopener noreferrer">NVIDIA 앱으로 설치 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
+     <a class="dlink" href="https://www.nvidia.com/Download/index.aspx" target="_blank" rel="noopener noreferrer">드라이버 직접 검색 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
+    </div>
+   </div>
+  </div>
+ </section>
+
+ <section class="sec">
+  <h2>처음 실행할 때</h2>
+  <div class="note">
+   <p><b>압축 풀기 전 "차단 해제"</b> — 내려받은 <span class="k">penta_recorder.zip</span>을 우클릭 → 속성 → 아래쪽 <span class="k">차단 해제</span>에 체크하고 적용한 뒤 압축을 풀면 경고가 줄어듭니다.</p>
+   <p><b>"확인되지 않은 앱" 경고(SmartScreen)</b> — 서명되지 않은 개인 제작 프로그램이라 Windows가 한 번 경고를 띄울 수 있습니다. <span class="k">추가 정보 → 실행</span>으로 진행하면 됩니다.</p>
+   <p><b>"스마트 앱 컨트롤"이 아예 차단할 때</b> — 실행 옵션조차 없이 막히면 스마트 앱 컨트롤(SAC)이 켜진 PC입니다. <span class="k">설정 → 개인정보 및 보안 → Windows 보안 → 앱 및 브라우저 컨트롤 → 스마트 앱 컨트롤 설정</span>에서 끌 수 있습니다. (한 번 끄면 다시 켜려면 Windows 재설치가 필요하니 신중히 결정하세요.) 대부분의 PC는 SAC가 꺼져 있어 이 화면을 보지 않습니다.</p>
+   <p><b>백신이 막을 때</b> — 드물게 강하게 막으면 예외(허용) 목록에 <span class="k">penta_recorder.exe</span>를 등록해 주세요.</p>
+  </div>
+ </section>
+
+</div>
+
+<footer><div class="foot-in">
+ <nav class="fnav"><a href="terms.html">이용약관</a><a href="privacy.html">개인정보처리방침</a></nav>
+ <div class="r">myPENTA isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing League of Legends.</div>
+</div></footer>
+
+<script src="penta-common.js"></script>
+<script>
+(function(){
+  var P=window.PENTA; if(!P) return;
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  async function renderAuth(){
+    var host=document.getElementById('auth'); if(!host) return;
+    var me=null; try{ me=await P.initAuth(); }catch(e){}
+    if(me&&me.puuid){
+      var nm=(me.name||'').split('#')[0]||'소환사';
+      host.innerHTML='<span class="authstat in" title="'+esc(me.name||'')+'"><span class="dot"></span>'+esc(nm)+'</span><a class="me-link" href="me.html">나의 협곡</a><button class="lo" id="loBtn">로그아웃</button>';
+      var b=document.getElementById('loBtn'); if(b) b.addEventListener('click', async function(){ try{ await P.logout(); }catch(e){} renderAuth(); });
+    } else {
+      var _le=(P.lastLoginError&&P.lastLoginError());
+      host.innerHTML='<div class="authwrap"><button class="authstat out" id="authOut" type="button"><span class="dot"></span>로그인 안 됨</button><div class="authpop" id="authPop"><b>로그인하려면</b><br>PC에서 <b>myPENTA 레코더</b>를 켜고 <b>Archive</b> 버튼을 누르면 이 브라우저가 자동으로 로그인됩니다.'+(_le?'<div class="poperr">최근 시도 실패: '+esc(_le)+'</div>':'')+'<button class="bridgebtn" id="authBridge" type="button">이 PC의 레코더로 로그인</button>'+'<div class="popsub">레코더가 없다면 <a href="download.html">다운로드</a> · <a href="manual.html">사용법</a></div></div></div>';
+      var o=document.getElementById('authOut'), pop=document.getElementById('authPop');
+      if(o&&pop){ o.addEventListener('click', function(e){ e.stopPropagation(); pop.classList.toggle('on'); }); document.addEventListener('click', function(){ pop.classList.remove('on'); }); }
+      var bb=document.getElementById('authBridge');
+      if(bb) bb.addEventListener('click', async function(e){
+        e.stopPropagation(); bb.disabled=true; bb.textContent='로그인 중…';
+        try{ await P.loginViaRecorder(); location.reload(); }
+        catch(err){ bb.disabled=false; bb.textContent='실패: 레코더가 켜져 있나요?'; bb.title=String(err&&err.message||err); setTimeout(function(){ bb.textContent='이 PC의 레코더로 로그인'; }, 3200); }
+      });
+    }
+  }
+  renderAuth();
+})();
+</script>
+</body></html>

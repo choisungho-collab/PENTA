@@ -1,6 +1,17 @@
 <!doctype html><html lang="ko"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>myPENTA — League of Legends Replay Archive</title>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="myPENTA">
+<meta property="og:title" content="myPENTA — 내 롤 게임, 전부 자동 녹화">
+<meta property="og:description" content="게임만 하면 알아서 녹화·업로드. 팀원 시점까지 한 화면에서 보는 멀티 POV 아카이브.">
+<meta property="og:image" content="https://mypenta.netlify.app/assets/og.png">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta property="og:url" content="https://mypenta.netlify.app/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="myPENTA — 내 롤 게임, 전부 자동 녹화">
+<meta name="twitter:description" content="게임만 하면 알아서 녹화·업로드. 팀원 시점까지 한 화면에서 보는 멀티 POV 아카이브.">
+<meta name="twitter:image" content="https://mypenta.netlify.app/assets/og.png">
 <meta name="description" content="리그 오브 레전드 게임을 자동으로 녹화하고 분석해 모아보는 커뮤니티 아카이브">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2 L15 9 L22 9 L16.5 13.5 L18.5 21 L12 16.5 L5.5 21 L7.5 13.5 L2 9 L9 9 Z' fill='%23DEC79C'/%3E%3C/svg%3E">
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">
@@ -9,7 +20,7 @@
 <style>
 :root{
  --bg:#080A0E;--surface:#0F131A;--surface2:#161B23;--hover:#1C2530;--well:#0B0E13;
- --ink:#ECE7DD;--ink2:#C2BBAD;--dim:#867F71;--faint:#564F44;
+ --ink:#ECE7DD;--ink2:#C2BBAD;--dim:#867F71;--faint:#6B6355;
  --line:#1F252E;--line2:#2B323C;
  --gold:#DEC79C;--gold-ink:#EFDDBC;--gold-soft:rgba(222,199,156,.11);--gold-line:rgba(222,199,156,.32);
  --win:#52C3AC;--win-soft:rgba(82,195,172,.12);--win-line:rgba(82,195,172,.42);
@@ -20,10 +31,13 @@
  --fg:'Sora',sans-serif;
  --fm:'IBM Plex Mono',ui-monospace,monospace;
  --r1:10px;--r2:14px;--r3:18px;--sh:0 18px 44px -22px rgba(0,0,0,.8);
+ --ease:cubic-bezier(.22,.9,.28,1.08);
 }
 *{box-sizing:border-box}html,body{margin:0;overflow-x:clip}
 body{background:var(--bg);color:var(--ink);font-family:var(--fd);font-size:15px;line-height:1.65;word-break:keep-all;overflow-wrap:break-word;-webkit-font-smoothing:antialiased;letter-spacing:.005em}
+body::before{content:'';position:fixed;inset:0;z-index:9999;pointer-events:none;opacity:.035;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='120' height='120' filter='url(%23n)' opacity='.6'/></svg>");background-size:120px 120px}
 a{color:inherit;text-decoration:none}svg{display:block}img{display:block;max-width:100%}
+button:active,.dl:active,.povchip:active{transform:scale(.965)}
 .ic{width:1em;height:1em;flex-shrink:0}
 ::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:var(--line2);border-radius:6px;border:3px solid var(--bg)}
 .wrap{max-width:1160px;margin:0 auto;padding:0 24px 110px}
@@ -40,6 +54,23 @@ a{color:inherit;text-decoration:none}svg{display:block}img{display:block;max-wid
 .auth .who{font-size:13px;font-weight:600;color:var(--gold);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .auth .lo{font-size:12px;color:var(--dim,#867F71);background:none;border:1px solid var(--line2,#2B323C);border-radius:8px;padding:5px 9px;cursor:pointer}
 .auth .lo:hover{color:var(--ink,#ECE7DD);border-color:var(--gold-line,#3a3526)}
+.auth .authwrap{position:relative;display:inline-block}
+.auth .authstat{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;padding:5px 11px;border-radius:999px;border:1px solid var(--line2,#2B323C);background:var(--surface,#12161c);white-space:nowrap;font-family:inherit}
+.auth .authstat .dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto}
+.auth .authstat.in{color:var(--gold-ink,#DEC79C);cursor:default;max-width:160px;overflow:hidden;text-overflow:ellipsis}
+.auth .authstat.in .dot{background:#57C98A;box-shadow:0 0 0 3px rgba(87,201,138,.16)}
+.auth .authstat.out{color:var(--dim,#867F71);cursor:pointer}
+.auth .authstat.out .dot{background:#6b6459}
+.auth .authstat.out:hover{border-color:var(--gold-line,#3a3526);color:var(--ink,#ECE7DD)}
+.auth .authpop{position:absolute;top:calc(100% + 8px);right:0;width:250px;background:var(--surface,#12161c);border:1px solid var(--line2,#2B323C);border-radius:10px;padding:12px 14px;font-size:12px;line-height:1.55;color:var(--dim,#867F71);box-shadow:0 10px 28px rgba(0,0,0,.55);opacity:0;visibility:hidden;transform:translateY(-4px);transition:opacity .15s,transform .15s,visibility .15s;z-index:60;text-align:left;white-space:normal}
+.auth .authpop.on{opacity:1;visibility:visible;transform:translateY(0)}
+.auth .authpop b{color:var(--ink,#ECE7DD)}
+.auth .authpop .poperr{margin-top:9px;padding-top:9px;border-top:1px solid var(--line2,#2B323C);color:#E8A0A0;font-size:11px;word-break:break-all}
+.auth .authpop .popsub{margin-top:9px;font-size:11px}
+.auth .authpop a{color:var(--gold-ink,#DEC79C)}
+.auth .authpop .bridgebtn{display:block;width:100%;margin-top:11px;padding:8px 10px;border-radius:8px;border:1px solid var(--gold-line,#3a3526);background:rgba(222,199,156,.08);color:var(--gold-ink,#DEC79C);font-size:12px;font-weight:600;cursor:pointer;transition:.14s}
+.auth .authpop .bridgebtn:hover{filter:brightness(1.15)}
+.auth .authpop .bridgebtn:disabled{opacity:.6;cursor:default}
 .bar .sp{flex:1}
 .nav{display:flex;gap:2px;margin-left:14px}
 .nav a{font-family:var(--fd);font-weight:600;font-size:14px;color:var(--dim);padding:7px 9px 9px;border-bottom:2px solid transparent;transition:.14s}
@@ -78,7 +109,12 @@ a{color:inherit;text-decoration:none}svg{display:block}img{display:block;max-wid
 /* 그리드 */
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:22px}
 
-.card{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:var(--r2);overflow:hidden;cursor:pointer;transition:.17s;display:flex;flex-direction:column}
+.card{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:var(--r2);overflow:hidden;cursor:pointer;transition:transform .35s var(--ease),border-color .2s,box-shadow .35s var(--ease);display:flex;flex-direction:column;animation:cardIn .48s var(--ease) backwards}
+@keyframes cardIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.grid .card:nth-child(1){animation-delay:.02s}.grid .card:nth-child(2){animation-delay:.06s}.grid .card:nth-child(3){animation-delay:.1s}
+.grid .card:nth-child(4){animation-delay:.14s}.grid .card:nth-child(5){animation-delay:.18s}.grid .card:nth-child(6){animation-delay:.22s}
+.grid .card:nth-child(7){animation-delay:.26s}.grid .card:nth-child(8){animation-delay:.3s}.grid .card:nth-child(9){animation-delay:.34s}
+.grid .card:nth-child(n+10){animation-delay:.38s}
 .card:hover{border-color:var(--line2);transform:translateY(-4px);box-shadow:var(--sh)}
 .card.win{border-top:2px solid var(--win-line)}
 .card.loss{border-top:2px solid var(--loss-line)}
@@ -88,6 +124,8 @@ a{color:inherit;text-decoration:none}svg{display:block}img{display:block;max-wid
 .thumb .scrim{position:absolute;inset:0;background:linear-gradient(to top,rgba(8,12,17,.94) 6%,rgba(8,12,17,.36) 46%,rgba(8,12,17,.1) 100%);z-index:1}
 .thumb .play{position:absolute;inset:0;display:grid;place-items:center;opacity:0;transition:.2s;z-index:3}
 .card:hover .thumb .play{opacity:1}
+.card .thumb img{transition:transform .55s var(--ease)}
+.card:hover .thumb img{transform:scale(1.03)}
 .thumb .play span{width:54px;height:54px;border-radius:50%;background:rgba(222,199,156,.16);border:1px solid var(--gold-line);display:grid;place-items:center;backdrop-filter:blur(3px)}
 .thumb .play .ic{width:20px;height:20px;color:var(--gold-ink);margin-left:3px}
 .thumb .povstrip{position:absolute;right:8px;bottom:8px;z-index:4;display:flex;gap:4px;align-items:center}
@@ -192,6 +230,13 @@ footer{border-top:1px solid var(--line);margin-top:70px}
 
 /* 모바일/태블릿: 레코더 로그인은 PC 전용 → 모바일에선 버튼 숨김 ── */
 @media(max-width:768px){.auth{display:none}}
+@media (prefers-reduced-motion:reduce){
+.grid .card,.card{animation:none}
+.card:hover{transform:none}
+.card .thumb img{transition:none}
+.card:hover .thumb img{transform:none}
+button:active,.dl:active,.povchip:active{transform:none}
+}
 </style>
 </head>
 <body>
@@ -259,7 +304,7 @@ footer{border-top:1px solid var(--line);margin-top:70px}
 <footer>
  <div class="foot-in">
   <nav class="fnav"><a href="terms.html">이용약관</a><a href="privacy.html">개인정보처리방침</a></nav>
-  <div class="r">myPENTA isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing League of Legends.</div>
+  <div class="r">myPENTA isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing League of Legends<a href="admin.html" aria-hidden="true" tabindex="-1" style="color:inherit;cursor:default;text-decoration:none">.</a></div>
  </div>
 </footer>
 
@@ -268,14 +313,17 @@ footer{border-top:1px solid var(--line);margin-top:70px}
 (function(){
   var P = window.PENTA;
   var grid = document.getElementById('grid');
-  // POV 아바타 클릭 → 카드 링크 대신 그 시점부터 시작
+  // POV 아바타 클릭 → 그 시점을 카드의 메인으로 교체(히어로라인·전적·썸네일·링크 갱신). 카드 본체 클릭은 현재 메인 시점으로 열림.
   if(grid) grid.addEventListener('click', function(e){
     var chip = e.target && e.target.closest && e.target.closest('.povchip[data-pov]');
-    if(chip){
-      e.preventDefault(); e.stopPropagation();
-      var mid = chip.getAttribute('data-mid'), pov = chip.getAttribute('data-pov');
-      if(mid && pov) location.href = 'match.html?id='+encodeURIComponent(mid)+'&pov='+encodeURIComponent(pov);
-    }
+    if(!chip) return;
+    e.preventDefault(); e.stopPropagation();
+    var card = chip.closest('.card'); if(!card) return;
+    var mid = chip.getAttribute('data-mid'), pov = chip.getAttribute('data-pov');
+    var group = GROUPS.find(function(g){ return String(P.groupKeyOf(g[0]))===String(mid); });
+    if(!group) return;
+    var row = group.find(function(x){ return String(x.id)===String(pov); });
+    if(row) card.outerHTML = cardHTML(group, row);
   }, true);
   var elLoading = document.getElementById('loading'),
       elEmpty = document.getElementById('empty'),
@@ -289,10 +337,21 @@ footer{border-top:1px solid var(--line);margin-top:70px}
   function show(el){ [elLoading,elEmpty,elFailed].forEach(function(e){ e.classList.toggle('on', e===el); }); }
 
   // 챔피언/멀티킬/요약을 카드 1장으로
-  function cardHTML(group){
-    var r = P.pickPrimary(group);
-    var me = P.heroCard(r);
-    var won = (r.won != null) ? r.won : (me.win != null ? me.win : null);  // 미확인은 null 유지
+  // 승패·KDA는 상세(match.html)와 동일하게 r.analysis 를 권위 소스로 사용 → 카드/상세 불일치 방지
+  function heroFromAnalysis(r){
+    var A=r.analysis||{};
+    return P.heroCard({players:(A.players&&A.players.length)?A.players:(r.players||[]), saver:r.saver});
+  }
+  function wonOf(r, me){
+    if(r.won!=null) return r.won;
+    if(me && me.win!=null) return me.win;
+    var A=r.analysis||{}; var wt=(A.win_team!=null)?A.win_team:r.winner;   // 승리팀 번호
+    return (wt!=null && me && me.team!=null) ? (me.team===wt) : null;      // 알 수 있으면 판정, 아니면 null(미확인)
+  }
+  function cardHTML(group, mainRow){
+    var r = mainRow || P.pickPrimary(group);
+    var me = heroFromAnalysis(r);
+    var won = wonOf(r, me);
     var champ = me.champion || '';
     var icon = P.champIcon(ver, champ);
     var bg = r.thumb || (champ ? P.champLoading(champ) : '');
@@ -319,16 +378,16 @@ footer{border-top:1px solid var(--line);margin-top:70px}
     var viewHTML = views>0 ? ('<span class="vw"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3.2"/><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/></svg>'
         + P.compact(views) + '</span>') : '';
 
-    // POV 아바타 스트립: 영상 있는 각 시점의 챔프(대표=me 강조). 클릭 시 그 시점부터 시작(위임 처리).
-    var vpovs = group.filter(function(x){ return x.video; });
-    var stripHTML = vpovs.length>1 ? ('<div class="povstrip">' + vpovs.map(function(row){
+    // POV 아바타 스트립: 대표(메인)를 뺀 나머지 시점만 표시. 클릭 시 그 시점을 메인으로 교체(위임 처리).
+    var others = group.filter(function(x){ return x.video && x !== r; });
+    var stripHTML = others.length>=1 ? ('<div class="povstrip">' + others.map(function(row){
       var pc = P.saverCard(row) || {}, pch = pc.champion || '';
-      return '<span class="povchip'+(row===r?' me':'')+'" data-mid="'+esc(gk)+'" data-pov="'+esc(String(row.id==null?'':row.id))+'" title="'+esc(pch||'시점')+' · '+((pc.kills||0)+'/'+(pc.deaths||0)+'/'+(pc.assists||0))+'">'
+      return '<span class="povchip" data-mid="'+esc(gk)+'" data-pov="'+esc(String(row.id==null?'':row.id))+'" title="'+esc(pch||'시점')+' · '+((pc.kills||0)+'/'+(pc.deaths||0)+'/'+(pc.assists||0))+' · 클릭하면 메인 교체">'
         + '<img src="'+P.champIcon(ver,pch)+'" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">'
         + '</span>';
     }).join('') + '</div>') : '';
 
-    return '<a class="card '+(won===true?'win':won===false?'loss':'')+'" href="match.html?id='+encodeURIComponent(P.groupKeyOf(r))+'">'
+    return '<a class="card '+(won===true?'win':won===false?'loss':'')+'" href="match.html?id='+encodeURIComponent(P.groupKeyOf(r))+(r.id!=null?'&pov='+encodeURIComponent(r.id):'')+'">'
       + '<div class="thumb">'
         + (bg ? '<img class="bgimg" src="'+bg+'" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '')
         + '<div class="scrim"></div>'
@@ -357,8 +416,8 @@ footer{border-top:1px solid var(--line);margin-top:70px}
   function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
 
   function matchFilter(group){
-    var r = P.pickPrimary(group), me = P.heroCard(r);
-    if(filter==='win' && !((r.won!=null)?r.won:me.win)) return false;
+    var r = P.pickPrimary(group), me = heroFromAnalysis(r);
+    if(filter==='win' && !wonOf(r, me)) return false;
     if(filter==='penta' && !(me.pentas>0)) return false;
     if(search){
       var hay = (me.champion||'') + ' ' + (r.saver||'') + ' ' + (r.uploader||'');
@@ -378,7 +437,7 @@ footer{border-top:1px solid var(--line);margin-top:70px}
       return;
     }
     show(null);
-    grid.innerHTML = list.map(cardHTML).join('');
+    grid.innerHTML = list.map(function(g){ return cardHTML(g); }).join('');   // map의 index가 mainRow로 새는 것 방지
   }
 
   function setStats(){
@@ -427,17 +486,41 @@ footer{border-top:1px solid var(--line);margin-top:70px}
     var host=document.getElementById('auth'); if(!host) return;
     var me=null; try{ me=await P.initAuth(); }catch(e){}
     if(me && me.puuid){
-      host.innerHTML='<a class="me-link" href="me.html">나의 협곡</a><span class="who"></span><button class="lo" id="loBtn">로그아웃</button>';
       var nm=(me.name||'').split('#')[0] || '소환사';
-      var w=host.querySelector('.who'); w.textContent=nm; w.title=me.name||'';
+      host.innerHTML='<span class="authstat in" title="'+esc(me.name||'')+'"><span class="dot"></span>'+esc(nm)+'</span><a class="me-link" href="me.html">나의 협곡</a><button class="lo" id="loBtn">로그아웃</button>';
       var b=document.getElementById('loBtn');
-      if(b) b.addEventListener('click', async function(){ try{ await P.logout(); }catch(e){} host.innerHTML=''; if(typeof rows!=='undefined'&&rows&&rows.length) render(); });
-    } else { host.innerHTML='<span class="hint" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--dim,#867F71);white-space:nowrap" title="myPENTA 레코더의 Archive 버튼을 누르면 이 브라우저가 로그인됩니다"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>레코더로 로그인</span>'; }
+      if(b) b.addEventListener('click', async function(){ try{ await P.logout(); }catch(e){} renderAuth(); });
+    } else {
+      var _le=(P.lastLoginError&&P.lastLoginError());
+      host.innerHTML='<div class="authwrap"><button class="authstat out" id="authOut" type="button"><span class="dot"></span>로그인 안 됨</button><div class="authpop" id="authPop"><b>로그인하려면</b><br>PC에서 <b>myPENTA 레코더</b>를 켜고 <b>Archive</b> 버튼을 누르면 이 브라우저가 자동으로 로그인됩니다.'+(_le?'<div class="poperr">최근 시도 실패: '+esc(_le)+'</div>':'')+'<button class="bridgebtn" id="authBridge" type="button">이 PC의 레코더로 로그인</button>'+'<div class="popsub">레코더가 없다면 <a href="download.html">다운로드</a> · <a href="manual.html">사용법</a></div></div></div>';
+      var o=document.getElementById('authOut'), pop=document.getElementById('authPop');
+      if(o&&pop){ o.addEventListener('click', function(e){ e.stopPropagation(); pop.classList.toggle('on'); }); document.addEventListener('click', function(){ pop.classList.remove('on'); }); }
+      var bb=document.getElementById('authBridge');
+      if(bb) bb.addEventListener('click', async function(e){
+        e.stopPropagation(); bb.disabled=true; bb.textContent='로그인 중…';
+        try{ await P.loginViaRecorder(); location.reload(); }
+        catch(err){ bb.disabled=false; bb.textContent='실패: 레코더가 켜져 있나요?'; bb.title=String(err&&err.message||err); setTimeout(function(){ bb.textContent='이 PC의 레코더로 로그인'; }, 3200); }
+      });
+    }
     if (typeof rows !== 'undefined' && rows && rows.length) render();   // 인증 확정 후 대표 시점 갱신(로그인한 본인 시점 우선)
   }
 
   load();
   renderAuth();
+})();
+</script>
+<script>
+/* 관리자 세션이 유효할 때만 우하단에 운영 콘솔 바로가기 표시(일반 유저에겐 안 보임) */
+(function(){
+  try{
+    var v=localStorage.getItem('penta_admin_session')||'';
+    var exp=parseInt(v.split('.')[0],10);
+    if(!v||!isFinite(exp)||Date.now()>exp) return;
+    var a=document.createElement('a');
+    a.href='admin.html'; a.textContent='운영 콘솔';
+    a.style.cssText='position:fixed;right:16px;bottom:16px;z-index:80;font-family:var(--fd),sans-serif;font-size:12.5px;color:var(--gold-ink);background:rgba(15,19,26,.9);border:1px solid var(--gold-line);padding:8px 13px;border-radius:9px;text-decoration:none;backdrop-filter:blur(4px)';
+    document.body.appendChild(a);
+  }catch(_){}
 })();
 </script>
 </body></html>
