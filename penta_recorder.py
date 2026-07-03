@@ -2306,7 +2306,9 @@ def _video_dur(video_path):
 
 def _discard(video_path, reason):
     REC_STATE["preparing"] = False
-    log(f"  Discarding (not saving) — {reason}")
+    REC_STATE["skipped_at"] = time.time()   # GUI 상태바에 몇 초간 '저장 안 함' 알림
+    REC_STATE["skipped_why"] = reason
+    log(f"  Discarding (not saving) - {reason}")
     try:
         if video_path and os.path.isfile(video_path): os.remove(video_path)
     except OSError: pass
@@ -2390,7 +2392,10 @@ def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr", 
     base = os.path.join(UPLOAD_DIR, safe); os.makedirs(base, exist_ok=True)
     trimmed = 0.0
     try:
-        if dur and analysis and not started_cs: trimmed = _trim_lead(video_path, dur) or 0.0   # 분석으로 시점을 아는 경우에만 로비/로딩 컷(챔프셀럭부터면 유지)
+        # 로비/로딩/챔프선택 구간을 잘라 모든 영상이 '게임 시작 카운트다운' 근처에서 시작하도록.
+        # (예전엔 게임 감지 녹화만 트림 → 챔프선택부터 녹화한 영상은 로딩이 남아 멀티뷰가 어긋났음)
+        # _trim_lead 는 영상 끝에서 game_len_sec 을 역산하므로 두 경우 모두 동일하게 안전하게 동작.
+        if dur and analysis: trimmed = _trim_lead(video_path, dur) or 0.0
     except Exception: pass
     if not sb_writable():
         REC_STATE["preparing"] = False
@@ -2521,6 +2526,7 @@ def recorder_loop(cfg):
                     try: cleanup_recordings()
                     except Exception: pass
                 start_ts = time.time(); active = rec.start(); last_hb = time.time()
+                REC_STATE["skipped_at"] = 0; REC_STATE["uploaded_at"] = 0   # 새 녹화 시작 → 이전 알림 지움
                 saw_game = run; cs_grace = 0.0; ended_at = 0.0
                 live_snaps = []; live_evts = []; last_snap_t = -999.0
 
@@ -3048,6 +3054,11 @@ def run_gui(cfg, url):
             cv.itemconfig(did,fill=(BLUE if _rec["blink"] else "#22344f")); cv.itemconfig(halo,fill="#162640")
             _pm,_ps=divmod(int(_now-_rec["psince"]),60)
             cv.itemconfig(status_lbl,text="Processing\u2026",fill=BLUE); cv.itemconfig(sub_lbl,text="%d:%02d"%(_pm,_ps),fill=SUB)
+        elif REC_STATE.get("skipped_at") and (_now-REC_STATE.get("skipped_at",0) < 6):   # 저장 안 함 알림(6초)
+            _rec["since"]=None; _rec["blink"]=False; _rec["psince"]=None
+            _why=REC_STATE.get("skipped_why") or "not saved"
+            cv.itemconfig(did,fill="#C8A86A"); cv.itemconfig(halo,fill="#3a2f18")
+            cv.itemconfig(status_lbl,text="Not saved",fill="#DEC79C"); cv.itemconfig(sub_lbl,text=_why[:44],fill=SUB)
         elif _up and (_now-_up < 5):   # 업로드 완료 토스트(5초)
             _rec["since"]=None; _rec["blink"]=False; _rec["psince"]=None
             cv.itemconfig(did,fill=TEAL); cv.itemconfig(halo,fill="#163029"); cv.itemconfig(status_lbl,text="Uploaded \u2713",fill=TEAL); cv.itemconfig(sub_lbl,text="added to your archive",fill=SUB)
