@@ -6,3 +6,13 @@
   from = "/api/riot"
   to = "/.netlify/functions/riot"
   status = 200
+
+[[redirects]]
+  from = "/api/storage"
+  to = "/.netlify/functions/storage"
+  status = 200
+
+[[redirects]]
+  from = "/api/admin"
+  to = "/.netlify/functions/admin"
+  status = 200

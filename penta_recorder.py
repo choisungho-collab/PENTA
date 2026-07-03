@@ -85,6 +85,7 @@ UPLOAD_DIR = os.path.join(DATA_DIR, "uploads")
 REC_DIR    = os.path.join(DATA_DIR, "recordings")
 CONFIG_PATH= os.path.join(HERE, "config.json")
 FPS        = 30
+APP_VERSION = "dev"   # 빌드 시 GitHub Actions 가 릴리즈 태그(vX.Y.Z)로 치환. 소스 실행(dev)이면 업데이트 확인 생략.
 _PENTA_ICON = "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"
 # --- Top/bottom scrim overlay so status text stays legible over the scene (transparent middle keeps the crystal) ---
 _SCRIM_B64 = "iVBORw0KGgoAAAANSUhEUgAAAdIAAACWCAYAAABq3gn4AAACT0lEQVR42u3bOw7CMBBF0bFjhGjY/85YDCShoccKiRQz5yxhmquXT7ne7o8AADZpEbE6AwBsU50AACxSABBSABBSAEgW0sUZAMAiBQCLFACEFAAShXR2BgCwSAHAIgUAIQUAIQUAekL6cgYAsEgBwCIFACEFACEFAIQUAIQUAIQUAP4ypE9nAACLFAAsUgCwSAHAIgUAhBQAhBQAzhtS70gBwCIFACEFACEFACEFAIQUAIQUAE4cUr+/AIBFCgBCCgBCCgCZQuodKQBYpABgkQKARQoAFikAIKQAIKQAIKQAIKQAgJACwH4hnZ0BACxSALBIAUBIAUBIAYCekC7OAAAWKQBYpAAgpACQKKSrMwCARQoAFikACCkACCkA8E11AgAQUgAQUgAQUgAQUgBASAFASAFASAFASAEAIQUAIQUAIQUAIQUAIQUAhBQAhBQAhBQAhBQAEFIAEFIAEFIAEFIA4KNFRHEGABBSABBSABBSAEgUUh8cAYCQAoCQAoCQAkCmkE7OAAAWKQBYpAAgpAAgpABAT0ibMwCARQoAFikACCkACCkAIKQAIKQAIKQAIKQAgJACwG4hvTgDAFikAGCRAoBFCgAWKQAgpABwcEg92gUAixQAhBQAhgupR7sAYJECgJACwHAh9WgXACxSALBIAcAiBQCLFAAQUgAQUgAQUgAQUgBASAFASAFASAFg9JBOzgAAFikAWKQAIKQAIKQAQE9IqzMAgEUKABYpAAgpAAgpACCkAHBwSIszAICQAoCQAoCQAkASPjQCgB+8AXZQQhBhzyXrAAAAAElFTkSuQmCC"
@@ -859,6 +860,43 @@ def log(m):
             with open(_LOGFILE["p"], "a", encoding="utf-8", errors="replace") as f: f.write(line + "\n")
     except Exception: pass
 
+# ===================== 크래시 로그 (전역 excepthook) =====================
+CRASH_LOG = os.path.join(DATA_DIR, "crash.log")
+
+def _write_crash(exc_type, exc, tb, where="main"):
+    try:
+        txt = "".join(traceback.format_exception(exc_type, exc, tb))
+    except Exception:
+        txt = "%s: %s" % (getattr(exc_type, "__name__", "?"), exc)
+    try:
+        try:   # 1MB 넘으면 뒤 절반만 남김(무한 성장 방지)
+            if os.path.isfile(CRASH_LOG) and os.path.getsize(CRASH_LOG) > 1048576:
+                _old = open(CRASH_LOG, encoding="utf-8", errors="replace").read()
+                open(CRASH_LOG, "w", encoding="utf-8").write(_old[-524288:])
+        except Exception: pass
+        with open(CRASH_LOG, "a", encoding="utf-8", errors="replace") as f:
+            f.write("\n===== %s | %s | thread=%s =====\n%s" %
+                    (datetime.datetime.now().isoformat(timespec="seconds"), APP_VERSION, where, txt))
+    except Exception:
+        pass
+    try:
+        log("CRASH (%s): %s - details saved to crash.log" % (where, getattr(exc_type, "__name__", "?")))
+    except Exception:
+        pass
+
+def _hook_main(exc_type, exc, tb):
+    _write_crash(exc_type, exc, tb, "main")
+    try: sys.__excepthook__(exc_type, exc, tb)
+    except Exception: pass
+
+def _hook_thread(args):
+    _write_crash(args.exc_type, args.exc_value, args.exc_traceback,
+                 getattr(getattr(args, "thread", None), "name", "thread"))
+
+sys.excepthook = _hook_main
+try: threading.excepthook = _hook_thread   # 데몬 스레드가 조용히 죽는 것 방지 — 전부 crash.log 에 남김
+except Exception: pass
+
 # ===================== 1. 설정 (자동 생성/탐지) =====================
 
 def free_port(pref=8000):
@@ -970,6 +1008,8 @@ def load_or_make_config():
             "fps": FPS,
             "poll_seconds": 4,
             "min_game_sec": 300,
+            "keep_games": 20,    # 원본 자동 정리: 최근 N판만 보관 (0 = 무제한)
+            "keep_gb": 30,       # 원본 총 용량 상한(GB). 초과분은 오래된 판부터 정리 (0 = 무제한)
         }
         _atomic_write_json(CONFIG_PATH, cfg)
         log(f"Config created → {CONFIG_PATH}")
@@ -1137,19 +1177,88 @@ class _ProgressReader:
     def __len__(self):
         return self._total
 
-def sb_upload(local, path, ctype, on_progress=None):
-    """Supabase Storage 업로드 → 공개 URL (버킷이 public 이어야 함). on_progress(done,total)로 진행률 통지."""
+def _gallery_origin():
+    return (CFG.get("gallery_url") or "https://mypenta.netlify.app").strip().rstrip("/")
+
+def sb_upload(local, path, ctype, on_progress=None, ident=None):
+    """Storage 업로드 v2 → 공개 URL.
+    ident=(puuid, device_secret) 가 있으면 Netlify 서명 프록시(/api/storage)로 1회용 URL 을 받아 업로드
+    — service_key 가 클라이언트에 전혀 필요 없는 경로. 서명 실패 시 레거시 직접 업로드로 폴백
+    (anon 정책 차단 전까지 동작; security_pass.sql 적용 후엔 서명 경로만 유효)."""
+    if ident and ident[0] and ident[1]:
+        try:
+            return _upload_signed(local, path, ctype, ident, on_progress)
+        except Exception as e:
+            log("Signed upload unavailable (%s) - falling back to direct upload." % e)
+    return _upload_direct(local, path, ctype, on_progress)
+
+def _upload_signed(local, path, ctype, ident, on_progress=None):
+    """서명 업로드: 시도마다 새 1회용 URL 발급(서명 토큰은 단발성) → PUT. 일시 오류만 백오프 재시도."""
+    import requests
+    org = _gallery_origin()
+    total = os.path.getsize(local)
+    _RETRYABLE = (408, 429, 500, 502, 503, 504)
+    last = None
+    for attempt in range(3):
+        if attempt:
+            wait = 3 if attempt == 1 else 8
+            log("Upload retry %d/2 in %ds... (%s)" % (attempt, wait, last))
+            time.sleep(wait)
+        try:
+            r = requests.post(org + "/api/storage",
+                              json={"action": "sign-upload", "puuid": ident[0], "secret": ident[1],
+                                    "paths": [path]},
+                              timeout=25)
+            if r.status_code == 401:
+                raise RuntimeError("sign 401: identity not registered or bad secret")
+            if r.status_code != 200:
+                if r.status_code in _RETRYABLE:
+                    last = "sign %s" % r.status_code; continue
+                raise RuntimeError("sign %s: %s" % (r.status_code, (r.text or "")[:160]))
+            items = (r.json() or {}).get("items") or []
+            if not items or not items[0].get("uploadUrl"):
+                raise RuntimeError("sign: empty response")
+            up = items[0]["uploadUrl"]; pub = items[0].get("publicUrl") or ""
+            with open(local, "rb") as f:
+                body = _ProgressReader(f, total, on_progress) if (on_progress and total) else f
+                r2 = requests.put(up, data=body,
+                                  headers={"Content-Type": ctype, "x-upsert": "true"},
+                                  timeout=(10, 3600))
+            if r2.status_code in (200, 201):
+                return pub or ("%s/storage/v1/object/public/%s/%s" % (_sb_base(), _sb_bucket(), path))
+            if r2.status_code not in _RETRYABLE:
+                raise RuntimeError("put %s: %s" % (r2.status_code, (r2.text or "")[:160]))
+            last = "put %s" % r2.status_code
+        except requests.RequestException as e:
+            last = e.__class__.__name__
+    raise RuntimeError("signed upload failed after retries: %s" % last)
+
+def _upload_direct(local, path, ctype, on_progress=None):
+    """레거시 직접 업로드(anon/service 키). security_pass.sql 적용 후에는 차단됨 — 서명 경로가 표준."""
     import requests
     base = _sb_base(); bk = _sb_bucket()
     _hh = _sb_h(write=True, body_json=False); _hh["Content-Type"] = ctype; _hh["x-upsert"] = "true"
     total = os.path.getsize(local)
-    with open(local, "rb") as f:
-        body = _ProgressReader(f, total, on_progress) if (on_progress and total) else f
-        r = requests.post("%s/storage/v1/object/%s/%s" % (base, bk, path), data=body,
-                          headers=_hh, timeout=(10, 3600))
-    if r.status_code not in (200, 201):
-        raise RuntimeError("storage %s: %s" % (r.status_code, r.text[:200]))
-    return "%s/storage/v1/object/public/%s/%s" % (base, bk, path)
+    _RETRYABLE = (408, 429, 500, 502, 503, 504)   # 일시 오류만 재시도(4xx 권한 문제는 즉시 실패)
+    last_err = None
+    for attempt in range(3):                      # 즉시 1회 + 백오프(3s, 8s) 2회
+        if attempt:
+            wait = 3 if attempt == 1 else 8
+            log("Upload retry %d/2 in %ds... (%s)" % (attempt, wait, last_err))
+            time.sleep(wait)
+        try:
+            with open(local, "rb") as f:          # 재시도마다 파일을 처음부터 다시 읽음
+                body = _ProgressReader(f, total, on_progress) if (on_progress and total) else f
+                r = requests.post("%s/storage/v1/object/%s/%s" % (base, bk, path), data=body,
+                                  headers=_hh, timeout=(10, 3600))
+            if r.status_code in (200, 201):
+                return "%s/storage/v1/object/public/%s/%s" % (base, bk, path)
+            if r.status_code not in _RETRYABLE:
+                raise RuntimeError("storage %s: %s" % (r.status_code, r.text[:200]))
+            last_err = "storage %s" % r.status_code
+        except requests.RequestException as e:
+            last_err = e.__class__.__name__       # 타임아웃/연결 끊김 등
+    raise RuntimeError("storage upload failed after retries: %s" % last_err)
 def cloud_selftest():
     """작은 파일을 실제 업로드해 업로드 권한을 즉시 진단(전체 게임 없이). 결과를 GUI 로그에 남긴다."""
     import tempfile
@@ -1162,11 +1271,208 @@ def cloud_selftest():
         _em = str(e)
         log(f"Cloud upload self-test FAILED: {e}")            # 정확한 Supabase 응답을 그대로 노출
         if ("row-level security" in _em) or (" 403" in _em) or ("403:" in _em) or ("Unauthorized" in _em):
-            log("\u2192 Storage RLS \ucc28\ub2e8. Supabase SQL Editor \uc5d0\uc11c supabase_storage_fix.sql \uc744 \uc2e4\ud589\ud558\uac70\ub098 service_key \ub97c \uc124\uc815\ud558\uc138\uc694.")
+            log("\u2192 Direct upload is blocked by policy (expected after security_pass.sql). Game uploads use the signed route (/api/storage) automatically.")
     finally:
         try: os.remove(p)
         except Exception: pass
+# ===================== Tier 1 신뢰성: 로컬 원본 정리 + 업로드 재시도 큐 =====================
+RETRY_QUEUE_PATH = os.path.join(DATA_DIR, "upload_retry.json")
+UPDATE_INFO = {}   # 새 버전 발견 시 {"tag": "vX.Y.Z", "url": 다운로드 페이지} — GUI 배너가 읽음
+
+def _busy_now():
+    return bool(REC_STATE.get("recording") or REC_STATE.get("uploading") or REC_STATE.get("preparing"))
+
+def disk_free_gb(path=None):
+    """대상 경로 드라이브의 여유 공간(GB). 실패 시 None."""
+    try:
+        import shutil as _sh
+        return _sh.disk_usage(path or REC_DIR).free / 1073741824
+    except Exception:
+        return None
+
+def _parse_ver(v):
+    """'v1.2.3' / '1.2.3' → (1,2,3). 형식이 아니면 None (dev 포함)."""
+    try:
+        parts = str(v).strip().lstrip("vV").split(".")
+        if len(parts) != 3: return None
+        return tuple(int(p) for p in parts)
+    except Exception:
+        return None
+
+def check_update():
+    """GitHub Releases 최신 태그와 비교 → 새 버전이면 UPDATE_INFO 채움 + 로그. 실패는 조용히 무시(오프라인 등)."""
+    cur = _parse_ver(APP_VERSION)
+    if not cur:
+        return   # 소스 실행/버전 미주입 → 확인 생략
+    try:
+        import requests
+        r = requests.get("https://api.github.com/repos/choisungho-collab/PENTA/releases/latest",
+                         headers={"Accept": "application/vnd.github+json"}, timeout=8)
+        if r.status_code != 200:
+            return
+        j = r.json() or {}
+        tag = str(j.get("tag_name") or "")
+        new = _parse_ver(tag)
+        if new and new > cur:
+            UPDATE_INFO["tag"] = tag
+            UPDATE_INFO["url"] = (CFG.get("gallery_url") or "https://mypenta.netlify.app").rstrip("/") + "/download.html"
+            log("Update available: %s (you have %s). Get it from the download page." % (tag, APP_VERSION))
+    except Exception:
+        pass
+
+def _rq_load():
+    try:
+        q = json.load(open(RETRY_QUEUE_PATH, encoding="utf-8"))
+        return q if isinstance(q, list) else []
+    except Exception:
+        return []
+
+def _rq_save(q):
+    try: _atomic_write_json(RETRY_QUEUE_PATH, q)
+    except Exception: pass
+
+def enqueue_failed_upload(entry):
+    """업로드 실패분을 큐에 저장 → 다음 실행 때 자동 재시도. 같은 id는 최신으로 갱신."""
+    q = [e for e in _rq_load() if e.get("id") != entry.get("id")]
+    entry["attempts"] = 0; entry["queued_at"] = time.time()
+    q.append(entry); _rq_save(q)
+    log("Upload saved to retry queue - will retry on next launch. (pending: %d)" % len(q))
+
+def process_retry_queue():
+    """시작 시 실패 큐 처리: 재업로드 성공 → 제거 / 파일 없음·6회째 실패 → 포기."""
+    q = _rq_load()
+    if not q:
+        return
+    if not sb_writable():
+        log("Retry queue: %d pending, but cloud is not configured - keeping for later." % len(q)); return
+    log("Retry queue: %d pending upload(s). Retrying now..." % len(q))
+    rest = []
+    for e in q:
+        vid = e.get("video_file"); row = e.get("row") or {}; eid = e.get("id") or "?"
+        e["attempts"] = int(e.get("attempts") or 0) + 1
+        if not (vid and os.path.isfile(vid)):
+            log("Retry dropped (file missing): %s" % eid); continue
+        if e["attempts"] > 5:
+            log("Retry dropped (too many attempts): %s" % eid); continue
+        try:
+            safe = e.get("safe") or ""
+            rid = e.get("riot_id") or ""
+            _ident = riot_key(rid); _sec = device_secret() if _ident else None
+            _idp = (_ident, _sec) if (_ident and _sec) else None
+            if _idp:   # 서명 업로드 전 identities 등록(멱등) — verify_device 통과 조건
+                try:
+                    sb_rpc("register_identity", {"p_puuid": _ident, "p_secret": _sec, "p_name": rid, "p_icon": None})
+                except Exception:
+                    pass
+            row["video"] = sb_upload(vid, "videos/%s.mp4" % safe, "video/mp4", ident=_idp)
+            th = e.get("thumb_file")
+            if th and os.path.isfile(th):
+                row["thumb"] = sb_upload(th, "thumbs/%s.jpg" % safe, "image/jpeg", ident=_idp)
+            done = False
+            if _idp:   # 소유자 행 등록 우선, 실패 시 익명 RPC 폴백
+                try:
+                    sb_rpc("upload_match", {"p_puuid": _ident, "p_secret": _sec, "p_row": row})
+                    done = True
+                except Exception:
+                    pass
+            if not done:
+                sb_insert_match(row)
+            log("Retry upload OK: %s" % eid)
+        except Exception as ex:
+            log("Retry upload failed (%s): %s" % (eid, ex))
+            rest.append(e)
+    _rq_save(rest)
+
+def cleanup_recordings(manual=False):
+    """원본 보관 정책: 최근 keep_games판 + 총 keep_gb GB 상한 초과분을 오래된 순으로 삭제.
+    안전장치: 녹화/업로드 중이면 건너뜀 / 30분 내 파일 보존 / 재시도 큐가 참조하는 파일 보존."""
+    if _busy_now():
+        if manual: log("Cleanup skipped: recording or upload in progress. Try again later.")
+        return
+    keep_n = int(CFG.get("keep_games", 20) or 0)
+    keep_gb = float(CFG.get("keep_gb", 30) or 0)
+    if keep_n <= 0 and keep_gb <= 0:
+        if manual: log("Cleanup skipped: auto-clean is off (keep_games=0, keep_gb=0).")
+        return
+    protected = set()   # 재시도 큐가 참조하는 파일·폴더는 절대 삭제 금지
+    for e in _rq_load():
+        for k in ("video_file", "thumb_file"):
+            v = e.get(k)
+            if v:
+                protected.add(os.path.normcase(os.path.abspath(v)))
+                protected.add(os.path.normcase(os.path.abspath(os.path.dirname(v))))
+    def _prot(p):
+        return os.path.normcase(os.path.abspath(p)) in protected
+    now = time.time(); removed = 0; freed = 0
+    def _rm(p):
+        nonlocal removed, freed
+        if _prot(p): return
+        try:
+            if os.path.isdir(p):
+                sz = 0
+                for dp, _dns, fns in os.walk(p):
+                    for fn in fns:
+                        try: sz += os.path.getsize(os.path.join(dp, fn))
+                        except OSError: pass
+                import shutil as _sh
+                _sh.rmtree(p, ignore_errors=True)
+            else:
+                sz = os.path.getsize(p); os.remove(p)
+            removed += 1; freed += sz
+        except OSError:
+            pass
+    try:
+        vids = []
+        for n in os.listdir(REC_DIR):
+            p = os.path.join(REC_DIR, n)
+            if n.lower().endswith(".mp4") and os.path.isfile(p):
+                m = os.path.getmtime(p)
+                if now - m > 1800: vids.append((m, p))   # 30분 내 파일은 집계에서 제외(=보존)
+        vids.sort(reverse=True)                          # 최신 먼저
+        drop = vids[keep_n:] if keep_n > 0 else []
+        keep = vids[:keep_n] if keep_n > 0 else list(vids)
+        if keep_gb > 0:                                  # 남긴 것도 총량 초과분은 오래된 것부터(최신 1판은 항상 보존)
+            cap = keep_gb * 1073741824
+            tot = 0
+            for _m, p in keep:
+                try: tot += os.path.getsize(p)
+                except OSError: pass
+            while len(keep) > 1 and tot > cap:
+                m, p = keep.pop()                        # 끝 = 가장 오래된 판
+                try: tot -= os.path.getsize(p)
+                except OSError: pass
+                drop.append((m, p))
+        for _m, p in drop: _rm(p)
+        for n in os.listdir(REC_DIR):                    # 하루 지난 임시 오디오/로그 정리
+            p = os.path.join(REC_DIR, n)
+            if os.path.isfile(p) and n.lower().endswith(".wav") and now - os.path.getmtime(p) > 86400:
+                _rm(p)
+        subs = []                                        # 업로드 산출물(preview/thumb) 폴더도 같은 N 기준
+        for n in os.listdir(UPLOAD_DIR):
+            p = os.path.join(UPLOAD_DIR, n)
+            if os.path.isdir(p):
+                m = os.path.getmtime(p)
+                if now - m > 1800: subs.append((m, p))
+        subs.sort(reverse=True)
+        for _m, p in (subs[keep_n:] if keep_n > 0 else []):
+            _rm(p)
+    except Exception as e:
+        log("Cleanup error: %s" % e); return
+    if removed or manual:
+        log("Cleanup done: %d item(s) removed, %.2f GB freed. (keep: %s games / %s GB cap)"
+            % (removed, freed / 1073741824,
+               (str(keep_n) if keep_n > 0 else "all"),
+               (("%g" % keep_gb) if keep_gb > 0 else "no")))
+
 def sb_insert_match(row):
+    """익명 행 등록: 검증 RPC(upload_match_anon) 우선 — anon 직접 insert 는 security_pass.sql 이후 차단됨."""
+    try:
+        return sb_rpc("upload_match_anon", {"p_row": row})
+    except Exception as e:
+        log("Anon RPC insert unavailable (%s) - trying legacy direct insert." % str(e)[:120])
+    return _insert_match_direct(row)
+
+def _insert_match_direct(row):
     import requests
     r = requests.post(_sb_base() + "/rest/v1/matches",
                       headers={**_sb_h(write=True), "Prefer": "resolution=merge-duplicates,return=minimal"},
@@ -1288,8 +1594,29 @@ def make_thumb(video, out, at=None):
 # ===================== 6. 레코더 (ffmpeg) =====================
 _ENC_CACHE = None
 _ENC_IS_SW = False   # 소프트웨어(libx264) 인코딩 여부 → 다운스케일 판단에 사용
+_HW_ENCODERS = [   # 자동 선택 우선순위: NVIDIA → AMD → Intel. pix_fmt 은 인코더별로 다름(QSV 는 nv12 필수).
+    ("nvenc", "h264_nvenc", ["-c:v", "h264_nvenc", "-preset", "p6", "-rc", "vbr", "-cq", "18", "-b:v", "0", "-pix_fmt", "yuv420p"], "NVENC"),
+    ("amf",   "h264_amf",   ["-c:v", "h264_amf", "-quality", "quality", "-rc", "vbr_peak", "-b:v", "12M", "-maxrate", "20M", "-pix_fmt", "yuv420p"], "AMD AMF"),
+    ("qsv",   "h264_qsv",   ["-c:v", "h264_qsv", "-global_quality", "20", "-pix_fmt", "nv12"], "Intel QSV"),
+]
+def _hw_ok(disp, args):
+    """실제 사용할 것과 동일한 인자로 720p 1초 인코딩 테스트 — 목록에 있어도 런타임 실패면 다음 후보로."""
+    try:
+        r = _run([FFMPEG, "-hide_banner", "-loglevel", "error",
+                  "-f", "lavfi", "-i", "color=c=black:s=1280x720:r=30:d=1",
+                  *args, "-f", "null", "-"],
+                 capture_output=True, text=True, timeout=30)
+        if r.returncode != 0:
+            errs = [l for l in (r.stderr or "").splitlines() if l.strip()]
+            if errs: log("  %s error: %s" % (disp, "  /  ".join(errs[-2:])))
+            return False
+        return True
+    except Exception as e:
+        log("  %s test exception: %s" % (disp, e))
+        return False
+
 def _encoder_args():
-    """인코더 자동 선택. NVENC는 '실제로 인코딩 되는지'까지 테스트 — 목록엔 있어도 런타임 실패면 libx264로."""
+    """인코더 자동 선택 — GPU 후보(NVENC→AMF→QSV)를 실제 인코딩 테스트로 검증, 전부 실패하면 x264."""
     global _ENC_CACHE, _ENC_IS_SW
     if _ENC_CACHE is not None: return _ENC_CACHE
     pref = (CFG.get("encoder") or "auto").lower()
@@ -1298,37 +1625,28 @@ def _encoder_args():
         have = _run([FFMPEG, "-hide_banner", "-encoders"],
                               capture_output=True, text=True, timeout=15).stdout or ""
     except Exception: pass
-    def _nvenc_ok():
-        # 256x256 같은 초소형은 NVENC가 거부할 수 있어 720p로 테스트. 실패하면 진짜 에러를 보여줌.
-        try:
-            r = _run([FFMPEG, "-hide_banner", "-loglevel", "error",
-                                "-f", "lavfi", "-i", "color=c=black:s=1280x720:r=30:d=1",
-                                "-c:v", "h264_nvenc", "-pix_fmt", "yuv420p", "-f", "null", "-"],
-                               capture_output=True, text=True, timeout=30)
-            if r.returncode != 0:
-                errs = [l for l in (r.stderr or "").splitlines() if l.strip()]
-                if errs: log("  NVENC error: " + "  /  ".join(errs[-2:]))
-                return False
-            return True
-        except Exception as e:
-            log(f"  NVENC test exception: {e}")
-            return False
-    if pref == "nvenc":
-        use_nvenc = True
-    elif pref in ("x264", "libx264", "software", "cpu"):
-        use_nvenc = False
-    else:  # auto — 실제 인코딩 테스트
-        use_nvenc = ("h264_nvenc" in have) and _nvenc_ok()
-        if ("h264_nvenc" in have) and not use_nvenc:
-            log("  NVENC is listed but failed to encode → switching to software (libx264)")
-    if use_nvenc:
+    chosen = None
+    if pref in ("x264", "libx264", "software", "cpu"):
+        pass                                              # 명시적 CPU 선택
+    elif pref in ("nvenc", "amf", "qsv"):                 # 명시적 GPU 선택 — 테스트 없이 존중(실패 시 에러가 그대로 보임)
+        for key, codec, args, disp in _HW_ENCODERS:
+            if key == pref:
+                chosen = (list(args), disp); break
+    else:                                                 # auto — 순서대로 실제 인코딩 테스트
+        for key, codec, args, disp in _HW_ENCODERS:
+            if codec not in have:
+                continue
+            if _hw_ok(disp, args):
+                chosen = (list(args), disp); break
+            log("  %s is listed but failed the encode test - trying next encoder." % disp)
+    if chosen:
         _ENC_IS_SW = False
-        _ENC_CACHE = ["-c:v", "h264_nvenc", "-preset", "p6", "-rc", "vbr", "-cq", "18", "-b:v", "0"]; name = "NVENC"
+        _ENC_CACHE, name = chosen
     else:
         _ENC_IS_SW = True
         preset = (CFG.get("preset") or "auto").lower()
         if preset in ("auto", ""): preset = "superfast"   # 소프트웨어는 게임 끊김 방지 위해 가벼운 프리셋
-        _ENC_CACHE = ["-c:v", "libx264", "-preset", preset, "-crf", "21"]; name = f"x264 ({preset})"
+        _ENC_CACHE = ["-c:v", "libx264", "-preset", preset, "-crf", "21", "-pix_fmt", "yuv420p"]; name = f"x264 ({preset})"
     log(f"Encoder: {name}")
     return _ENC_CACHE
 
@@ -1357,9 +1675,14 @@ def make_preview(src, dst):
     if "h264_nvenc" in enc:
         # p6(고품질 프리셋) + VBR 기반 CQ. maxrate 로 최대 비트레이트만 막아 용량 폭주 방지.
         venc = ["-c:v", "h264_nvenc", "-preset", "p6", "-rc", "vbr", "-cq", cq,
-                "-b:v", "0", "-maxrate", "16M", "-bufsize", "32M"]
+                "-b:v", "0", "-maxrate", "16M", "-bufsize", "32M", "-pix_fmt", "yuv420p"]
+    elif "h264_amf" in enc:
+        venc = ["-c:v", "h264_amf", "-quality", "quality", "-rc", "vbr_peak",
+                "-b:v", "10M", "-maxrate", "16M", "-pix_fmt", "yuv420p"]
+    elif "h264_qsv" in enc:
+        venc = ["-c:v", "h264_qsv", "-global_quality", crf, "-pix_fmt", "nv12"]
     else:
-        venc = ["-c:v", "libx264", "-preset", "veryfast", "-crf", crf]
+        venc = ["-c:v", "libx264", "-preset", "veryfast", "-crf", crf, "-pix_fmt", "yuv420p"]
     sh = _probe_height(src)
     vf = [] if (sh and sh <= 1080) else ["-vf", "scale=-2:'min(1080,ih)':flags=lanczos"]
     hws = ([["-hwaccel", "cuda"], []] if "h264_nvenc" in enc else [[]])   # NVENC: GPU decode first, CPU fallback
@@ -1368,7 +1691,7 @@ def make_preview(src, dst):
         for _hw in hws:
             r = _run([FFMPEG, "-y", "-loglevel", "error", *_hw, "-i", src,
                       *venc, *vf,
-                      "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", dst],
+                      "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", dst],
                      timeout=5400)
             if r.returncode == 0 and os.path.isfile(dst) and os.path.getsize(dst) > 0:
                 return dst
@@ -1414,7 +1737,7 @@ class Recorder:
     def _cmd(self, out, mode, output_idx=0):
         enc = _encoder_args()
         vf, chain = _scale_vf(0)   # 데스크톱 높이를 모르므로 min() 식이 런타임에 처리(업스케일 안 함)
-        tail = [*enc, "-pix_fmt", "yuv420p", "-movflags", "+faststart", out]
+        tail = [*enc, "-movflags", "+faststart", out]   # pix_fmt 은 인코더 인자에 포함(QSV=nv12)
         if mode == "ddagrab":
             return [FFMPEG, "-y", "-loglevel", "error",
                     "-filter_complex", f"ddagrab=output_idx={output_idx}:framerate={self.fps},hwdownload,format=bgra{chain}", *tail]
@@ -1622,7 +1945,7 @@ class Recorder:
             vf, _chain = _scale_vf(h)
             cmd = [FFMPEG, "-y", "-loglevel", "error",
                    "-f", "rawvideo", "-pixel_format", "bgra", "-video_size", f"{w}x{h}", "-framerate", str(fps),
-                   "-i", "pipe:", *vf, *enc, "-pix_fmt", "yuv420p", "-movflags", "+faststart", pathx]
+                   "-i", "pipe:", *vf, *enc, "-movflags", "+faststart", pathx]
             if vf: log(f"  Lowering CPU load: capturing {h}p → encoding at {_target_height(h)}p")
             errlog = os.path.join(REC_DIR, "wgc_ffmpeg.log")
             try: _ef = open(errlog, "w", encoding="utf-8", errors="replace")
@@ -2084,9 +2407,6 @@ def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr", 
         p = int(done * 100 / total) if total else 0
         if p != REC_STATE.get("upload_pct"): REC_STATE["upload_pct"] = p
     try:
-        log("Uploading video to cloud\u2026 (%s)" % (("%.1f GB" % (up_size / 1073741824)) if up_size >= 1073741824 else ("%d MB" % (up_size // 1048576))))
-        video_url = sb_upload(up_src, f"videos/{safe}.mp4", "video/mp4", on_progress=_up_cb)
-        thumb_url = sb_upload(tmp_thumb, f"thumbs/{safe}.jpg", "image/jpeg") if has_thumb else None
         players = analysis.get("players") or []
         me = next((p for p in players if puuid and p.get("puuid") == puuid), None)
         if not me and riot_id:
@@ -2104,7 +2424,7 @@ def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr", 
         _row = {
             "id": row_id, "match_id": gid, "uploader": saver,
             "uploaded": datetime.datetime.now().isoformat(timespec="seconds"),
-            "video": video_url, "thumb": thumb_url, "replay": None,
+            "video": None, "thumb": None, "replay": None,   # URL은 업로드 성공 후 채움(실패 시 재시도 큐에 그대로 저장)
             "video_size": up_size or 0,
             "map": "Summoner's Rift", "matchup": None,
             "length": _sec_mmss(dur), "length_sec": int(dur or 0),
@@ -2113,6 +2433,21 @@ def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr", 
             "np": len(players), "players": players, "won": won,
             "analysis": analysis,
         }
+        log("Uploading video to cloud\u2026 (%s)" % (("%.1f GB" % (up_size / 1073741824)) if up_size >= 1073741824 else ("%d MB" % (up_size // 1048576))))
+        _idp = None   # 서명 업로드용 신원 (로그인 필요 없음 — 기기 비밀키로 증명)
+        try:
+            _ik = riot_key(riot_id)
+            if _ik:
+                _idp = (_ik, device_secret())
+                try:   # verify_device 가 통과하려면 identities 에 등록돼 있어야 함(멱등)
+                    sb_rpc("register_identity", {"p_puuid": _ik, "p_secret": _idp[1], "p_name": riot_id, "p_icon": None})
+                except Exception:
+                    pass
+        except Exception:
+            _idp = None
+        video_url = sb_upload(up_src, f"videos/{safe}.mp4", "video/mp4", on_progress=_up_cb, ident=_idp)
+        thumb_url = sb_upload(tmp_thumb, f"thumbs/{safe}.jpg", "image/jpeg", ident=_idp) if has_thumb else None
+        _row["video"] = video_url; _row["thumb"] = thumb_url
         _ident = riot_key(riot_id)   # 계정 = Riot ID. PC 안 가리고 같은 ID면 한 계정.
         if _ident:   # 이 PC를 인가 기기로 등록하고 소유자(riot_key) 박아 업로드. 실패 시에만 익명 폴백.
             try:
@@ -2129,9 +2464,17 @@ def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr", 
         _em = str(e)
         log(f"Upload failed: {e}")          # ← 원본 Supabase 응답을 항상 표시(진단용; 더 이상 가리지 않음)
         if ("row-level security" in _em) or ("Unauthorized" in _em) or (" 403" in _em) or ("403:" in _em):
-            log("\u2192 Storage RLS 차단. Supabase SQL Editor 에서 supabase_storage_fix.sql 을 실행하거나, config.json 의 supabase.service_key 를 채우세요. 영상은 로컬에 보관됩니다.")
+            log("\u2192 Upload blocked by storage policy. Check: Netlify env SUPABASE_SERVICE_KEY + storage.js deployed (signed route /api/storage). Video is kept locally and queued for retry.")
+        try:   # 실패분은 큐에 저장 → 다음 실행 때 자동 재업로드 (파일은 정리 대상에서 보호됨)
+            enqueue_failed_upload({"id": row_id, "safe": safe, "riot_id": riot_id or "",
+                                   "video_file": up_src, "thumb_file": (tmp_thumb if has_thumb else None),
+                                   "row": _row})
+        except Exception as _qe:
+            log("Retry-queue save failed: %s" % _qe)
     finally:
         REC_STATE["uploading"] = False; REC_STATE["preparing"] = False; REC_STATE["upload_pct"] = 0
+        try: cleanup_recordings()   # 업로드 사이클이 끝날 때마다 보관 정책 적용
+        except Exception: pass
 
 def recorder_loop(cfg):
     proc = cfg.get("league_process", "League of Legends.exe")
@@ -2143,6 +2486,15 @@ def recorder_loop(cfg):
     except Exception: pass
     if not proxy:
         log("Note: proxy_url in config.json is empty. Set your Netlify proxy URL to connect analysis.")
+    def _startup_maintenance():   # 준비를 막지 않도록 백그라운드에서: 버전 확인 → 실패 큐 재업로드 → 보관 정책 정리
+        if _parse_ver(APP_VERSION): log("Version: %s" % APP_VERSION)
+        try: check_update()
+        except Exception: pass
+        try: process_retry_queue()
+        except Exception as e: log("Retry queue error: %s" % e)
+        try: cleanup_recordings()
+        except Exception: pass
+    threading.Thread(target=_startup_maintenance, daemon=True).start()
     log("Ready. Start a League of Legends game and it records automatically. (Keep this window open.)")
     while True:
         try:
@@ -2163,6 +2515,11 @@ def recorder_loop(cfg):
                 else:
                     log("Champion select detected \u2014 recording from draft.")
                     started_cs = True
+                _free = disk_free_gb()
+                if _free is not None and _free < 3.0:
+                    log("WARNING: low disk space - %.1f GB free. Recording may fail. Cleaning old originals..." % _free)
+                    try: cleanup_recordings()
+                    except Exception: pass
                 start_ts = time.time(); active = rec.start(); last_hb = time.time()
                 saw_game = run; cs_grace = 0.0; ended_at = 0.0
                 live_snaps = []; live_evts = []; last_snap_t = -999.0
@@ -2394,7 +2751,7 @@ def run_gui(cfg, url):
     SG_S=_pick("Sora SemiBold","Sora","Segoe UI Semibold","Segoe UI")
     PLEX=_pick("IBM Plex Mono","Consolas","Segoe UI")
     UI=SG; SEMI=SG_S; MON=PLEX
-    BASE_H, SET_H, LOG_H = 160, 156, 210
+    BASE_H, SET_H, LOG_H = 160, 222, 210
     root.geometry(f"{W}x{BASE_H}"); root.resizable(False, True)
     st={"log":False,"settings":False}
 
@@ -2448,6 +2805,11 @@ def run_gui(cfg, url):
     errbar=tk.Label(logwrap,text="",bg="#3A1E18",fg="#FFB4A6",font=(UI,9),anchor="w",padx=11,pady=6,justify="left",wraplength=W-44)
     logtxt=tk.Text(logwrap,bg="#0C0D10",fg=DIM,font=(MON,9),bd=0,padx=11,pady=8,height=8,wrap="word",state="disabled")
 
+    # === Update banner (새 버전 발견 시 하단에 표시, 클릭 → 다운로드 페이지) ===
+    UPD_H=34
+    updbar=tk.Label(root,text="",bg="#2A2410",fg=GOLD,font=(UI,9,"bold"),anchor="w",padx=12,pady=7,cursor="hand2")
+    updbar.bind("<Button-1>",lambda e: open_app(UPDATE_INFO.get("url") or url))
+
     # === Callbacks ===
     def open_gallery():
         def _go():
@@ -2469,6 +2831,16 @@ def run_gui(cfg, url):
             if sys.platform=="win32": os.startfile(REC_DIR)
         except Exception: pass
     def do_quit():
+        try:   # 녹화/업로드 중 실수로 닫아 판을 날리는 것 방지
+            if REC_STATE.get("recording") or REC_STATE.get("uploading") or REC_STATE.get("preparing"):
+                from tkinter import messagebox
+                _what = "Recording" if REC_STATE.get("recording") else "Upload"
+                if not messagebox.askyesno("myPENTA",
+                        _what + " is in progress.\nQuit anyway? The current game may be lost.",
+                        parent=root):
+                    return
+        except Exception:
+            pass
         try: root.destroy()
         except Exception: pass
         os._exit(0)
@@ -2481,7 +2853,7 @@ def run_gui(cfg, url):
     optwrap=tk.Frame(root,bg=PANEL,highlightbackground=LINE,highlightthickness=1)
     tk.Label(optwrap,text="RECORDING SETTINGS",bg=PANEL,fg=INK2,font=(SEMI,8,"bold")).pack(anchor="w",padx=15,pady=(12,6))
     SCALE_OPTS=[("Auto (best)","auto"),("Source","source"),("1080p","1080"),("720p","720"),("480p","480")]
-    ENC_OPTS=[("Auto (GPU first)","auto"),("GPU \u00b7 NVENC","nvenc"),("CPU \u00b7 x264","x264")]
+    ENC_OPTS=[("Auto (GPU first)","auto"),("GPU \u00b7 NVIDIA NVENC","nvenc"),("GPU \u00b7 AMD AMF","amf"),("GPU \u00b7 Intel QSV","qsv"),("CPU \u00b7 x264","x264")]
     def opt_row(label, opts, key):
         row=tk.Frame(optwrap,bg=PANEL); row.pack(fill="x",padx=15,pady=3)
         tk.Label(row,text=label,bg=PANEL,fg=DIM,font=(UI,9),width=8,anchor="w").pack(side="left")
@@ -2497,11 +2869,19 @@ def run_gui(cfg, url):
         om.pack(side="left",fill="x",expand=True)
     opt_row("Quality",SCALE_OPTS,"scale")
     opt_row("Encoder",ENC_OPTS,"encoder")
-    tk.Label(optwrap,text="Auto = best quality, GPU-accelerated so your game stays smooth",bg=PANEL,fg=FAINT,font=(UI,8),wraplength=W-50,justify="left").pack(anchor="w",padx=15,pady=(6,12))
+    KEEP_OPTS=[("Last 20 games","20"),("Last 10 games","10"),("Last 50 games","50"),("Keep all (no cleanup)","0")]
+    opt_row("Keep",KEEP_OPTS,"keep_games")
+    tk.Label(optwrap,text="Auto = best quality, GPU-accelerated so your game stays smooth",bg=PANEL,fg=FAINT,font=(UI,8),wraplength=W-50,justify="left").pack(anchor="w",padx=15,pady=(6,4))
+    _cleanrow=tk.Frame(optwrap,bg=PANEL); _cleanrow.pack(fill="x",padx=15,pady=(0,12))
+    def _do_clean():
+        threading.Thread(target=cleanup_recordings,kwargs={"manual":True},daemon=True).start()
+    tk.Button(_cleanrow,text="Clean up originals now",command=_do_clean,bg="#181B21",fg=INK,font=(UI,9),relief="flat",bd=0,highlightthickness=1,highlightbackground=LINE2,activebackground="#23272F",activeforeground=INK,cursor="hand2",padx=11,pady=4).pack(side="left")
+    _fr=disk_free_gb()
+    tk.Label(_cleanrow,text=("Disk free: %.0f GB" % _fr) if _fr is not None else "",bg=PANEL,fg=FAINT,font=(UI,8)).pack(side="left",padx=10)
 
     # === Panel toggle + resize ===
     def _resize():
-        h=BASE_H+(SET_H if st["settings"] else 0)+(LOG_H if st["log"] else 0)
+        h=BASE_H+(SET_H if st["settings"] else 0)+(LOG_H if st["log"] else 0)+(UPD_H if st.get("upd") else 0)
         root.geometry(f"{W}x{h}")
     def set_log(open_):
         if open_ and st["settings"]: set_settings(False)
@@ -2613,6 +2993,11 @@ def run_gui(cfg, url):
 
     _rec={"since":None,"blink":False,"psince":None}
     def poll():
+        if UPDATE_INFO.get("tag") and not st.get("upd"):
+            st["upd"]=True
+            updbar.config(text="New version "+UPDATE_INFO["tag"]+" is available - click here to download")
+            updbar.pack(fill="x",side="bottom")
+            _resize()
         appended=False
         for _ in range(150):
             try: line=GUI_Q.get_nowait()
@@ -2681,6 +3066,8 @@ def run_gui(cfg, url):
         except Exception: pass
         ea=(REC_STATE.get("encoder") or "").lower()
         if "nvenc" in ea: enc="NVENC"; is_sw=False
+        elif "amf" in ea: enc="AMF"; is_sw=False
+        elif "qsv" in ea: enc="QSV"; is_sw=False
         elif ("x264" in ea) or ("264" in ea): enc="x264"; is_sw=True
         else:
             ec=str(cfg.get("encoder","auto")).lower()
@@ -2726,7 +3113,7 @@ def _print_status():
     print("-" * 50)
     print(f"  Supabase URL : {s.get('url') or '(none)'}")
     print(f"  anon_key     : {'set' if s.get('anon_key') else 'missing'}")
-    print(f"  service_key  : {'set' if s.get('service_key') else 'missing  ← needed for uploads'}")
+    print(f"  service_key  : {'set (legacy - no longer required)' if s.get('service_key') else 'not set (OK - uploads use signed route)'}")
     print(f"  bucket       : {s.get('bucket') or 'media'}")
     verdict = {"cloud": "\u2601 Cloud ON (uploads enabled)",
                "readonly": "\u26a0 Read-only (service_key needed)",
