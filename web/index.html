@@ -105,6 +105,14 @@ button:active,.dl:active,.povchip:active{transform:scale(.965)}
 .fchip{font-family:var(--fd);font-weight:600;font-size:13px;color:var(--dim);background:var(--surface);border:1px solid var(--line);padding:9px 15px;border-radius:100px;cursor:pointer;transition:.14s}
 .fchip:hover{color:var(--ink);border-color:var(--line2)}
 .fchip.on{color:var(--bg);background:var(--gold);border-color:var(--gold)}
+.sortsel{font-family:var(--fd);font-weight:600;font-size:13px;color:var(--dim);background:var(--surface);border:1px solid var(--line);padding:9px 13px;border-radius:100px;cursor:pointer;outline:0;margin-left:auto}
+.sortsel:hover{color:var(--ink);border-color:var(--line2)}
+.carddel{position:absolute;right:12px;bottom:12px;z-index:4;width:32px;height:32px;display:grid;place-items:center;border-radius:8px;background:rgba(8,12,17,.72);border:1px solid var(--line2);color:var(--dim);cursor:pointer;opacity:0;transition:opacity .15s,color .14s,border-color .14s;backdrop-filter:blur(4px)}
+.carddel svg{width:15px;height:15px}
+.card:hover .carddel{opacity:1}
+.carddel:hover{color:#E8A0A0;border-color:#5a2b33}
+@media(hover:none){.carddel{opacity:.9}}
+.filters{align-items:center}
 
 /* 그리드 */
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:22px}
@@ -274,6 +282,11 @@ button:active,.dl:active,.povchip:active{transform:none}
    <button class="fchip on" data-f="all">전체</button>
    <button class="fchip" data-f="win">승리</button>
    <button class="fchip" data-f="penta">펜타킬</button>
+   <select class="sortsel" id="sortsel" aria-label="정렬">
+    <option value="recent">최신순</option>
+    <option value="size">용량순</option>
+    <option value="grade">평점순</option>
+   </select>
   </div>
  </div>
 
@@ -315,6 +328,19 @@ button:active,.dl:active,.povchip:active{transform:none}
   var grid = document.getElementById('grid');
   // POV 아바타 클릭 → 그 시점을 카드의 메인으로 교체(히어로라인·전적·썸네일·링크 갱신). 카드 본체 클릭은 현재 메인 시점으로 열림.
   if(grid) grid.addEventListener('click', function(e){
+    // 소유자 삭제 버튼
+    var db = e.target && e.target.closest && e.target.closest('.carddel[data-delmid]');
+    if(db){
+      e.preventDefault(); e.stopPropagation();
+      var dmid = db.getAttribute('data-delmid');
+      if(!confirm('이 게임에 올린 내 영상을 삭제할까요? 되돌릴 수 없습니다.')) return;
+      db.disabled=true;
+      P.deleteMatch(dmid).then(function(){
+        GROUPS = GROUPS.filter(function(g){ return String(P.groupKeyOf(g[0]))!==String(dmid); });
+        setStats(); render();
+      }).catch(function(err){ alert('삭제 실패: '+String(err&&err.message||err)); db.disabled=false; });
+      return;
+    }
     var chip = e.target && e.target.closest && e.target.closest('.povchip[data-pov]');
     if(!chip) return;
     e.preventDefault(); e.stopPropagation();
@@ -332,6 +358,13 @@ button:active,.dl:active,.povchip:active{transform:none}
   var GROUPS = [];          // 전체 그룹
   var STATS = {};           // match_id → {likes, views}
   var filter = 'all';
+  var sortBy = 'recent';   // recent | size | grade
+  function fmtSize(b){ b=+b||0; if(b>=1073741824) return (b/1073741824).toFixed(1)+'GB'; if(b>=1048576) return Math.round(b/1048576)+'MB'; return Math.round(b/1024)+'KB'; }
+  function groupSize(g){ return g.reduce(function(s,x){ return s+(x.video_size||0); },0); }
+  function groupGrade(g){ var r=P.pickPrimary(g), ana=r.analysis||{}, aps=ana.players||[], me=null;
+    for(var i=0;i<aps.length;i++){ if(aps[i]&&aps[i].name===r.saver){ me=aps[i]; break; } } if(!me)me=aps[0]||null;
+    var G=me?P.grade(me, ana.duration||r.length_sec||0):null; return G?G.score:-1; }
+  function groupTime(g){ var r=P.pickPrimary(g); return r.uploaded||''; }
   var search = '';
 
   function show(el){ [elLoading,elEmpty,elFailed].forEach(function(e){ e.classList.toggle('on', e===el); }); }
@@ -360,6 +393,8 @@ button:active,.dl:active,.povchip:active{transform:none}
     var q = P.queueName(r.type);
     var role = P.posKo(me.position);
     var povN = group.length;
+    var gSize = group.reduce(function(s,x){ return s + (x.video_size||0); }, 0);
+    var sizeTag = gSize>0 ? ('<span class="tag">'+fmtSize(gSize)+'</span>') : '';
     var bm = P.bestMulti(me);
     var gk = P.groupKeyOf(r);
     var views = (STATS[gk] && STATS[gk].views) || group.reduce(function(s,x){ return s + (x.views||0); }, 0);
@@ -387,6 +422,11 @@ button:active,.dl:active,.povchip:active{transform:none}
         + '</span>';
     }).join('') + '</div>') : '';
 
+    // 소유자 삭제 버튼: 로그인한 내 puuid 가 이 그룹의 어떤 시점의 owner 와 일치할 때만 노출
+    var myPuuid = P.sessionPuuid && P.sessionPuuid();
+    var myRow = myPuuid ? group.filter(function(x){ return x.owner_puuid===myPuuid; }) : [];
+    var delHTML = myRow.length ? ('<button class="carddel" type="button" data-delmid="'+esc(gk)+'" title="내 영상 삭제" aria-label="삭제"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></button>') : '';
+
     return '<a class="card '+(won===true?'win':won===false?'loss':'')+'" href="match.html?id='+encodeURIComponent(P.groupKeyOf(r))+(r.id!=null?'&pov='+encodeURIComponent(r.id):'')+'">'
       + '<div class="thumb">'
         + (bg ? '<img class="bgimg" src="'+bg+'" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '')
@@ -400,11 +440,12 @@ button:active,.dl:active,.povchip:active{transform:none}
           + '<div class="nm"><div class="cn">'+esc(champ||'알 수 없음')+'</div>'+(role?'<div class="role">'+role+'</div>':'')+'</div>'
         + '</div>'
         + '<div class="play"><span><svg class="ic" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></span></div>'
+        + delHTML
       + '</div>'
       + '<div class="cbody">'
         + '<div class="kda"><span class="nums">'+k+'<span class="s">/</span>'+d+'<span class="s">/</span>'+a+'</span>'
           + '<span class="ratio"><b>'+P.kdaRatio(k,d,a)+'</b> 평점</span></div>'
-        + '<div class="meta"><span class="tag q">'+q+'</span><span class="tag">'+len+'</span><span class="tag">CS '+(me.cs||0)+'</span><span class="tag">'+(me.level?('Lv '+me.level):'')+'</span></div>'
+        + '<div class="meta"><span class="tag q">'+q+'</span><span class="tag">'+len+'</span><span class="tag">CS '+(me.cs||0)+'</span>'+sizeTag+'<span class="tag">'+(me.level?('Lv '+me.level):'')+'</span></div>'
         + '<div class="foot">'
           + '<div class="upl"><b>'+esc(r.saver||r.uploader||'소환사')+'</b> · '+(P.ago(r.uploaded)||'')+'</div>'
           + '<div class="fr">'+viewHTML+'</div>'
@@ -430,6 +471,9 @@ button:active,.dl:active,.povchip:active{transform:none}
 
   function render(){
     var list = GROUPS.filter(matchFilter);
+    if(sortBy==='size') list.sort(function(a,b){ return groupSize(b)-groupSize(a); });
+    else if(sortBy==='grade') list.sort(function(a,b){ return groupGrade(b)-groupGrade(a); });
+    else list.sort(function(a,b){ return groupTime(a)<groupTime(b)?1:-1; });   // recent
     if(!list.length){
       grid.innerHTML='';
       if(!GROUPS.length){ show(elEmpty); }
@@ -475,6 +519,9 @@ button:active,.dl:active,.povchip:active{transform:none}
     document.querySelectorAll('.fchip').forEach(function(x){ x.classList.toggle('on', x===b); });
     render();
   });
+  // 정렬
+  var _ss = document.getElementById('sortsel');
+  if(_ss) _ss.addEventListener('change', function(){ sortBy = _ss.value; render(); });
   // 검색
   var qi = document.getElementById('q');
   if(qi) qi.addEventListener('input', function(){ search = qi.value.trim(); render(); });
@@ -507,6 +554,20 @@ button:active,.dl:active,.povchip:active{transform:none}
 
   load();
   renderAuth();
+})();
+</script>
+<script>
+/* 관리자 세션이 유효할 때만 우하단에 운영 콘솔 바로가기 표시(일반 유저에겐 안 보임) */
+(function(){
+  try{
+    var v=localStorage.getItem('penta_admin_session')||'';
+    var exp=parseInt(v.split('.')[0],10);
+    if(!v||!isFinite(exp)||Date.now()>exp) return;
+    var a=document.createElement('a');
+    a.href='admin.html'; a.textContent='운영 콘솔';
+    a.style.cssText='position:fixed;right:16px;bottom:16px;z-index:80;font-family:var(--fd),sans-serif;font-size:12.5px;color:var(--gold-ink);background:rgba(15,19,26,.9);border:1px solid var(--gold-line);padding:8px 13px;border-radius:9px;text-decoration:none;backdrop-filter:blur(4px)';
+    document.body.appendChild(a);
+  }catch(_){}
 })();
 </script>
 </body></html>
