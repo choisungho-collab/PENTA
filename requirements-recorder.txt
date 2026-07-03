@@ -1,5 +1,20 @@
+# 버전 고정 - 재현 가능한 빌드.
+# (미고정 시 빌드마다 그 시점 최신이 깔려, 어느 날 갑자기 API 가 바뀌어 깨질 수 있음.)
+#
+# windows-capture 2.0.0 (2026-04-14, Production/Stable):
+#   우리가 쓰는 WGC API(WindowsCapture / @event / on_frame_arrived / frame.frame_buffer /
+#   capture_control.stop() / start_free_threaded)가 2.0.0 에 그대로 존재함을 소스로 확인.
+#   PyPI 공식 예제도 우리 사용법과 동일 -> 레코더 코드 수정 불필요.
+#   2.0.0 은 DXGI Desktop Duplication 을 '추가'했을 뿐 기존 WGC 경로를 바꾸지 않음.
+#   wheel 이 cp39-abi3(안정 ABI) -> Python 3.9+ 전부 호환(빌드의 3.12 포함).
+windows-capture==2.0.0
+
+# WASAPI 루프백 오디오 캡처. 0.2.12.8 = 최신, cp312 wheel 제공(빌드 Python 3.12 와 일치).
+pyaudiowpatch==0.2.12.8
+
+# numpy 는 windows-capture 가 의존성으로 가져오지만(frame.frame_buffer 반환),
+# 우리도 직접 tobytes 변환에 쓰므로 명시. 상한 없이 두어 windows-capture 와 충돌 방지.
 numpy
+
 psutil
 requests
-windows-capture
-pyaudiowpatch
