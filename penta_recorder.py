@@ -3277,6 +3277,66 @@ def run_gui(cfg, url):
     except Exception: pass
     if sys.platform=="win32": _hide_console()
     poll()
+
+    # ── 첫 실행 온보딩: exe 를 처음 켠 사람에게 '무엇을 해야 하는지' 3스텝 안내 ──
+    def _show_onboarding():
+        try:
+            ob=tk.Toplevel(root); ob.title("myPENTA")
+            ob.configure(bg=BG); ob.resizable(False,False)
+            try: ob.iconphoto(True, tk.PhotoImage(data=_PENTA_ICON))
+            except Exception: pass
+            ob.transient(root); ob.grab_set()
+            OW,OH=440,486
+            try:  # 부모 창 중앙에 배치
+                root.update_idletasks()
+                px,py=root.winfo_x(),root.winfo_y(); pw=root.winfo_width()
+                ox=px+(pw-OW)//2; oy=py+40
+                ob.geometry("%dx%d+%d+%d"%(OW,OH,max(0,ox),max(0,oy)))
+            except Exception:
+                ob.geometry("%dx%d"%(OW,OH))
+            pad=tk.Frame(ob,bg=BG); pad.pack(fill="both",expand=True,padx=26,pady=22)
+            # 헤더
+            tk.Label(pad,text="Welcome to myPENTA",bg=BG,fg=GOLD,font=(SEMI,16,"bold")).pack(anchor="w")
+            tk.Label(pad,text="League of Legends \uac8c\uc784\uc744 \uc790\ub3d9\uc73c\ub85c \ub179\ud654\ud558\uace0, \uc6f9\uc5d0\uc11c \ub2e4\uc2dc\ubcf4\uae30\ub85c \ubaa8\uc544\ubcf4\ub294 \ub3c4\uad6c\uc608\uc694.",
+                     bg=BG,fg=SUB,font=(UI,9),wraplength=OW-56,justify="left").pack(anchor="w",pady=(4,16))
+            # 3스텝 카드
+            def _step(n, title, body):
+                row=tk.Frame(pad,bg=SURF,highlightbackground=LINE2,highlightthickness=1); row.pack(fill="x",pady=5)
+                inner=tk.Frame(row,bg=SURF); inner.pack(fill="x",padx=13,pady=11)
+                top=tk.Frame(inner,bg=SURF); top.pack(fill="x")
+                _num=tk.Canvas(top,width=24,height=24,bg=SURF,highlightthickness=0); _num.pack(side="left")
+                _num.create_oval(2,2,22,22,fill="",outline=GOLD,width=1)
+                _num.create_text(12,12,text=str(n),fill=GOLD,font=(SEMI,11,"bold"))
+                tk.Label(top,text=title,bg=SURF,fg=INK,font=(SEMI,11,"bold")).pack(side="left",padx=9)
+                tk.Label(inner,text=body,bg=SURF,fg=INK2,font=(UI,9),wraplength=OW-92,justify="left").pack(anchor="w",padx=(33,0),pady=(3,0))
+            _step(1,"\uac8c\uc784\uc744 \ud50c\ub808\uc774\ud558\uc138\uc694",
+                  "\uc774 \ucc3d\uc744 \ucf1c\ub454 \ucc44\ub85c \ub86f\uc744 \ud558\uba74, \uac8c\uc784\uc774 \ub05d\ub098\ub294 \uc21c\uac04 \uc601\uc0c1\uacfc \uc804\uc801\uc774 \uc790\ub3d9\uc73c\ub85c \uc800\uc7a5\ub3fc\uc694. \ub530\ub85c \ub204\ub97c \uac83\ub3c4 \uc5c6\uc5b4\uc694.")
+            _step(2,"Archive \ubc84\ud2bc\uc73c\ub85c \ud655\uc778",
+                  "\uc544\ub798 Archive \ubc84\ud2bc\uc744 \ub204\ub974\uba74 \ub0b4 \uc601\uc0c1\uacfc \uc804\uc801\uc774 \ubaa8\uc778 \uc6f9\ud398\uc774\uc9c0\uac00 \uc5f4\ub9ac\uace0, \uadf8 \ube0c\ub77c\uc6b0\uc800\uc5d0 \uc790\ub3d9\uc73c\ub85c \ub85c\uadf8\uc778\ub3fc\uc694.")
+            _step(3,"\uce5c\uad6c\uc640 \uac19\uc774 \uc4f0\uba74 \ub354 \uc88b\uc544\uc694",
+                  "\uac19\uc740 \uacbd\uae30\ub97c \uc5ec\ub7ec \uba85\uc774 \ub179\ud654\ud574 \uc62c\ub9ac\uba74, \uac01\uc790\uc758 \uc2dc\uc810\uc73c\ub85c \ubb36\uc5ec\uc11c \ud55c \uad50\uc804\uc744 \uc5ec\ub7ec \uc790\ub9ac\uc5d0\uc11c \ub2e4\uc2dc \ubcfc \uc218 \uc788\uc5b4\uc694.")
+            # 하단 버튼
+            btnrow=tk.Frame(pad,bg=BG); btnrow.pack(fill="x",pady=(18,0))
+            def _close_ob():
+                try: cfg["onboarded"]=True; _atomic_write_json(CONFIG_PATH, cfg)
+                except Exception: pass
+                try: ob.grab_release(); ob.destroy()
+                except Exception: pass
+            def _open_manual():
+                open_app((url.rstrip("/") if url else "") + "/manual.html" if url else "https://mypenta.netlify.app/manual.html")
+            tk.Button(btnrow,text="\uc0ac\uc6a9\ubc95 \uc790\uc138\ud788",command=_open_manual,bg="#181B21",fg=INK,font=(UI,9),
+                      relief="flat",bd=0,highlightthickness=1,highlightbackground=LINE2,activebackground="#23272F",
+                      activeforeground=INK,cursor="hand2",padx=13,pady=7).pack(side="left")
+            tk.Button(btnrow,text="\uc2dc\uc791\ud558\uae30",command=_close_ob,bg=GOLD,fg="#0a0a0a",font=(SEMI,10,"bold"),
+                      relief="flat",bd=0,activebackground=GOLD2,activeforeground="#0a0a0a",cursor="hand2",
+                      padx=20,pady=7).pack(side="right")
+            ob.protocol("WM_DELETE_WINDOW", _close_ob)
+        except Exception as _e:
+            log("onboarding skipped: %s" % _e)
+    if not cfg.get("onboarded"):
+        try: root.after(400, _show_onboarding)
+        except Exception: pass
+
     try: root.mainloop()
     except Exception as ex: log(f"GUI closed: {ex}")
 

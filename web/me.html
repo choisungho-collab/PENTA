@@ -14,7 +14,7 @@
 <meta name="twitter:image" content="https://mypenta.netlify.app/assets/og.png">
 <meta name="description" content="myPENTA에 업로드한 내 게임 기록과 지표">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2 L15 9 L22 9 L16.5 13.5 L18.5 21 L12 16.5 L5.5 21 L7.5 13.5 L2 9 L9 9 Z' fill='%23DEC79C'/%3E%3C/svg%3E">
-<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin><link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="preconnect" href="https://bsrvmesrygbfeqicquvq.supabase.co" crossorigin><link rel="preconnect" href="https://ddragon.leagueoflegends.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Sora:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -33,7 +33,7 @@
  --r1:10px;--r2:14px;--r3:18px;--sh:0 18px 44px -22px rgba(0,0,0,.8);
 }
 *{box-sizing:border-box}html,body{margin:0;overflow-x:clip}
-body{background:var(--bg);color:var(--ink);font-family:var(--fd);font-size:15px;line-height:1.65;word-break:keep-all;overflow-wrap:break-word;-webkit-font-smoothing:antialiased;letter-spacing:.005em}
+body{background:var(--bg);color:var(--ink);font-family:var(--fd);font-size:15px;line-height:1.65;word-break:keep-all;overflow-wrap:break-word;-webkit-font-smoothing:antialiased;letter-spacing:-.01em;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
 a{color:inherit;text-decoration:none}svg{display:block}img{display:block;max-width:100%}
 .ic{width:1em;height:1em;flex-shrink:0}
 ::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:var(--line2);border-radius:6px;border:3px solid var(--bg)}
@@ -350,6 +350,7 @@ footer{border-top:1px solid var(--line);margin-top:70px}
 (function(){
   var P = window.PENTA; if(!P) return;
   var ver = '15.1.1';
+  var MY_PUUID = null;   // 로그인한 나의 puuid — 카드/통계에서 '나'를 정확히 특정
 
   function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
   function show(id){ ['gate','loading','dash','failed'].forEach(function(x){ var e=document.getElementById(x); if(e) e.classList.toggle('on', x===id); }); }
@@ -381,8 +382,8 @@ footer{border-top:1px solid var(--line);margin-top:70px}
 
   // 갤러리와 같은 형식의 카드(단순화 — 내 시점 대표)
   function cardHTML(r){
-    var me = P.heroCard(r);
-    var won = (r.won!=null)?r.won:(me.win!=null?me.win:null);
+    var me = meInRow(r, MY_PUUID);
+    var won = wonOf(r, me);
     var champ = me.champion||'';
     var icon = P.champIcon(ver, champ);
     var bg = r.thumb || (champ ? P.champLoading(champ) : '');
@@ -435,17 +436,36 @@ footer{border-top:1px solid var(--line);margin-top:70px}
     }
   }, true);
 
-  function computeAndRender(rows){
-    var games=rows.length, wins=0, losses=0, totalSec=0, K=0, D=0, A=0, pentas=0;
+  // 이 row(내 게임)에서 '나'를 정확히 특정: owner_puuid(로그인한 나) > players의 puuid 매칭 > saver 이름 > 폴백.
+  //  saver(이름)만으로 찾으면 동명이인/이름 누락 시 엉뚱한 선수(상대팀)를 잡아 승패가 뒤집히던 버그를 고침.
+  function meInRow(r, myPuuid){
+    var ps=r.players||[];
+    if(myPuuid){
+      var byId=ps.find(function(p){ return p && p.puuid===myPuuid; });
+      if(byId) return byId;
+    }
+    var opu=r.owner_puuid;
+    if(opu){ var byOwner=ps.find(function(p){ return p && p.puuid===opu; }); if(byOwner) return byOwner; }
+    return P.heroCard(r) || {};
+  }
+  // 게임 승패: 명시적 r.won > 나의 win. true/false/null(미확인) 중 하나.
+  function wonOf(r, mine){
+    if(r.won===true||r.won===false) return r.won;
+    if(mine && (mine.win===true||mine.win===false)) return mine.win;
+    return null;
+  }
+
+  function computeAndRender(rows, myPuuid){
+    var games=rows.length, wins=0, losses=0, undec=0, totalSec=0, K=0, D=0, A=0, pentas=0;
     var champ={}, pos={};
     rows.forEach(function(r){
-      var me = P.heroCard(r);
-      var won = (r.won!=null)?r.won:(me.win!=null?me.win:null);
-      if(won===true) wins++; else if(won===false) losses++;
+      var me = meInRow(r, myPuuid);
+      var won = wonOf(r, me);
+      if(won===true) wins++; else if(won===false) losses++; else undec++;
       totalSec += (r.length_sec||0);
       K += me.kills||0; D += me.deaths||0; A += me.assists||0; pentas += me.pentas||0;
       var c = me.champion;
-      if(c){ var cc=(champ[c]=champ[c]||{g:0,w:0,k:0,d:0,a:0}); cc.g++; if(won===true) cc.w++; cc.k+=me.kills||0; cc.d+=me.deaths||0; cc.a+=me.assists||0; }
+      if(c){ var cc=(champ[c]=champ[c]||{g:0,w:0,l:0,k:0,d:0,a:0}); cc.g++; if(won===true) cc.w++; else if(won===false) cc.l++; cc.k+=me.kills||0; cc.d+=me.deaths||0; cc.a+=me.assists||0; }
       var pp = me.position;
       if(pp){ pos[pp]=(pos[pp]||0)+1; }
     });
@@ -455,22 +475,27 @@ footer{border-top:1px solid var(--line);margin-top:70px}
     var wrEl=document.getElementById('k-wr');
     wrEl.textContent = decided ? fmtPct(wins/decided) : '—';
     wrEl.className = 'v ' + (decided ? (wins/decided>=0.5?'w':'l') : '');
-    setText('k-wr-sub', decided ? (wins+'승 '+losses+'패') : '승패 기록 없음');
+    // 승패 요약: 미확인 게임이 있으면 분모가 다르다는 걸 명확히 표기(모순처럼 보이지 않게)
+    setText('k-wr-sub', decided ? (wins+'승 '+losses+'패'+(undec?(' · '+undec+'게임 미확인'):'')) : (undec?(undec+'게임 미확인'):'승패 기록 없음'));
     setText('k-time', fmtDur(totalSec));
     setText('k-time-sub', games+'게임');
     setText('k-kda', D ? (((K+A)/D).toFixed(2)) : (games?'Perfect':'—'));
     setText('k-kda-sub', games ? (avg(K,games)+' / '+avg(D,games)+' / '+avg(A,games)) : '');
     setText('k-penta', pentas);
 
-    var clist = Object.keys(champ).map(function(c){ var o=champ[c]; o.name=c; o.wr=o.g?o.w/o.g:0; o.kda=o.d?((o.k+o.a)/o.d):(o.k+o.a); return o; });
+    var clist = Object.keys(champ).map(function(c){ var o=champ[c]; o.name=c; o.dec=o.w+o.l; o.wr=o.dec?o.w/o.dec:0; o.kda=o.d?((o.k+o.a)/o.d):(o.k+o.a); return o; });
     clist.sort(function(x,y){ return (y.g-x.g) || (y.wr-x.wr); });
     setText('champ-ct', clist.length ? (clist.length+'종') : '');
     document.getElementById('champlist').innerHTML = clist.length
       ? clist.slice(0,8).map(function(o){
           var wr=Math.round(o.wr*100);
+          // 승패가 확정된 게임(dec)이 있을 때만 승률 표시. 전부 미확인이면 '미확인'.
+          var wrHTML = o.dec
+            ? '<div class="wr '+(wr>=50?'good':'bad')+'">'+wr+'%<small>'+o.w+'승 '+o.l+'패'+(o.g>o.dec?(' · '+(o.g-o.dec)+' 미확인'):'')+'</small></div>'
+            : '<div class="wr"><small>미확인</small></div>';
           return '<div class="crow"><img src="'+P.champIcon(ver,o.name)+'" alt="" onerror="this.style.visibility=\'hidden\'">'
             + '<div class="nm"><b>'+esc(o.name)+'</b><span>'+o.g+'게임 · KDA '+o.kda.toFixed(2)+'</span></div>'
-            + '<div class="wr '+(wr>=50?'good':'bad')+'">'+wr+'%<small>'+o.w+'승 '+(o.g-o.w)+'패</small></div></div>';
+            + wrHTML+'</div>';
         }).join('')
       : '<div class="gempty">아직 챔피언 데이터가 없습니다.</div>';
 
@@ -493,6 +518,7 @@ footer{border-top:1px solid var(--line);margin-top:70px}
     var me=null; try{ me=await P.initAuth(); }catch(e){}
     renderAuthChip(me);
     if(!me || !me.puuid){ show('gate'); return; }
+    MY_PUUID = me.puuid;
     setText('me-name', (me.name||'').split('#')[0] || '소환사');
     try{ ver = await P.ddVersion(); }catch(e){}
     try{ await P.ddChampMap(ver); }catch(e){}   // 한글 챔피언명 → 영문 키 맵(아이콘 URL용) — 이게 없으면 초상화가 안 보임
@@ -500,7 +526,7 @@ footer{border-top:1px solid var(--line);margin-top:70px}
     try{
       rows = await P.sbSelect('matches', 'owner_puuid=eq.'+encodeURIComponent(me.puuid)+'&select=*&order=uploaded.desc');
     }catch(e){ show('failed'); return; }
-    computeAndRender(rows || []);
+    computeAndRender(rows || [], MY_PUUID);
     show('dash');
   }
 
