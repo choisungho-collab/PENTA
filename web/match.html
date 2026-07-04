@@ -635,7 +635,7 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
 .matchintro .mpc-img{width:clamp(46px,7vw,74px);height:clamp(58px,9vw,96px);border-radius:10px;overflow:hidden;border:1.5px solid rgba(255,255,255,.16);box-shadow:0 8px 22px rgba(0,0,0,.6);background:#0c1016;flex:0 0 auto;position:relative}
 .matchintro .miteam.blue .mpc-img{border-color:rgba(45,155,214,.55);box-shadow:0 8px 22px rgba(0,0,0,.6),0 0 0 1px rgba(45,155,214,.25)}
 .matchintro .miteam.red .mpc-img{border-color:rgba(224,107,107,.55);box-shadow:0 8px 22px rgba(0,0,0,.6),0 0 0 1px rgba(224,107,107,.25)}
-.matchintro .mpc-img img{width:100%;height:100%;object-fit:cover;object-position:38% 26%;display:block}
+.matchintro .mpc-img img{width:100%;height:100%;object-fit:cover;object-position:center 18%;display:block}
 .matchintro .mpc-img.sq img{object-position:center}   /* 폴백 정사각 아이콘일 때 */   /* 폴백 정사각 아이콘일 때 */
 .matchintro .mpc-nm{font-family:var(--fd);font-weight:700;font-size:clamp(12px,1.5vw,16px);color:var(--ink);max-width:clamp(70px,11vw,130px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 2px 8px rgba(0,0,0,.8)}
 /* VS 배지 */
@@ -2351,10 +2351,10 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
       function champs(list){
         return list.slice(0,5).map(function(p){
           var nm=(p.name||'').split('#')[0]||'-';
-          // 원화(splash) 우선 → 실패 시 로딩 초상화 → 그래도 실패 시 정사각 아이콘. splash 가 가장 고화질.
-          var splash=P.champSplash(p.champion), load=P.champLoading(p.champion), icon=P.champIcon(ver,p.champion);
+          // 세로 초상화(portrait) 우선 → splash → loading → 정사각 아이콘 순 폴백. portrait 가 세로 카드에 가장 잘 맞음.
+          var portrait=P.champPortrait(p.champion), splash=P.champSplash(p.champion), load=P.champLoading(p.champion), icon=P.champIcon(ver,p.champion);
           return '<div class="mpc">'
-            + '<div class="mpc-img"><img src="'+splash+'" alt="" loading="eager" data-fb="0" onerror="var s=this;var st=+s.getAttribute(\'data-fb\')||0;s.setAttribute(\'data-fb\',st+1);if(st===0){s.src=\''+load+'\';}else if(st===1){s.src=\''+icon+'\';s.parentNode.classList.add(\'sq\');}else{s.onerror=null;}"></div>'
+            + '<div class="mpc-img"><img src="'+portrait+'" alt="" loading="eager" data-fb="0" onerror="var s=this;var st=+s.getAttribute(\'data-fb\')||0;s.setAttribute(\'data-fb\',st+1);if(st===0){s.src=\''+splash+'\';}else if(st===1){s.src=\''+load+'\';}else if(st===2){s.src=\''+icon+'\';s.parentNode.classList.add(\'sq\');}else{s.onerror=null;}"></div>'
             + '<div class="mpc-nm">'+esc(nm)+'</div>'
             + '</div>';
         }).join('');

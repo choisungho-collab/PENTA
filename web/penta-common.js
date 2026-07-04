@@ -110,6 +110,8 @@
   function champIcon(ver, name) { return ddBase(ver) + '/img/champion/' + champKey(name) + '.png'; }
   function champSplash(name) { return 'https://ddragon.leagueoflegends.com/cdn/img/champion/splash/' + champKey(name) + '_0.jpg'; }
   function champLoading(name) { return 'https://ddragon.leagueoflegends.com/cdn/img/champion/loading/' + champKey(name) + '_0.jpg'; }
+  // CommunityDragon 세로 초상화(이름 기반). 세로 카드 비율에 잘 맞고 고화질.
+  function champPortrait(name) { return 'https://cdn.communitydragon.org/latest/champion/' + champKey(name) + '/portrait'; }
   function itemIcon(ver, id) { return id ? (ddBase(ver) + '/img/item/' + id + '.png') : null; }
 
   // 소환사 주문 id → DDragon 파일명
@@ -256,43 +258,54 @@
   // ===================== 세션 / 로그인 =====================
   // 토큰은 localStorage 보관. #code(레코더 Archive가 붙여줌) → exchange_login_code → 토큰.
   var SESS_KEY = 'penta_session';
+  var VERIFY_KEY = 'penta_sess_verified';   // 마지막 서버 검증 시각(ms)
+  var VERIFY_TTL = 5 * 60 * 1000;           // 5분 내 재검증 스킵(페이지 이동 시 매번 왕복 방지)
   function _sessRead() { try { return JSON.parse(localStorage.getItem(SESS_KEY) || 'null'); } catch (e) { return null; } }
   function _sessWrite(s) { try { if (s) localStorage.setItem(SESS_KEY, JSON.stringify(s)); else localStorage.removeItem(SESS_KEY); } catch (e) {} }
+  function _verGet() { try { return parseInt(localStorage.getItem(VERIFY_KEY) || '0', 10) || 0; } catch (e) { return 0; } }
+  function _verSet(t) { try { localStorage.setItem(VERIFY_KEY, String(t == null ? Date.now() : t)); } catch (e) {} }
   function session() { return _sessRead(); }                 // {token,puuid,name,icon} | null (로컬 캐시)
   function sessionPuuid() { var s = _sessRead(); return s && s.puuid; }
+  // 캐시된 세션을 네트워크 없이 즉시 반환(헤더를 바로 그리는 용도).
+  function whoamiCached() { return _sessRead(); }
 
   async function loginWithCode(code) {
     var r = await sbRpc('exchange_login_code', { p_code: code });   // {token,puuid,name,icon}
     if (r && r.token) { _sessWrite(r); return r; }
     return null;
   }
-  async function whoami() {
+  async function whoami(opts) {
     var s = _sessRead(); if (!s || !s.token) return null;
+    // 최근에 검증했으면 서버 왕복을 건너뛰고 캐시 사용(페이지 이동마다 왕복하지 않도록).
+    var force = opts && opts.force;
+    if (!force && (Date.now() - _verGet()) < VERIFY_TTL) return s;
     try {
       var r = await sbRpc('session_whoami', { p_token: s.token });
-      if (r && r.puuid) { var ns = { token: s.token, puuid: r.puuid, name: r.name, icon: r.icon }; _sessWrite(ns); return ns; }
+      if (r && r.puuid) { var ns = { token: s.token, puuid: r.puuid, name: r.name, icon: r.icon }; _sessWrite(ns); _verSet(Date.now()); return ns; }
       _sessWrite(null); return null;                          // 만료/무효 → 정리
     } catch (e) { return s; }                                 // 네트워크 오류면 캐시 유지
   }
   async function logout() {
     var s = _sessRead();
     if (s && s.token) { try { await sbRpc('end_session', { p_token: s.token }); } catch (e) {} }
-    _sessWrite(null);
+    _sessWrite(null); _verSet(0);
   }
   // 페이지 로드시: #code 있으면 소비(→토큰, URL에서 제거), 그 뒤 토큰 검증. 세션 반환.
   var _loginErr = null;
   function lastLoginError() { return _loginErr; }
   async function initAuth() {
     _loginErr = null;
+    var justLoggedIn = false;
     try {
       var m = (location.hash || '').match(/[#&]code=([^&]+)/);
       if (m) {
         var code = decodeURIComponent(m[1]);
         try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { location.hash = ''; }
-        try { await loginWithCode(code); } catch (e) { _loginErr = String((e && e.message) || e); }
+        try { await loginWithCode(code); justLoggedIn = true; } catch (e) { _loginErr = String((e && e.message) || e); }
       }
     } catch (e) {}
-    return await whoami();
+    // 방금 코드로 로그인했으면 강제 검증, 아니면 쓰로틀(최근 검증 시 캐시 사용).
+    return await whoami({ force: justLoggedIn });
   }
   // [이 PC의 레코더로 로그인] — 레코더의 127.0.0.1 브리지에서 코드 받아 즉시 로그인
   async function loginViaRecorder() {
@@ -315,7 +328,7 @@
     SB_URL: SB_URL, SB_ANON: SB_ANON,
     sbSelect: sbSelect, sbInsert: sbInsert, sbRpc: sbRpc,
     ddVersion: ddVersion, ddChampMap: ddChampMap, champKey: champKey, champIcon: champIcon,
-    champSplash: champSplash, champLoading: champLoading,
+    champSplash: champSplash, champLoading: champLoading, champPortrait: champPortrait,
     itemIcon: itemIcon, spellIcon: spellIcon,
     posKo: posKo, posRank: posRank,
     queueName: queueName, mmss: mmss, kdaRatio: kdaRatio, compact: compact, ago: ago,
@@ -323,7 +336,7 @@
     saverCard: saverCard, heroCard: heroCard, bestMulti: bestMulti, grade: grade,
     likeGroup: likeGroup, viewGroup: viewGroup, statsAll: statsAll, statsOne: statsOne,
     session: session, sessionPuuid: sessionPuuid, loginWithCode: loginWithCode, lastLoginError: lastLoginError, loginViaRecorder: loginViaRecorder,
-    whoami: whoami, logout: logout, initAuth: initAuth,
+    whoami: whoami, whoamiCached: whoamiCached, logout: logout, initAuth: initAuth,
     updateMatchMeta: updateMatchMeta, deleteMatch: deleteMatch
   };
 })(typeof window !== 'undefined' ? window : globalThis);
