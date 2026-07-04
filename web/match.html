@@ -73,6 +73,7 @@ a{color:inherit;text-decoration:none}svg{display:block}img{display:block;max-wid
 /* 시점 풀(즉시 전환) */
 .stage.pool{position:relative}
 .stage.pool .pvid{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#05080b;opacity:0;z-index:1;pointer-events:none;transition:opacity .1s linear}
+#stagehost.director .stage.pool .pvid{transition:opacity .45s ease}
 .stage.pool .pvid.on{opacity:1;z-index:2;pointer-events:auto}
 .stage.pool .poolempty{position:absolute;inset:0;display:none;place-items:center;background:#05080b;z-index:3}
 .stage.pool .poolempty.on{display:grid}
@@ -354,6 +355,10 @@ footer{border-top:1px solid var(--line);margin-top:70px}
 
 /* 영상 아래 점프 */
 .vjumps{margin-top:13px}
+.dirbtn{display:inline-flex;align-items:center;gap:7px;margin-bottom:11px;padding:7px 14px;border-radius:9px;border:1px solid var(--gold-line);background:var(--gold-soft);color:var(--gold-ink);font-family:var(--fd);font-weight:600;font-size:12.5px;cursor:pointer;transition:.15s}
+.dirbtn svg{width:15px;height:15px;flex-shrink:0}
+.dirbtn:hover{border-color:var(--gold);background:rgba(222,199,156,.16)}
+.dirbtn.on{background:var(--gold);color:#0a0a0a;border-color:var(--gold);box-shadow:0 0 16px -4px var(--gold)}
 
 /* ===== 복기 분석 격상 ===== */
 .coachhead{display:flex;align-items:baseline;gap:11px;margin:40px 0 16px}
@@ -450,7 +455,7 @@ span.rico{display:inline-block}
 /* ───────── 가한 피해량 / CS (LCK식 다이버징 바) ───────── */
 .dmg{position:relative;display:grid;grid-template-columns:1fr 1fr;column-gap:26px}
 .dmg::after{content:'';position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--line)}
-@media(max-width:480px){.dmg{grid-template-columns:1fr;column-gap:0}.dmg::after{display:none}}
+@media(max-width:480px){.dmg{grid-template-columns:1fr;column-gap:0}.dmg::after{display:none}.dcol{gap:9px}.dteamsep{display:flex;align-items:center;gap:9px;margin:12px 2px 4px;font-family:var(--fm);font-size:10px;font-weight:700;letter-spacing:.14em}.dteamsep .b{color:var(--blue)}.dteamsep .r{color:var(--red)}.dteamsep .vs{color:var(--faint);font-size:9px}.dteamsep::before,.dteamsep::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--line),transparent)}}
 .dcol{display:flex;flex-direction:column;gap:7px}
 .drow{display:flex;align-items:center;gap:8px}
 .dcol.red .drow{flex-direction:row-reverse}
@@ -463,6 +468,7 @@ span.rico{display:inline-block}
 .dnv .dv{font-family:var(--fs);font-weight:700;font-size:13px;color:var(--ink);font-variant-numeric:tabular-nums;letter-spacing:.004em}
 .dtrack{flex:1;min-width:0;height:8px;background:var(--well);border-radius:4px;overflow:hidden;display:flex;box-shadow:inset 0 1px 2px rgba(0,0,0,.35)}
 .dcol.red .dtrack{justify-content:flex-end}
+.dteamsep{display:none}
 .dfill{height:100%;border-radius:4px;min-width:3px;transform-origin:left center;animation:dgrow .9s cubic-bezier(.2,.8,.25,1) both;position:relative}
 .dcol.red .dfill{transform-origin:right center}
 .dfill.b{background:linear-gradient(90deg,var(--blue),var(--blue-line))}
@@ -588,7 +594,7 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
 .clipshare svg{width:13px;height:13px;display:block}
 #stagehost:hover .clipshare{opacity:1}
 .clipshare:hover{color:var(--ink);border-color:var(--gold-line)}
-@media(hover:none){.clipshare{opacity:.85}}
+@media(hover:none){.clipshare{opacity:0;pointer-events:none}#stagehost.peek .clipshare{opacity:.9;pointer-events:auto}}
 #stagehost.idle:fullscreen .clipshare{opacity:0;pointer-events:none}
 #stagehost.idle:-webkit-full-screen .clipshare{opacity:0;pointer-events:none}
 .toastmsg{position:fixed;left:50%;bottom:30px;transform:translateX(-50%) translateY(8px);z-index:99;background:#131922;border:1px solid var(--gold-line);color:var(--ink);padding:10px 17px;border-radius:9px;font-size:12.5px;opacity:0;transition:opacity .22s,transform .22s;pointer-events:none;max-width:86vw;text-align:center}
@@ -596,6 +602,13 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
 /* 전체화면(멀티뷰) 컨트롤 바 자동 숨김 — 일반/단일뷰엔 미적용 */
 #stagehost:fullscreen{display:flex;flex-direction:column;width:100vw;height:100vh;background:#000}
 #stagehost:-webkit-full-screen{display:flex;flex-direction:column;width:100vw;height:100vh;background:#000}
+/* 전체화면 요소 뒤 backdrop 을 검은색으로 명시 — 일부 브라우저(삼성 등)가 흰색으로 렌더하는 것 방지 */
+#stagehost:fullscreen::backdrop{background:#000}
+#stagehost:-webkit-full-screen::backdrop{background:#000}
+:fullscreen::backdrop{background:#000}
+:-webkit-full-screen::backdrop{background:#000}
+/* 전체화면 중엔 최상위 배경도 검게(여백이 body/html 로 새는 경우 대비) */
+html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
 #stagehost:fullscreen .stage{flex:1 1 auto;min-height:0;border:0;border-radius:0;aspect-ratio:auto}
 #stagehost:-webkit-full-screen .stage{flex:1 1 auto;min-height:0;border:0;border-radius:0;aspect-ratio:auto}
 #stagehost:fullscreen .mvbar{position:absolute;left:0;right:0;bottom:0;margin:0;border:0;border-radius:0;z-index:6;padding:18px 22px calc(14px + env(safe-area-inset-bottom));background:linear-gradient(to top,rgba(5,8,11,.92),rgba(5,8,11,.5) 62%,transparent);transition:opacity .26s ease,transform .26s ease}
@@ -690,6 +703,11 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
   var MID = '';
   var STAT = { likes: 0, views: 0 };   // match_id 그룹 단위 좋아요/조회
   var curPov = 0;
+  var director = false;      // 감독판 모드: 킬 순간마다 자동으로 최적 시점 전환
+  var _dirSched = null;      // 감독판 스케줄(캐시)
+  var _dirIdx = -1;          // 현재 적용된 스케줄 세그먼트 인덱스
+  var _dirLock = 0;          // 전환 직후 재전환 방지(연속 전환 억제)
+  var _dirWarm = -1;         // 프리워밍 완료한 다음 세그먼트 인덱스(중복 시크 방지)
   var split = false;
   var selected = [];      // 분할 선택 인덱스
   var syncRAF = null;
@@ -1054,8 +1072,11 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
     window.scrollTo({top:y<0?0:y, behavior:'smooth'});
   }
   document.addEventListener('click', function(e){
+    var db=e.target.closest?e.target.closest('#dirbtn'):null;
+    if(db){ toggleDirector(); e.preventDefault(); return; }
     var b=e.target.closest?e.target.closest('.jbtn[data-jump]'):null;
     if(!b) return;
+    if(director){ dirResync(); }   // 하이라이트 점프 시 감독판 위치 재동기화
     jumpTo(parseInt(b.getAttribute('data-jump'),10)||0);
   });
 
@@ -1064,6 +1085,7 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
     var v=activeVideo(); if(!v||v._err) return;
     var nt=(v.currentTime||0)+d; if(nt<0) nt=0;
     try{ var du=v.duration; if(isFinite(du)&&du>0.6) nt=Math.min(nt,du-0.1); v.currentTime=nt; }catch(_){}
+    if(director){ dirResync(); }
   }
   document.addEventListener('keydown', function(e){
     if(e.metaKey||e.ctrlKey||e.altKey) return;
@@ -1203,7 +1225,7 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
           +'<div class="dtrack"><div class="dfill '+(team===100?'b':'r')+'" style="width:'+w+'%"></div></div></div>';
       }).join('')+'</div>';
     }
-    return '<div class="dmg">'+col(100)+col(200)+'</div>';
+    return '<div class="dmg">'+col(100)+'<div class="dteamsep"><span class="b">BLUE</span><span class="vs">vs</span><span class="r">RED</span></div>'+col(200)+'</div>';
   }
 
   // ── 골드 차이 그래프 (곡선 + 글로우 + 그리드 + 마커/주석) ──
@@ -1250,18 +1272,41 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
     return out.length>1?out:null;
   }
 
+  // 계단식 이벤트 시리즈를 균등 시간격자로 리샘플 후 이동평균 → 곡선이 매끄러워짐(급점프 완화)
+  function resampleSmooth(series, samples, win){
+    var maxT=series[series.length-1].t||1;
+    // 각 시점 t 의 누적 골드차를 계단(step) 보간으로 뽑기
+    function diffAt(t){
+      var lo=0;
+      for(var i=0;i<series.length;i++){ if(series[i].t<=t) lo=i; else break; }
+      var s=series[lo]; return (s.g100||0)-(s.g200||0);
+    }
+    var raw=[];
+    for(var k=0;k<samples;k++){ var t=maxT*k/(samples-1); raw.push({t:t, d:diffAt(t)}); }
+    // 이동평균(양방향) — win 은 한쪽 반경
+    var out=[];
+    for(var i=0;i<raw.length;i++){
+      var a=Math.max(0,i-win), b=Math.min(raw.length-1,i+win), sum=0,n=0;
+      for(var j=a;j<=b;j++){ sum+=raw[j].d; n++; }
+      out.push({t:raw[i].t, d:sum/n});
+    }
+    return out;
+  }
+
   function goldDiffChart(series){
     if(!series || series.length<2) return '';
     var W=1000, H=250, pad=12, padB=34, padT=14;
     var maxT=series[series.length-1].t||1;
-    var diffs=series.map(function(s){ return (s.g100||0)-(s.g200||0); });
+    // 원본 이벤트 시리즈를 매끄럽게: 160 샘플 + 반경6 이동평균 (약 ±40초 창)
+    var sm=resampleSmooth(series, 160, 6);
+    var diffs=sm.map(function(s){ return s.d; });
     var maxUp=0, maxDn=0, exi=0, exv=0;
     diffs.forEach(function(d,i){ if(d>0) maxUp=Math.max(maxUp,d); else maxDn=Math.max(maxDn,-d); if(Math.abs(d)>Math.abs(exv)){ exv=d; exi=i; } });
     if(maxUp===0 && maxDn===0){ maxUp=maxDn=1; }
     var span=(maxUp+maxDn)||1, yBase=padT+(maxUp/span)*(H-padT-padB);
     function x(t){ return pad+(t/maxT)*(W-2*pad); }
     function y(d){ if(d>=0) return yBase-(maxUp?d/maxUp:0)*(yBase-padT); return yBase+(maxDn?(-d)/maxDn:0)*((H-padB)-yBase); }
-    var pts=series.map(function(s,i){ return {x:x(s.t), y:y(diffs[i])}; });
+    var pts=sm.map(function(s){ return {x:x(s.t), y:y(s.d)}; });
     var line=smoothPath(pts);
     var area=line+' L'+x(maxT).toFixed(1)+' '+yBase.toFixed(1)+' L'+x(0).toFixed(1)+' '+yBase.toFixed(1)+' Z';
     var bf=(yBase/H*100).toFixed(2);
@@ -1278,7 +1323,7 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
       var cx=x(tt).toFixed(1), cy=(H-13), col=e.team===100?'var(--blue)':e.team===200?'var(--red)':'var(--line2)';
       marks+='<circle cx="'+cx+'" cy="'+cy+'" r="8" fill="var(--well)" stroke="'+col+'" stroke-width="1.4"/><text x="'+cx+'" y="'+(cy+3)+'" text-anchor="middle" class="gm">'+ic+'</text>';
     });
-    var anx=x(series[exi].t).toFixed(1), any=y(exv).toFixed(1), anc=exv>=0?'var(--blue)':'var(--red)';
+    var anx=x(sm[exi].t).toFixed(1), any=y(exv).toFixed(1), anc=exv>=0?'var(--blue)':'var(--red)';
     var ann='<circle cx="'+anx+'" cy="'+any+'" r="4.5" fill="'+anc+'" stroke="var(--bg)" stroke-width="1.5"/>';
     var maxLead=Math.max(maxUp,maxDn);
     return '<div class="gdc">'
@@ -1424,6 +1469,22 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
   function vG0(v){ if(!v) return 0; var i=v.getAttribute('data-pv'); if(i===null) i=v.getAttribute('data-idx'); return rowG0(+i); }
   function playLive(){ stageVideos().forEach(function(v){ if(!v._err){ try{ v.playbackRate=RATE; }catch(_){} var p=v.play(); if(p&&p.catch)p.catch(function(){}); } }); }
 
+  // 감독판 켜기/끄기. 켜면 스케줄 생성 후 현재 위치부터 자동 전환 시작.
+  function toggleDirector(on){
+    director = (on==null) ? !director : !!on;
+    if(director){
+      if(split){ if(selected.length) curPov=selected[0]; split=false; selected=[]; renderPovBar(); renderStage(); }
+      _dirSched = directorSchedule();
+      _dirIdx = -1; _dirLock = 0; _dirWarm = -1;
+      if(!_dirSched || !_dirSched.length){ director=false; }   // 전환할 게 없으면 자동 해제
+    }
+    var b=document.getElementById('dirbtn'); if(b) b.classList.toggle('on', director);
+    var h=document.getElementById('stagehost'); if(h) h.classList.toggle('director', director);
+    return director;
+  }
+  // 사용자가 재생바를 옮기면 감독판 인덱스 재동기화(그 위치 기준으로)
+  function dirResync(){ if(director){ _dirIdx=-1; _dirLock=0; _dirWarm=-1; } }
+
   // 페이지 열자마자 자동재생: 소리로 시도 → 브라우저가 막으면 음소거로 재생(음소거 자동재생은 항상 허용). 사용자는 볼륨 버튼으로 소리 켬.
   function autoplayNow(){
     var v = activeVideo(); if(!v) return;
@@ -1517,6 +1578,13 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
       h.classList.remove('idle');
       if(idleT){ clearTimeout(idleT); idleT=null; }
       if(inFs()) idleT=setTimeout(function(){ var hh=document.getElementById('stagehost'); if(hh && inFs()) hh.classList.add('idle'); }, ms||1600);
+    }
+    var peekT=null;
+    function peekClip(){   // 터치 기기: 영상 탭 시 클립공유를 3초간 잠깐 표시 후 자동 숨김
+      var h=document.getElementById('stagehost'); if(!h) return;
+      h.classList.add('peek');
+      if(peekT) clearTimeout(peekT);
+      peekT=setTimeout(function(){ var hh=document.getElementById('stagehost'); if(hh) hh.classList.remove('peek'); }, 3000);
     }
     function onFs(){
       var h=document.getElementById('stagehost'); if(!h) return;
@@ -1616,6 +1684,11 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
     if(_m && _rt>0 && _m.readyState<1){ _m.addEventListener('loadedmetadata', _resume, {once:true}); }
     else { _resume(); }
     applyRate(RATE);
+    // 터치 기기: 영상 영역을 탭하면 클립공유 버튼을 잠깐 표시(상시 노출로 게임 화면 가리는 것 방지)
+    host.querySelectorAll('video').forEach(function(v){
+      if(v._peekWired) return; v._peekWired=true;
+      v.addEventListener('pointerup', function(ev){ if(ev.pointerType==='touch') peekClip(); });
+    });
     startSync();
   }
 
@@ -1694,6 +1767,35 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
             if(Math.abs((v.currentTime||0)-want)>0.28){ try{v.currentTime=want;}catch(_){} }
           }
         });
+        // ── 감독판: 현재 게임시간에 맞는 시점으로 자동 전환 ──
+        if(director && !split && _dirSched && _dirSched.length && performance.now()>=_dirLock){
+          var gt=base+ga;   // 현재 게임시간
+          // gt 이하의 마지막 세그먼트를 찾음
+          var ti=-1;
+          for(var s=0;s<_dirSched.length;s++){ if(_dirSched[s].gt<=gt) ti=s; else break; }
+          if(ti>=0 && ti!==_dirIdx){
+            var seg=_dirSched[ti];
+            _dirIdx=ti;
+            if(seg.pov!==curPov && ROWS[seg.pov] && ROWS[seg.pov].video){
+              _dirLock=performance.now()+900;   // 전환 후 0.9s 는 재전환 억제(부드럽게)
+              setActive(seg.pov);
+            }
+          }
+          // 프리워밍: 다음 세그먼트가 4초 안에 오면, 그 시점 비디오를 미리 목표 시각으로 시크해
+          // 전환 순간 seek 대기 없이 즉시 크로스페이드되게 한다(백그라운드·음소거 상태 그대로).
+          var ni=ti+1;
+          if(ni<_dirSched.length){
+            var nseg=_dirSched[ni];
+            if(nseg.pov!==curPov && nseg.gt-gt<=4 && nseg.gt-gt>0 && _dirWarm!==ni && POOL){
+              var wv=POOL.querySelector('.pvid[data-pv="'+nseg.pov+'"]');
+              if(wv && !wv._err){
+                _dirWarm=ni;
+                var wt=nseg.gt - rowG0(nseg.pov); if(wt<0) wt=0;   // 그 시점 영상에서의 목표 시각
+                try{ if(Math.abs((wv.currentTime||0)-wt)>0.3) wv.currentTime=wt; }catch(_){}
+              }
+            }
+          }
+        }
       }
       syncRAF=requestAnimationFrame(loop);
     }
@@ -1874,6 +1976,42 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
 
   // 하이라이트: 이미 업로드된 이벤트(킬·오브젝트)만으로 가장 극적인 장면을 골라낸다(서버/재분석 불필요 → 기존 영상에도 적용).
   // 한타(킬 밀집)·바론/장로 교전·내 멀티킬·선취점을 점수화해 상위 몇 개만. (죽음 위기 구출 등은 체력 데이터가 없어 제외)
+  // ── 감독판(Director's Cut): 킬 순간마다 그 킬을 낸 선수 시점으로 자동 전환하는 타임라인 생성 ──
+  // 반환: [{gt: 전환할 게임시간, pov: ROWS 인덱스, why: 라벨}] — 게임시간 오름차순.
+  // 규칙: 킬러 시점이 업로드돼 있으면 그 시점, 없으면 어시스트 시점, 그것도 없으면 피해자 시점(당하는 장면), 다 없으면 스킵.
+  function directorSchedule(){
+    var players=ANALYSIS.players||[];
+    if(!players.length) return [];
+    // participant id(1-based) → ROWS 인덱스 (그 선수 시점이 업로드된 경우만)
+    var pidToRow={};
+    ROWS.forEach(function(r,ri){
+      if(!r || !r.video) return;
+      var sv=r.saver; if(!sv) return;
+      for(var i=0;i<players.length;i++){ if(players[i] && players[i].name===sv){ pidToRow[i+1]=ri; break; } }
+    });
+    var haveRows=Object.keys(pidToRow).length;
+    if(haveRows<1) return [];
+    var LEAD=3.0;   // 킬 몇 초 전에 미리 전환(킬 순간을 그 시점으로 보게)
+    var kills=(ANALYSIS.kills||[]).filter(function(e){return e&&typeof e.t==='number';}).slice().sort(function(a,b){return a.t-b.t;});
+    var seg=[];
+    kills.forEach(function(k){
+      // 이 킬을 보여줄 최적 시점: 킬러 > 어시스트(첫번째 업로드된) > 피해자
+      var pov=null, why='';
+      if(k.killer && pidToRow[k.killer]!=null){ pov=pidToRow[k.killer]; why='kill'; }
+      else {
+        var asr=null; (k.assists||[]).some(function(a){ if(pidToRow[a]!=null){ asr=pidToRow[a]; return true; } return false; });
+        if(asr!=null){ pov=asr; why='assist'; }
+        else if(k.victim && pidToRow[k.victim]!=null){ pov=pidToRow[k.victim]; why='death'; }
+      }
+      if(pov==null) return;   // 관련자 아무도 시점 안 올림 → 스킵(직전 시점 유지)
+      var gt=Math.max(0, k.t - LEAD);
+      // 직전 세그먼트와 같은 시점이면 합침(불필요한 전환 방지)
+      if(seg.length && seg[seg.length-1].pov===pov){ return; }
+      seg.push({gt:gt, pov:pov, why:why, kt:k.t});
+    });
+    return seg;
+  }
+
   function computeHighlights(myPid){
     var K=(ANALYSIS.kills||[]).filter(function(e){return e&&typeof e.t==='number'&&(e.killer||e.victim);}).slice().sort(function(a,b){return a.t-b.t;});
     var O=(ANALYSIS.objs||[]).filter(function(e){return e&&typeof e.t==='number';});
@@ -1946,7 +2084,18 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
       }
     }
     if(!hlHTML && !kdHTML) return '';
-    return '<div class="vjumps">'+hlHTML+kdHTML+'</div>';
+    // 감독판 버튼: 시점이 2개 이상이고 전환할 킬 스케줄이 있을 때만
+    var dirHTML='';
+    var _vidRows=ROWS.filter(function(r){return r&&r.video;}).length;
+    if(_vidRows>=2){
+      var _sc=directorSchedule();
+      if(_sc && _sc.length){
+        dirHTML='<button class="dirbtn'+(director?' on':'')+'" id="dirbtn" title="킬 순간마다 그 시점으로 자동 전환하며 재생">'
+          +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>'
+          +'<span>감독판</span></button>';
+      }
+    }
+    return '<div class="vjumps">'+dirHTML+hlHTML+kdHTML+'</div>';
   }
 
   // ── 내 영상 관리(소유자만: 제목 수정 / 삭제) ──

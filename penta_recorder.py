@@ -1000,6 +1000,7 @@ def load_or_make_config():
             "scale": "auto",     # auto | source | 1080 | 720 | 480  (auto: NVENC면 1080p, 소프트웨어면 720p로 낮춰 끊김 방지. 원본 그대로는 "source")
             "preset": "auto",    # auto | ultrafast | superfast | veryfast | fast ...  (libx264 속도/품질)
             "output_idx": "auto",   # auto | 0 | 1 | 2  (멀티모니터면 게임 있는 모니터 번호)
+            "capture_target": "window",  # window(게임 창만·Alt+Tab 안전) | monitor(모니터 전체). 창 캡처 실패 시 자동으로 모니터 폴백.
             "capture": "auto",   # auto | wgc | ddagrab | gdigrab   (wgc=OBS식, 전체화면도 잡힘)
             "postgame_tail": 6,  # (GameEnd 미감지 시 폴백) 프로세스 종료 후 결과 화면을 몇 초 더 녹화할지(초)
             "result_tail": 8,  # 승리/패배(GameEnd) 화면을 몇 초 담고 정지할지(초) - 끝나고 늘어지는 것 방지
@@ -1010,6 +1011,7 @@ def load_or_make_config():
             "min_game_sec": 300,
             "keep_games": 20,    # 원본 자동 정리: 최근 N판만 보관 (0 = 무제한)
             "keep_gb": 30,       # 원본 총 용량 상한(GB). 초과분은 오래된 판부터 정리 (0 = 무제한)
+            "audio_device": "",  # 녹음할 출력장치 이름(부분일치). 빈 값 = 기본 출력장치. 특정 장치를 고르면 그 장치 소리만 녹음.
         }
         _atomic_write_json(CONFIG_PATH, cfg)
         log(f"Config created → {CONFIG_PATH}")
@@ -1597,6 +1599,27 @@ def sb_rpc(fn, payload, timeout=30):
     except Exception: return None
 
 
+def _trim_front(video_path, cut_sec):
+    """영상 앞 cut_sec 초를 잘라낸다(로딩 구간 제거). 분석이 없어 끝에서 역산할 수 없을 때 쓰는 폴백.
+    잘라낸 초를 반환(멀티뷰 정렬용). -ss 를 입력 앞에 둬 빠르게 컷하고 -c copy 로 재인코딩 없음."""
+    if not (FFMPEG and video_path and cut_sec and cut_sec > 0): return 0.0
+    try:
+        tmp = video_path + ".front.mp4"
+        r = _run([FFMPEG, "-y", "-loglevel", "error", "-ss", f"{float(cut_sec):.2f}",
+                  "-i", video_path, "-c", "copy", "-avoid_negative_ts", "make_zero", tmp],
+                 capture_output=True)
+        if r.returncode == 0 and os.path.isfile(tmp) and os.path.getsize(tmp) > 1024:
+            os.replace(tmp, video_path)
+            log("Trimmed the loading intro (no analysis) so it starts near the countdown")
+            return float(cut_sec)
+        else:
+            try: os.remove(tmp)
+            except OSError: pass
+    except Exception as e:
+        log(f"Skipped front-trim (keeping original): {e}")
+    return 0.0
+
+
 def _trim_lead(video_path, game_len_sec, lead=6.0):
     """로비/로딩 구간을 잘라 카운트다운(게임 시작 ~6초 전)부터 시작하게. 게임은 영상 끝에서 game_len_sec 길이라 끝에서 역산(-sseof). 앞에서 잘라낸 초를 반환(멀티뷰 정렬용)."""
     if not (FFMPEG and video_path and game_len_sec): return 0.0
@@ -1849,14 +1872,23 @@ class Recorder:
             p = stream = wf = None
             try:
                 p = pa.PyAudio()
-                try:
-                    dev = p.get_default_wasapi_loopback()           # 기본 출력장치의 루프백
-                except Exception:
-                    wi = p.get_host_api_info_by_type(pa.paWASAPI)   # 폴백: 직접 탐색
-                    spk = p.get_device_info_by_index(wi["defaultOutputDevice"]); dev = None
-                    for lb in p.get_loopback_device_info_generator():
-                        if spk.get("name","") in lb.get("name",""): dev = lb; break
-                    if dev is None: raise RuntimeError("WASAPI loopback device not found")
+                dev = None
+                _want = str(CFG.get("audio_device") or "").strip()
+                if _want:   # 사용자가 고른 장치(이름 부분일치) — 예: LoL 만 나오는 출력장치를 골라 '게임 소리만' 녹음
+                    try:
+                        for lb in p.get_loopback_device_info_generator():
+                            if _want.lower() in str(lb.get("name","")).lower(): dev = lb; break
+                    except Exception: dev = None
+                    if dev is None: log("  (audio) chosen device not found - falling back to default output")
+                if dev is None:
+                    try:
+                        dev = p.get_default_wasapi_loopback()           # 기본 출력장치의 루프백
+                    except Exception:
+                        wi = p.get_host_api_info_by_type(pa.paWASAPI)   # 폴백: 직접 탐색
+                        spk = p.get_device_info_by_index(wi["defaultOutputDevice"]); dev = None
+                        for lb in p.get_loopback_device_info_generator():
+                            if spk.get("name","") in lb.get("name",""): dev = lb; break
+                        if dev is None: raise RuntimeError("WASAPI loopback device not found")
                 ch = int(dev.get("maxInputChannels") or 2) or 2
                 rate = int(dev.get("defaultSampleRate") or 48000) or 48000
                 wf = wave.open(box["path"], "wb"); wf.setnchannels(ch); wf.setsampwidth(2); wf.setframerate(rate)
@@ -1961,9 +1993,13 @@ class Recorder:
         # Pick the monitor from config.output_idx (ddagrab is 0-based; windows-capture is 1-based → +1). "auto" → primary (1).
         _ci = CFG.get("output_idx", "auto")
         midx = (int(_ci) + 1) if (isinstance(_ci, int) or (isinstance(_ci, str) and _ci.isdigit())) else 1
-        def _build_and_start(border):
-            """주어진 draw_border로 캡처 세션 생성+이벤트 등록+시작. (cap, control) 반환."""
-            cap = WindowsCapture(cursor_capture=None, draw_border=border, monitor_index=midx, window_name=None)
+        def _build_and_start(border, win_title=None):
+            """주어진 draw_border로 캡처 세션 생성+이벤트 등록+시작. (cap, control) 반환.
+            win_title 이 있으면 그 창만 캡처(Alt+Tab 해도 게임만 녹화), 없으면 모니터 전체."""
+            if win_title:
+                cap = WindowsCapture(cursor_capture=None, draw_border=border, monitor_index=None, window_name=win_title)
+            else:
+                cap = WindowsCapture(cursor_capture=None, draw_border=border, monitor_index=midx, window_name=None)
             @cap.event
             def on_frame_arrived(frame, capture_control):
                 if stop_ev.is_set():
@@ -1971,8 +2007,13 @@ class Recorder:
                     except Exception: pass
                     return
                 try:
-                    shared["buf"] = frame.frame_buffer          # numpy 처리는 피더에서 (콜백은 최대한 단순하게)
-                    shared["wh"] = (frame.width, frame.height)
+                    _fb = frame.frame_buffer
+                    # 즉시 복사: windows-capture 가 이 버퍼를 다음 프레임에 재사용하면, 참조만 들고 있던
+                    # 피더가 읽는 도중 내용이 바뀌어 '위/아래가 다른 순간'으로 찢어짐(tearing). copy 로 스냅샷 고정.
+                    _w = frame.width
+                    if _fb.shape[1] != _w: _fb = _fb[:, :_w]        # 스트라이드 보정
+                    shared["buf"] = _np.ascontiguousarray(_fb)      # 연속 메모리 복사본(피더가 안전하게 재사용)
+                    shared["wh"] = (_w, frame.height)
                     shared["n"] = shared.get("n", 0) + 1
                 except Exception as e:
                     if shared.get("err") is None: shared["err"] = repr(e)
@@ -2006,8 +2047,7 @@ class Recorder:
                 b = shared["buf"]
                 if b is not None:
                     try:
-                        if b.shape[1] != w: b = b[:, :w]            # 스트라이드 보정
-                        p.stdin.write(_np.ascontiguousarray(b).tobytes())
+                        p.stdin.write(b.tobytes())   # 이미 콜백에서 복사·스트라이드보정된 연속버퍼 → 그대로 안전
                     except Exception: break
                 nxt += interval; d = nxt - time.time()
                 if d > 0: time.sleep(d)
@@ -2023,15 +2063,31 @@ class Recorder:
         # ★ 성능 우선: ddagrab(GPU)은 hwdownload 로 매 프레임을 GPU→CPU 로 복사해 WGC보다 무겁다(인게임 FPS 저하 가능).
         #   따라서 borderless 가 안 되면 ddagrab 으로 떨어뜨리지 말고, WGC 기본(None)으로 — 여전히 GPU 기반이라 가볍다.
         #   (그 대신 일부 빌드는 노란 테두리가 남을 수 있음. 노란선이 싫고 부하를 감수하면 config.json "capture":"ddagrab".)
+        # 캡처 대상: 게임 창을 우선(Alt+Tab 해도 게임만 녹화). 창을 못 잡으면 모니터 전체로 폴백.
+        #   config "capture_target": "window"(기본) | "monitor" 로 강제 가능.
+        _tgt = str(CFG.get("capture_target", "window")).lower()
+        _wtitle = _lol_window_title() if _tgt != "monitor" else None
         try:
-            cap, control = _build_and_start(False)        # 테두리 없는 WGC
+            if _wtitle:
+                cap, control = _build_and_start(False, _wtitle)   # 게임 창만 캡처
+                log("  WGC target: game window (\"%s\") - Alt+Tab won't be recorded." % _wtitle[:40])
+            else:
+                cap, control = _build_and_start(False)            # 모니터 전체(폴백)
         except Exception:
+            # 창 캡처 실패(전체화면 등) → 모니터 전체로 안전 폴백
             try:
-                cap, control = _build_and_start(None)     # WGC 기본(가벼움) — 빌드에 따라 노란 테두리가 남을 수 있음
-                log("  WGC: this build keeps the default capture border (kept WGC for low overhead).")
+                if _wtitle:
+                    cap, control = _build_and_start(False)
+                    log("  WGC: window capture failed - fell back to full monitor.")
+                else:
+                    raise RuntimeError("monitor capture also failed")
             except Exception:
-                log("  WGC not usable here \u2014 using GPU desktop capture (ddagrab) instead.")
-                return False
+                try:
+                    cap, control = _build_and_start(None)     # WGC 기본(가벼움) — 빌드에 따라 노란 테두리가 남을 수 있음
+                    log("  WGC: this build keeps the default capture border (kept WGC for low overhead).")
+                except Exception:
+                    log("  WGC not usable here \u2014 using GPU desktop capture (ddagrab) instead.")
+                    return False
         ft = threading.Thread(target=feeder, daemon=True); ft.start()
         self._wgc_control = control
         self._wgc_state = {"stop": stop_ev, "feeder": ft, "proc_box": proc_box}
@@ -2167,6 +2223,40 @@ def _lol_game_pid():
     except Exception:
         pass
     return None
+
+def _lol_window_title(pid=None):
+    """League of Legends.exe 게임 창의 제목을 찾는다(WGC 창 캡처용). 보통 'League of Legends (TM) Client'.
+    PID 로 그 프로세스의 보이는 창을 찾고, 실패하면 알려진 제목으로 폴백. 못 찾으면 None(→ 모니터 캡처)."""
+    if sys.platform != "win32":
+        return None
+    want_pid = pid or _lol_game_pid()
+    found = {"title": None}
+    try:
+        import ctypes
+        from ctypes import wintypes
+        user32 = ctypes.windll.user32
+        EnumWindows = user32.EnumWindows
+        EnumWindowsProc = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+        def _cb(hwnd, _l):
+            try:
+                if not user32.IsWindowVisible(hwnd): return True
+                _p = wintypes.DWORD()
+                user32.GetWindowThreadProcessId(hwnd, ctypes.byref(_p))
+                if want_pid and _p.value != want_pid: return True
+                n = user32.GetWindowTextLengthW(hwnd)
+                if n <= 0: return True
+                buf = ctypes.create_unicode_buffer(n + 1)
+                user32.GetWindowTextW(hwnd, buf, n + 1)
+                t = buf.value or ""
+                if "league of legends" in t.lower():   # 게임 창 (런처/로비 제외 목적)
+                    found["title"] = t; return False
+            except Exception:
+                pass
+            return True
+        EnumWindows(EnumWindowsProc(_cb), 0)
+    except Exception:
+        pass
+    return found["title"]
 
 
 def _capture_process_audio(pid, box):
@@ -2434,12 +2524,29 @@ def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr", 
     safe = "".join(ch if (ch.isascii() and (ch.isalnum() or ch in "._-")) else "_" for ch in row_id)   # 키 안전망: 무조건 ASCII
     size = os.path.getsize(video_path)
     base = os.path.join(UPLOAD_DIR, safe); os.makedirs(base, exist_ok=True)
+    # ── 영상 t=0 의 gameTime 을 먼저 구한다(snaps 기반). 이걸로 로딩 길이를 알 수 있음. ──
+    _snaps0 = (live_data or {}).get("snaps") or []
+    _anchor0 = vt0 if (vt0 and start_ts and vt0 >= start_ts) else start_ts
+    _g0_raw = None   # 영상 t=0 시점의 gameTime(초). 음수면 그만큼 로딩/카운트다운.
+    try:
+        _cs0 = [float(s.get("t") or 0) - (float(s["w"]) - _anchor0) for s in _snaps0 if s.get("w") and _anchor0]
+        if _cs0:
+            _cs0.sort(); _g0_raw = _cs0[len(_cs0)//2]
+    except Exception:
+        _g0_raw = None
+
     trimmed = 0.0
     try:
-        # 로비/로딩/챔프선택 구간을 잘라 모든 영상이 '게임 시작 카운트다운' 근처에서 시작하도록.
-        # (예전엔 게임 감지 녹화만 트림 → 챔프선택부터 녹화한 영상은 로딩이 남아 멀티뷰가 어긋났음)
-        # _trim_lead 는 영상 끝에서 game_len_sec 을 역산하므로 두 경우 모두 동일하게 안전하게 동작.
-        if dur and analysis: trimmed = _trim_lead(video_path, dur) or 0.0
+        # 로비/로딩/챔프선택 구간을 잘라 '게임 시작 카운트다운' 근처에서 시작하도록.
+        if dur and analysis:
+            # (1순위) 분석 성공: 영상 끝에서 게임 길이만큼 역산해 정확히 컷
+            trimmed = _trim_lead(video_path, dur) or 0.0
+        elif _g0_raw is not None and _g0_raw < -8:
+            # (폴백) 분석 실패해도 snaps 로 로딩을 안다 → 앞에서 잘라 카운트다운 ~2초 전부터.
+            #        _g0_raw=-60 이면 영상 앞 60초가 로딩 → 58초 잘라냄. (게임 감지 녹화만: 챔프선택은 g0 가 더 큰 음수라 과다 컷 방지 위해 캡)
+            _cut = min(-_g0_raw - 2.0, 90.0)   # 최대 90초까지만(오검출 안전장치)
+            if _cut > 3:
+                trimmed = _trim_front(video_path, _cut) or 0.0
     except Exception: pass
     if not sb_writable():
         REC_STATE["preparing"] = False
@@ -2464,11 +2571,8 @@ def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr", 
         won = (me or {}).get("win")
         saver = (me or {}).get("name") or riot_id.split("#")[0]
         try:
-            _snaps = (live_data or {}).get("snaps") or []
-            _anchor = vt0 if (vt0 and start_ts and vt0 >= start_ts) else start_ts   # 영상 첫 프레임 시각(_vt0) 기준 → 캡처/인코더 워밍업 간극 제거(없거나 stale면 start_ts로 폴백)
-            _cs = [float(s.get("t") or 0) - (float(s["w"]) - _anchor) for s in _snaps if s.get("w") and _anchor]
-            if _cs:
-                _cs.sort(); analysis["g0"] = round(_cs[len(_cs)//2] + (trimmed or 0.0), 2)   # 영상 t=0의 gameTime(멀티뷰 정밀 정렬용)
+            if _g0_raw is not None:
+                analysis["g0"] = round(_g0_raw + (trimmed or 0.0), 2)   # 영상 t=0의 gameTime(멀티뷰 정밀 정렬용) — 트림한 만큼 보정
         except Exception: pass
         _row = {
             "id": row_id, "match_id": gid, "uploader": saver,
@@ -2921,6 +3025,24 @@ def run_gui(cfg, url):
     opt_row("Encoder",ENC_OPTS,"encoder")
     KEEP_OPTS=[("Last 20 games","20"),("Last 10 games","10"),("Last 50 games","50"),("Keep all (no cleanup)","0")]
     opt_row("Keep",KEEP_OPTS,"keep_games")
+    # 오디오 소스: 기본은 '기본 출력장치' 루프백(스피커로 나오는 전부). 특정 장치를 고르면 그 장치 소리만 녹음.
+    # 활용: 윈도우 '앱별 사운드 출력'에서 Discord 등을 다른 장치로 보내면 게임 소리만 남는다.
+    AUD_OPTS=[("Auto (default output)","")]
+    try:
+        import pyaudiowpatch as _pa
+        _pp=_pa.PyAudio()
+        try:
+            _seen=set()
+            for _lb in _pp.get_loopback_device_info_generator():
+                _nm=str(_lb.get("name","")).replace(" [Loopback]","").strip()
+                if _nm and _nm not in _seen:
+                    _seen.add(_nm); AUD_OPTS.append((_nm[:34], _nm))
+        finally:
+            try: _pp.terminate()
+            except Exception: pass
+    except Exception:
+        pass
+    opt_row("Audio",AUD_OPTS,"audio_device")
     tk.Label(optwrap,text="Auto = best quality, GPU-accelerated so your game stays smooth",bg=PANEL,fg=FAINT,font=(UI,8),wraplength=W-50,justify="left").pack(anchor="w",padx=15,pady=(6,4))
     _cleanrow=tk.Frame(optwrap,bg=PANEL); _cleanrow.pack(fill="x",padx=15,pady=(0,12))
     def _do_clean():
