@@ -130,6 +130,18 @@ td.act{white-space:nowrap}
         <tbody id="orows"></tbody>
       </table>
     </section>
+
+    <section>
+      <h2>에러 로그 <span class="cnt" id="ecnt"></span></h2>
+      <div class="bar">
+        <button class="btn" id="loaderr">불러오기</button>
+      </div>
+      <div class="note" id="esum">서버 함수에서 발생한 에러(업로드 실패·쿼터 초과 등)를 최근순으로 봅니다.</div>
+      <table style="margin-top:12px;display:none" id="etab">
+        <thead><tr><th>시각</th><th>출처</th><th>메시지</th></tr></thead>
+        <tbody id="erows"></tbody>
+      </table>
+    </section>
   </div>
 </main>
 <div id="toast"></div>
@@ -284,6 +296,22 @@ td.act{white-space:nowrap}
 
   // ── 고아 파일 ──
   var orphans=[];
+  $('loaderr').addEventListener('click',async function(){
+    try{
+      $('esum').textContent='불러오는 중…';
+      var j=await api('errors',{limit:50});
+      var rows=j.errors||[];
+      if(!rows.length){ $('esum').textContent='기록된 에러가 없습니다. (좋은 신호예요)'; $('etab').style.display='none'; $('ecnt').textContent='0'; return; }
+      $('erows').innerHTML=rows.map(function(e){
+        var meta=e.meta?(' · '+esc(JSON.stringify(e.meta)).slice(0,80)):'';
+        return '<tr><td style="white-space:nowrap">'+esc(fmtT(e.created_at))+'</td><td>'+esc(e.source||'?')+'</td><td>'+esc(e.message||'')+meta+'</td></tr>';
+      }).join('');
+      $('etab').style.display='block';
+      $('ecnt').textContent=rows.length;
+      $('esum').textContent='최근 '+rows.length+'건 (30일 이후 자동 삭제)';
+    }catch(err){ toast(String(err.message||err)); $('esum').textContent='불러오기 실패'; }
+  });
+
   $('scan').addEventListener('click',async function(){
     var b=$('scan');b.disabled=true;b.innerHTML='<span class="spin"></span> 스캔 중';
     try{

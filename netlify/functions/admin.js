@@ -154,6 +154,15 @@ exports.handler = async (event) => {
                           uploads7d: nWeek, videoBytes: vidBytes, videoRows: vidRows });
     }
 
+    // ── 에러 로그 조회 (모니터링) ──────────────────────────────────
+    if (body.action === 'errors') {
+      const limit = Math.min(Math.max(parseInt(body.limit, 10) || 50, 1), 200);
+      const r = await fetch(SB_URL + '/rest/v1/error_log?select=id,source,message,meta,created_at&order=created_at.desc&limit=' + limit,
+        { headers: sbH() });
+      const rows = r.ok ? await r.json() : [];
+      return reply(200, { errors: rows });
+    }
+
     // ── 매치 목록/검색 ─────────────────────────────────────────────
     if (body.action === 'matches') {
       const limit = Math.min(Math.max(parseInt(body.limit, 10) || 60, 1), 200);

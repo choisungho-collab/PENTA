@@ -1239,10 +1239,15 @@ def _upload_signed(local, path, ctype, ident, on_progress=None):
         try:
             r = requests.post(org + "/api/storage",
                               json={"action": "sign-upload", "puuid": ident[0], "secret": ident[1],
-                                    "paths": [path]},
+                                    "paths": [path], "bytes": total},
                               timeout=25)
             if r.status_code == 401:
                 raise RuntimeError("sign 401: identity not registered or bad secret")
+            if r.status_code == 429:
+                _rj = {}
+                try: _rj = r.json() or {}
+                except Exception: pass
+                raise RuntimeError("upload limit reached (%s) - try again later" % (_rj.get("reason") or "quota"))
             if r.status_code != 200:
                 if r.status_code in _RETRYABLE:
                     last = "sign %s" % r.status_code; continue
@@ -3278,7 +3283,7 @@ def run_gui(cfg, url):
     if sys.platform=="win32": _hide_console()
     poll()
 
-    # ── 첫 실행 온보딩: exe 를 처음 켠 사람에게 '무엇을 해야 하는지' 3스텝 안내 ──
+    # ── 첫 실행 온보딩: 한 슬라이드씩 넘겨보는 캐러셀 ──
     def _show_onboarding():
         try:
             ob=tk.Toplevel(root); ob.title("myPENTA")
@@ -3286,37 +3291,16 @@ def run_gui(cfg, url):
             try: ob.iconphoto(True, tk.PhotoImage(data=_PENTA_ICON))
             except Exception: pass
             ob.transient(root); ob.grab_set()
-            OW,OH=440,486
-            try:  # 부모 창 중앙에 배치
+            OW,OH=468,470
+            try:
                 root.update_idletasks()
                 px,py=root.winfo_x(),root.winfo_y(); pw=root.winfo_width()
-                ox=px+(pw-OW)//2; oy=py+40
-                ob.geometry("%dx%d+%d+%d"%(OW,OH,max(0,ox),max(0,oy)))
+                ox=px+(pw-OW)//2; oy=max(0,py+24)
+                ob.geometry("%dx%d+%d+%d"%(OW,OH,max(0,ox),oy))
             except Exception:
                 ob.geometry("%dx%d"%(OW,OH))
-            pad=tk.Frame(ob,bg=BG); pad.pack(fill="both",expand=True,padx=26,pady=22)
-            # 헤더
-            tk.Label(pad,text="Welcome to myPENTA",bg=BG,fg=GOLD,font=(SEMI,16,"bold")).pack(anchor="w")
-            tk.Label(pad,text="League of Legends \uac8c\uc784\uc744 \uc790\ub3d9\uc73c\ub85c \ub179\ud654\ud558\uace0, \uc6f9\uc5d0\uc11c \ub2e4\uc2dc\ubcf4\uae30\ub85c \ubaa8\uc544\ubcf4\ub294 \ub3c4\uad6c\uc608\uc694.",
-                     bg=BG,fg=SUB,font=(UI,9),wraplength=OW-56,justify="left").pack(anchor="w",pady=(4,16))
-            # 3스텝 카드
-            def _step(n, title, body):
-                row=tk.Frame(pad,bg=SURF,highlightbackground=LINE2,highlightthickness=1); row.pack(fill="x",pady=5)
-                inner=tk.Frame(row,bg=SURF); inner.pack(fill="x",padx=13,pady=11)
-                top=tk.Frame(inner,bg=SURF); top.pack(fill="x")
-                _num=tk.Canvas(top,width=24,height=24,bg=SURF,highlightthickness=0); _num.pack(side="left")
-                _num.create_oval(2,2,22,22,fill="",outline=GOLD,width=1)
-                _num.create_text(12,12,text=str(n),fill=GOLD,font=(SEMI,11,"bold"))
-                tk.Label(top,text=title,bg=SURF,fg=INK,font=(SEMI,11,"bold")).pack(side="left",padx=9)
-                tk.Label(inner,text=body,bg=SURF,fg=INK2,font=(UI,9),wraplength=OW-92,justify="left").pack(anchor="w",padx=(33,0),pady=(3,0))
-            _step(1,"\uac8c\uc784\uc744 \ud50c\ub808\uc774\ud558\uc138\uc694",
-                  "\uc774 \ucc3d\uc744 \ucf1c\ub454 \ucc44\ub85c \ub86f\uc744 \ud558\uba74, \uac8c\uc784\uc774 \ub05d\ub098\ub294 \uc21c\uac04 \uc601\uc0c1\uacfc \uc804\uc801\uc774 \uc790\ub3d9\uc73c\ub85c \uc800\uc7a5\ub3fc\uc694. \ub530\ub85c \ub204\ub97c \uac83\ub3c4 \uc5c6\uc5b4\uc694.")
-            _step(2,"Archive \ubc84\ud2bc\uc73c\ub85c \ud655\uc778",
-                  "\uc544\ub798 Archive \ubc84\ud2bc\uc744 \ub204\ub974\uba74 \ub0b4 \uc601\uc0c1\uacfc \uc804\uc801\uc774 \ubaa8\uc778 \uc6f9\ud398\uc774\uc9c0\uac00 \uc5f4\ub9ac\uace0, \uadf8 \ube0c\ub77c\uc6b0\uc800\uc5d0 \uc790\ub3d9\uc73c\ub85c \ub85c\uadf8\uc778\ub3fc\uc694.")
-            _step(3,"\uce5c\uad6c\uc640 \uac19\uc774 \uc4f0\uba74 \ub354 \uc88b\uc544\uc694",
-                  "\uac19\uc740 \uacbd\uae30\ub97c \uc5ec\ub7ec \uba85\uc774 \ub179\ud654\ud574 \uc62c\ub9ac\uba74, \uac01\uc790\uc758 \uc2dc\uc810\uc73c\ub85c \ubb36\uc5ec\uc11c \ud55c \uad50\uc804\uc744 \uc5ec\ub7ec \uc790\ub9ac\uc5d0\uc11c \ub2e4\uc2dc \ubcfc \uc218 \uc788\uc5b4\uc694.")
-            # 하단 버튼
-            btnrow=tk.Frame(pad,bg=BG); btnrow.pack(fill="x",pady=(18,0))
+            WRAP=OW-72
+
             def _close_ob():
                 try: cfg["onboarded"]=True; _atomic_write_json(CONFIG_PATH, cfg)
                 except Exception: pass
@@ -3324,13 +3308,113 @@ def run_gui(cfg, url):
                 except Exception: pass
             def _open_manual():
                 open_app((url.rstrip("/") if url else "") + "/manual.html" if url else "https://mypenta.netlify.app/manual.html")
-            tk.Button(btnrow,text="\uc0ac\uc6a9\ubc95 \uc790\uc138\ud788",command=_open_manual,bg="#181B21",fg=INK,font=(UI,9),
-                      relief="flat",bd=0,highlightthickness=1,highlightbackground=LINE2,activebackground="#23272F",
-                      activeforeground=INK,cursor="hand2",padx=13,pady=7).pack(side="left")
-            tk.Button(btnrow,text="\uc2dc\uc791\ud558\uae30",command=_close_ob,bg=GOLD,fg="#0a0a0a",font=(SEMI,10,"bold"),
-                      relief="flat",bd=0,activebackground=GOLD2,activeforeground="#0a0a0a",cursor="hand2",
-                      padx=20,pady=7).pack(side="right")
+
+            # ── 각 슬라이드의 큰 아이콘(캔버스에 직접 그림) ──
+            def _art(cvp, kind):
+                w=int(cvp["width"]); cx=w//2; cy=70
+                if kind=="welcome":
+                    # 골드 5각별 (브랜드)
+                    import math as _m
+                    pts=[]
+                    for i in range(10):
+                        ang=-_m.pi/2 + i*_m.pi/5; rr=34 if i%2==0 else 14
+                        pts+=[cx+rr*_m.cos(ang), cy+rr*_m.sin(ang)]
+                    cvp.create_polygon(pts, fill=GOLD, outline="")
+                elif kind=="record":
+                    # 모니터 + 빨간 REC 점
+                    cvp.create_rectangle(cx-42,cy-30,cx+42,cy+20, outline=INK2, width=2)
+                    cvp.create_rectangle(cx-14,cy+20,cx+14,cy+28, fill=INK2, outline="")
+                    cvp.create_oval(cx-38,cy-26,cx-26,cy-14, fill=REC, outline="")
+                    cvp.create_text(cx+6,cy-4, text="REC", fill=INK2, font=(SEMI,13,"bold"))
+                elif kind=="archive":
+                    # 클라우드 + 위 화살표(업로드)
+                    cvp.create_oval(cx-40,cy-6,cx-8,cy+26, fill=SURF, outline=BLUE, width=2)
+                    cvp.create_oval(cx-16,cy-18,cx+24,cy+26, fill=SURF, outline=BLUE, width=2)
+                    cvp.create_oval(cx+6,cy-2,cx+40,cy+26, fill=SURF, outline=BLUE, width=2)
+                    cvp.create_rectangle(cx-38,cy+18,cx+38,cy+30, fill=BG, outline="")
+                    cvp.create_line(cx,cy+22,cx,cy-8, fill=TEAL, width=3, arrow="first")
+                elif kind=="multipov":
+                    # 2x2 멀티 화면 + 가운데 골드 하이라이트
+                    for i,(dx,dy) in enumerate([(-40,-28),(6,-28),(-40,8),(6,8)]):
+                        col=GOLD if i==1 else INK2
+                        cvp.create_rectangle(cx+dx,cy+dy,cx+dx+34,cy+dy+30, outline=col, width=2)
+                    cvp.create_text(cx,cy+52, text="\u25B6", fill=GOLD, font=(SEMI,14,"bold"))
+                elif kind=="ready":
+                    # 체크 원
+                    cvp.create_oval(cx-32,cy-32,cx+32,cy+32, outline=TEAL, width=3)
+                    cvp.create_line(cx-15,cy+2,cx-4,cy+14, fill=TEAL, width=4, capstyle="round")
+                    cvp.create_line(cx-4,cy+14,cx+17,cy-14, fill=TEAL, width=4, capstyle="round")
+
+            # ── 슬라이드 내용 (아이콘 kind, 제목, 본문) ──
+            SLIDES=[
+                ("welcome","Welcome to myPENTA",
+                 "League of Legends \uac8c\uc784\uc744 \uc790\ub3d9\uc73c\ub85c \ub179\ud654\ud558\uace0, \uc6f9\uc5d0\uc11c \ub2e4\uc2dc\ubcf4\uae30\ub85c \ubaa8\uc544\ubcf4\ub294 \ub3c4\uad6c\uc608\uc694.\n\n\uba87 \uac00\uc9c0\ub9cc \ubcf4\uba74 \ubc14\ub85c \uc2dc\uc791\ud560 \uc218 \uc788\uc5b4\uc694. \u2192"),
+                ("record","1. \uac8c\uc784\ub9cc \ud558\uc138\uc694",
+                 "\uc774 \ucc3d\uc744 \ucf1c\ub454 \ucc44\ub85c \ub86f\uc744 \ud50c\ub808\uc774\ud558\uba74, \uac8c\uc784\uc774 \ub05d\ub098\ub294 \uc21c\uac04 \uc601\uc0c1\uacfc \uc804\uc801\uc774 \uc790\ub3d9\uc73c\ub85c \uc800\uc7a5\ub3fc\uc694.\n\n\ub179\ud654 \ubc84\ud2bc\ub3c4, \uc124\uc815\ub3c4 \ud544\uc694 \uc5c6\uc5b4\uc694. \uadf8\ub0e5 \ucf1c\ub450\uae30\ub9cc \ud558\uc138\uc694."),
+                ("archive","2. Archive \ub85c \ud655\uc778",
+                 "\uc544\ub798 \uae08\uc0c9 Archive \ubc84\ud2bc\uc744 \ub204\ub974\uba74, \ub0b4 \uc601\uc0c1\uacfc \uc804\uc801\uc774 \ubaa8\uc778 \uc6f9\ud398\uc774\uc9c0\uac00 \uc5f4\ub824\uc694.\n\n\uadf8 \ube0c\ub77c\uc6b0\uc800\uc5d0 \uc790\ub3d9\uc73c\ub85c \ub85c\uadf8\uc778\ub418\ub2c8, \ub530\ub85c \uac00\uc785\ud560 \uac83\ub3c4 \uc5c6\uc2b5\ub2c8\ub2e4."),
+                ("multipov","3. \uc5ec\ub7ec \uc2dc\uc810\u00b7\uac10\ub3c5\ud310",
+                 "\uac19\uc740 \uacbd\uae30\ub97c \uce5c\uad6c\ub4e4\uacfc \uac01\uc790 \ub179\ud654\ud574 \uc62c\ub9ac\uba74, \ud55c \uad50\uc804\uc744 \uc5ec\ub7ec \uc790\ub9ac\uc5d0\uc11c \ub3d9\uc2dc\uc5d0 \ubcfc \uc218 \uc788\uc5b4\uc694.\n\n\uac10\ub3c5\ud310\uc744 \ucf1c\uba74 \ud0ac \uc21c\uac04\ub9c8\ub2e4 \uac00\uc7a5 \uc88b\uc740 \uc2dc\uc810\uc73c\ub85c \uc790\ub3d9 \uc804\ud658\ub3fc\uc694."),
+                ("ready","\uc900\ube44 \ub05d!",
+                 "\uc774\uc81c \ub86f\uc744 \ucf1c\uace0 \ud55c \ud310 \ud50c\ub808\uc774\ud574\ubcf4\uc138\uc694.\n\n\ucc98\uc74c \uc2e4\ud589\ud560 \ub54c Windows \uacbd\uace0\uac00 \ub73c \uc218 \uc788\ub294\ub370, \uc815\uc0c1\uc774\uc5d0\uc694 \u2014 '\ucd94\uac00 \uc815\ubcf4 \u2192 \uc2e4\ud589'\uc744 \ub204\ub974\uba74 \ub429\ub2c8\ub2e4."),
+            ]
+            state={"i":0}
+
+            # 슬라이드 표시 영역
+            body=tk.Frame(ob,bg=BG); body.pack(fill="both",expand=True,padx=36,pady=(26,0))
+            art=tk.Canvas(body,width=OW-72,height=150,bg=BG,highlightthickness=0); art.pack()
+            ttl=tk.Label(body,text="",bg=BG,fg=GOLD,font=(SEMI,17,"bold")); ttl.pack(pady=(6,0))
+            txt=tk.Label(body,text="",bg=BG,fg=SUB,font=(UI,10),wraplength=WRAP,justify="center"); txt.pack(pady=(10,0))
+
+            # 하단: 점 인디케이터 + 버튼
+            foot=tk.Frame(ob,bg=BG); foot.pack(fill="x",side="bottom",padx=30,pady=18)
+            dots=tk.Canvas(foot,width=OW-60,height=14,bg=BG,highlightthickness=0); dots.pack()
+            navrow=tk.Frame(foot,bg=BG); navrow.pack(fill="x",pady=(12,0))
+            btn_prev=tk.Button(navrow,text="\uc774\uc804",bg="#181B21",fg=INK,font=(UI,9),relief="flat",bd=0,
+                      highlightthickness=1,highlightbackground=LINE2,activebackground="#23272F",activeforeground=INK,
+                      cursor="hand2",padx=15,pady=7)
+            btn_prev.pack(side="left")
+            btn_skip=tk.Button(navrow,text="\uac74\ub108\ub6f0\uae30",bg=BG,fg=DIM,font=(UI,9),relief="flat",bd=0,
+                      activebackground=BG,activeforeground=INK2,cursor="hand2",padx=8,pady=7)
+            btn_skip.pack(side="left",padx=6)
+            btn_next=tk.Button(navrow,text="\ub2e4\uc74c",bg=GOLD,fg="#0a0a0a",font=(SEMI,10,"bold"),relief="flat",bd=0,
+                      activebackground=GOLD2,activeforeground="#0a0a0a",cursor="hand2",padx=22,pady=7)
+            btn_next.pack(side="right")
+
+            def _render():
+                i=state["i"]; n=len(SLIDES)
+                kind,title,bodytxt=SLIDES[i]
+                art.delete("all"); _art(art, kind)
+                ttl.config(text=title); txt.config(text=bodytxt)
+                # 점 인디케이터
+                dots.delete("all"); gap=16; total=(n-1)*gap; x0=int(dots["width"])//2-total//2
+                for k in range(n):
+                    x=x0+k*gap
+                    if k==i: dots.create_oval(x-4,3,x+4,11, fill=GOLD, outline="")
+                    else: dots.create_oval(x-3,4,x+3,10, fill="", outline=FAINT, width=1)
+                # 버튼 상태
+                btn_prev.pack_forget()
+                if i>0: btn_prev.pack(side="left")
+                if i==n-1:
+                    btn_next.config(text="\uc2dc\uc791\ud558\uae30", command=_close_ob)
+                    btn_skip.pack_forget()
+                else:
+                    btn_next.config(text="\ub2e4\uc74c \u2192", command=_go_next)
+                    btn_skip.pack_forget(); btn_skip.pack(side="left",padx=6)
+            def _go_next():
+                if state["i"]<len(SLIDES)-1: state["i"]+=1; _render()
+            def _go_prev():
+                if state["i"]>0: state["i"]-=1; _render()
+            btn_prev.config(command=_go_prev)
+            btn_skip.config(command=_close_ob)
             ob.protocol("WM_DELETE_WINDOW", _close_ob)
+            # 좌우 화살표 키로도 넘기기
+            try:
+                ob.bind("<Right>", lambda e:_go_next()); ob.bind("<Left>", lambda e:_go_prev())
+                ob.bind("<Return>", lambda e:(_close_ob() if state["i"]==len(SLIDES)-1 else _go_next()))
+                ob.bind("<Escape>", lambda e:_close_ob())
+            except Exception: pass
+            _render()
         except Exception as _e:
             log("onboarding skipped: %s" % _e)
     if not cfg.get("onboarded"):
