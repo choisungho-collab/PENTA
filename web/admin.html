@@ -62,6 +62,12 @@ tbody tr:hover td{background:var(--hover)}
 td.mono{font-family:var(--fm);font-size:12px;color:var(--dim)}
 .tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:6px;border:1px solid var(--line2);color:var(--dim)}
 .tag.own{border-color:var(--gold-line);color:var(--gold-ink);background:var(--gold-soft)}
+td.upl{white-space:normal;max-width:380px}
+td.upl .tag{margin:2px 4px 2px 0}
+.povn{font-family:var(--fm);font-size:11px;color:var(--gold-ink);margin-left:4px}
+tr.sub td{background:var(--well);border-bottom:1px solid var(--line);font-size:12.5px}
+tr.sub:hover td{background:var(--well)}
+td.act{white-space:nowrap}
 .rowbtn{font-size:12px;padding:4px 10px;border-radius:7px;border:1px solid var(--line2);background:none;color:var(--dim);cursor:pointer;font-family:var(--fd)}
 .rowbtn:hover{color:var(--ink);border-color:var(--gold-line)}
 .rowbtn.del:hover{color:var(--red);border-color:var(--red-line)}
@@ -77,7 +83,10 @@ td.mono{font-family:var(--fm);font-size:12px;color:var(--dim)}
 <body>
 <header>
   <div class="brand">myPENTA<span>운영 콘솔</span></div>
-  <button class="hbtn" id="logout" style="display:none">로그아웃</button>
+  <div style="display:flex;gap:9px;align-items:center">
+    <a class="hbtn" id="gohome" href="index.html" style="display:none">← 아카이브로</a>
+    <button class="hbtn" id="logout" style="display:none">로그아웃</button>
+  </div>
 </header>
 
 <main>
@@ -103,7 +112,7 @@ td.mono{font-family:var(--fm);font-size:12px;color:var(--dim)}
         <button class="btn" id="more">더 보기</button>
       </div>
       <table>
-        <thead><tr><th>업로드</th><th>업로더</th><th>제목</th><th>길이</th><th>크기</th><th>소유</th><th></th></tr></thead>
+        <thead><tr><th>업로드</th><th>업로더 (POV)</th><th>제목</th><th>길이</th><th>크기</th><th></th></tr></thead>
         <tbody id="mrows"></tbody>
       </table>
       <div class="note">삭제는 DB 행과 스토리지 파일(영상+썸네일)을 함께 제거합니다. 되돌릴 수 없습니다.</div>
@@ -160,6 +169,7 @@ td.mono{font-family:var(--fm);font-size:12px;color:var(--dim)}
     $('gate').style.display=inApp?'none':'block';
     $('app').style.display=inApp?'block':'none';
     $('logout').style.display=inApp?'inline-block':'none';
+    $('gohome').style.display=inApp?'inline-block':'none';
   }
 
   // ── 대시보드 ──
@@ -177,48 +187,99 @@ td.mono{font-family:var(--fm);font-size:12px;color:var(--dim)}
     }).join('');
   }
 
-  // ── 매치 관리 ──
-  var lastUploaded=null, curQ='';
-  function rowHtml(r){
-    var own=r.owner_puuid?'<span class="tag own">소유</span>':'<span class="tag">익명</span>';
-    return '<tr data-id="'+esc(r.id)+'">'
-      +'<td class="mono">'+esc(fmtT(r.uploaded))+'</td>'
-      +'<td>'+esc(r.uploader||'—')+'</td>'
-      +'<td>'+esc(r.title||'')+'</td>'
-      +'<td class="mono">'+esc(r.length||'')+'</td>'
-      +'<td class="mono">'+fmtB(r.video_size)+'</td>'
-      +'<td>'+own+'</td>'
-      +'<td><a class="rowbtn" target="_blank" href="match.html?id='+encodeURIComponent(r.match_id||'')+'&pov='+encodeURIComponent(r.id)+'">보기</a> '
-      +'<button class="rowbtn del" data-del="'+esc(r.id)+'" data-name="'+esc(r.uploader||'')+'">삭제</button></td></tr>';
+  // ── 매치 관리 (match_id 그룹 = 같은 게임의 멀티 POV) ──
+  var curQ='', curCursor=null, GROUPS={};
+  function povChip(pv){
+    var cls=pv.owner?'tag own':'tag';
+    return '<span class="'+cls+'" title="'+(pv.owner?'소유자 업로드':'익명 업로드')+'">'+esc(pv.uploader||'—')+' · '+fmtB(pv.bytes)+'</span>';
+  }
+  function groupHtml(g){
+    var chips=g.povs.map(povChip).join(' ');
+    var multi=g.povs.length>1;
+    var first=g.povs[0]||{};
+    return '<tr class="grp" data-mid="'+esc(g.match_id)+'">'
+      +'<td class="mono">'+esc(fmtT(g.uploaded))+'</td>'
+      +'<td class="upl">'+chips+(multi?' <span class="povn">'+g.povs.length+'명</span>':'')+'</td>'
+      +'<td>'+esc(g.title||'')+'</td>'
+      +'<td class="mono">'+esc(g.length||'')+'</td>'
+      +'<td class="mono">'+fmtB(g.totalBytes)+'</td>'
+      +'<td class="act">'
+        +'<a class="rowbtn" target="_blank" href="match.html?id='+encodeURIComponent(g.match_id)+(first.id?'&pov='+encodeURIComponent(first.id):'')+'">보기</a> '
+        +(multi?'<button class="rowbtn" data-expand="'+esc(g.match_id)+'">시점별</button> ':'')
+        +'<button class="rowbtn del" data-delmid="'+esc(g.match_id)+'" data-n="'+g.povs.length+'">'+(multi?'전체삭제':'삭제')+'</button>'
+      +'</td></tr>';
   }
   async function loadMatches(append){
-    var p={limit:100};
+    var p={limit:60};
     if(curQ)p.q=curQ;
-    if(append&&lastUploaded)p.before=lastUploaded;
+    if(append&&curCursor)p.before=curCursor;
     var j=await api('matches',p);
-    var rows=j.rows||[];
-    if(rows.length)lastUploaded=rows[rows.length-1].uploaded;
-    var html=rows.map(rowHtml).join('');
-    if(append)$('mrows').insertAdjacentHTML('beforeend',html); else $('mrows').innerHTML=html||'<tr><td colspan="7" style="color:var(--faint)">결과 없음</td></tr>';
-    $('mcnt').textContent=$('mrows').querySelectorAll('tr[data-id]').length+'개 표시';
-    $('more').disabled=rows.length<100;
+    var groups=j.groups||[];
+    curCursor=j.cursor;
+    groups.forEach(function(g){GROUPS[g.match_id]=g;});
+    var html=groups.map(groupHtml).join('');
+    if(append)$('mrows').insertAdjacentHTML('beforeend',html); else { GROUPS={}; groups.forEach(function(g){GROUPS[g.match_id]=g;}); $('mrows').innerHTML=html||'<tr><td colspan="6" style="color:var(--faint)">결과 없음</td></tr>'; }
+    $('mcnt').textContent=$('mrows').querySelectorAll('tr.grp').length+'게임 표시';
+    $('more').disabled=!j.hasMore;
   }
-  $('search').addEventListener('click',function(){curQ=$('q').value.trim();lastUploaded=null;loadMatches(false).catch(function(e){toast(String(e.message||e));});});
+  $('search').addEventListener('click',function(){curQ=$('q').value.trim();curCursor=null;loadMatches(false).catch(function(e){toast(String(e.message||e));});});
   $('q').addEventListener('keydown',function(e){if(e.key==='Enter')$('search').click();});
   $('more').addEventListener('click',function(){loadMatches(true).catch(function(e){toast(String(e.message||e));});});
+
+  function sel(v){return (window.CSS&&CSS.escape?CSS.escape(v):v);}
   $('mrows').addEventListener('click',async function(e){
-    var b=e.target.closest?e.target.closest('button[data-del]'):null;
-    if(!b)return;
-    var id=b.getAttribute('data-del');
-    if(!confirm('이 매치를 완전히 삭제할까요?\n업로더: '+(b.getAttribute('data-name')||'—')+'\n영상 파일과 썸네일도 함께 지워지며 되돌릴 수 없습니다.'))return;
-    b.disabled=true;b.textContent='삭제 중';
-    try{
-      var j=await api('delete-match',{id:id});
-      var tr=$('mrows').querySelector('tr[data-id="'+(window.CSS&&CSS.escape?CSS.escape(id):id)+'"]');
-      if(tr)tr.remove();
-      toast('삭제 완료 (파일 '+((j.removedFiles||[]).length)+'개 제거)');
-      loadStats().catch(function(){});
-    }catch(err){ toast('삭제 실패: '+String(err.message||err)); b.disabled=false;b.textContent='삭제'; }
+    var t=e.target;
+    // 시점별 펼치기
+    var ex=t.closest?t.closest('button[data-expand]'):null;
+    if(ex){
+      var mid=ex.getAttribute('data-expand'), g=GROUPS[mid];
+      var exist=$('mrows').querySelector('tr.sub[data-for="'+sel(mid)+'"]');
+      if(exist){ // 토글로 접기
+        var all=$('mrows').querySelectorAll('tr.sub[data-for="'+sel(mid)+'"]'); all.forEach(function(n){n.remove();}); ex.textContent='시점별'; return;
+      }
+      ex.textContent='접기';
+      var host=ex.closest('tr'); var frag='';
+      (g.povs||[]).forEach(function(pv){
+        frag+='<tr class="sub" data-for="'+esc(mid)+'"><td></td>'
+          +'<td class="upl">'+povChip(pv)+'</td>'
+          +'<td colspan="2" class="mono" style="color:var(--faint)">'+esc(pv.id)+'</td>'
+          +'<td class="mono">'+fmtB(pv.bytes)+'</td>'
+          +'<td class="act"><a class="rowbtn" target="_blank" href="match.html?id='+encodeURIComponent(mid)+'&pov='+encodeURIComponent(pv.id)+'">보기</a> '
+          +'<button class="rowbtn del" data-delid="'+esc(pv.id)+'" data-name="'+esc(pv.uploader||'')+'">이 시점 삭제</button></td></tr>';
+      });
+      host.insertAdjacentHTML('afterend',frag);
+      return;
+    }
+    // 게임 전체 삭제
+    var bm=t.closest?t.closest('button[data-delmid]'):null;
+    if(bm){
+      var mid2=bm.getAttribute('data-delmid'), n=bm.getAttribute('data-n');
+      if(!confirm('이 게임의 모든 시점('+n+'개)을 삭제할까요?\n영상·썸네일 파일까지 함께 지워지며 되돌릴 수 없습니다.'))return;
+      bm.disabled=true;bm.textContent='삭제 중';
+      try{
+        var j=await api('delete-match',{matchId:mid2});
+        $('mrows').querySelectorAll('tr[data-mid="'+sel(mid2)+'"],tr.sub[data-for="'+sel(mid2)+'"]').forEach(function(nd){nd.remove();});
+        delete GROUPS[mid2];
+        toast('삭제 완료 ('+((j.removedRows||0))+'개 행, 파일 '+((j.removedFiles||[]).length)+'개)');
+        loadStats().catch(function(){});
+        $('mcnt').textContent=$('mrows').querySelectorAll('tr.grp').length+'게임 표시';
+      }catch(err){ toast('삭제 실패: '+String(err.message||err)); bm.disabled=false;bm.textContent='전체삭제'; }
+      return;
+    }
+    // 단일 시점 삭제
+    var bi=t.closest?t.closest('button[data-delid]'):null;
+    if(bi){
+      var id=bi.getAttribute('data-delid');
+      if(!confirm('이 시점 1개만 삭제할까요?\n업로더: '+(bi.getAttribute('data-name')||'—')+'\n되돌릴 수 없습니다.'))return;
+      bi.disabled=true;bi.textContent='삭제 중';
+      try{
+        var j2=await api('delete-match',{id:id});
+        bi.closest('tr').remove();
+        toast('시점 삭제 완료 (파일 '+((j2.removedFiles||[]).length)+'개)');
+        loadStats().catch(function(){});
+      }catch(err){ toast('삭제 실패: '+String(err.message||err)); bi.disabled=false;bi.textContent='이 시점 삭제'; }
+      return;
+    }
   });
 
   // ── 고아 파일 ──

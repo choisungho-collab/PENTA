@@ -156,29 +156,67 @@ exports.handler = async (event) => {
 
     // ── 매치 목록/검색 ─────────────────────────────────────────────
     if (body.action === 'matches') {
-      const limit = Math.min(Math.max(parseInt(body.limit, 10) || 100, 1), 300);
-      let url = SB_URL + '/rest/v1/matches?select=id,match_id,uploader,uploaded,video_size,owner_puuid,title,length'
-              + '&order=uploaded.desc&limit=' + limit;
+      const limit = Math.min(Math.max(parseInt(body.limit, 10) || 60, 1), 200);
+      // 개별 시점 행을 넉넉히 가져와 match_id 로 그룹화(같은 게임을 여러 명이 녹화한 멀티 POV 를 한 줄로).
+      let url = SB_URL + '/rest/v1/matches?select=id,match_id,uploader,uploaded,video_size,owner_puuid,title,length,won'
+              + '&order=uploaded.desc&limit=' + (limit * 4);
       const q = String(body.q || '').slice(0, 60).replace(/[%,()]/g, '');
       if (q) url += '&or=(uploader.ilike.*' + encodeURIComponent(q) + '*,match_id.ilike.*' + encodeURIComponent(q) + '*)';
       if (body.before) url += '&uploaded=lt.' + encodeURIComponent(String(body.before).slice(0, 40));
       const r = await fetch(url, { headers: sbH() });
       if (!r.ok) throw new Error('matches ' + r.status);
-      return reply(200, { rows: await r.json() });
+      const rows = await r.json();
+
+      const groups = new Map();   // match_id -> 그룹(대표 정보 + 시점 목록)
+      for (const row of rows) {
+        const key = row.match_id || row.id;
+        let g = groups.get(key);
+        if (!g) {
+          g = { match_id: key, uploaded: row.uploaded, title: row.title || '',
+                length: row.length || '', totalBytes: 0, povs: [] };
+          groups.set(key, g);
+        }
+        g.povs.push({ id: row.id, uploader: row.uploader || '', owner: !!row.owner_puuid,
+                      bytes: row.video_size || 0, won: row.won });
+        g.totalBytes += (row.video_size || 0);
+        if (row.title && !g.title) g.title = row.title;
+        if (row.uploaded > g.uploaded) g.uploaded = row.uploaded;   // 그룹 대표 시각 = 최신
+      }
+      // 최신순 정렬 후 limit 개 그룹만
+      const out = Array.from(groups.values())
+        .sort((a, b) => (a.uploaded < b.uploaded ? 1 : -1))
+        .slice(0, limit);
+      // 페이지네이션 커서: 마지막 그룹의 대표 시각
+      const cursor = out.length ? out[out.length - 1].uploaded : null;
+      return reply(200, { groups: out, cursor: cursor, hasMore: rows.length >= limit * 4 });
     }
 
-    // ── 매치 삭제 (행 + 스토리지 파일) ─────────────────────────────
+    // ── 삭제: 단일 시점(id) 또는 게임 전체(match_id) ─────────────────
+    //    { action:'delete-match', id }        → 그 시점 1개만
+    //    { action:'delete-match', matchId }   → 같은 게임의 모든 시점(멀티 POV 통째로)
     if (body.action === 'delete-match') {
-      const id = String(body.id || '');
-      if (!/^[A-Za-z0-9._-]{8,140}$/.test(id)) return reply(400, { error: 'bad id' });
-      const r = await fetch(SB_URL + '/rest/v1/matches?select=video,thumb&id=eq.' + encodeURIComponent(id), { headers: sbH() });
+      let filter, label;
+      if (body.matchId) {
+        const mid = String(body.matchId);
+        if (!/^[A-Za-z0-9._-]{4,160}$/.test(mid)) return reply(400, { error: 'bad matchId' });
+        filter = 'match_id=eq.' + encodeURIComponent(mid); label = mid;
+      } else {
+        const id = String(body.id || '');
+        if (!/^[A-Za-z0-9._-]{8,140}$/.test(id)) return reply(400, { error: 'bad id' });
+        filter = 'id=eq.' + encodeURIComponent(id); label = id;
+      }
+      const r = await fetch(SB_URL + '/rest/v1/matches?select=video,thumb&' + filter, { headers: sbH() });
       const rows = r.ok ? await r.json() : [];
       if (!rows.length) return reply(404, { error: 'not found' });
-      const paths = [keyFromUrl(rows[0].video), keyFromUrl(rows[0].thumb)].filter(Boolean);
+      const paths = [];
+      for (const row of rows) {
+        const v = keyFromUrl(row.video); if (v) paths.push(v);
+        const t = keyFromUrl(row.thumb); if (t) paths.push(t);
+      }
       if (paths.length) await storageDelete(paths);
-      const d = await fetch(SB_URL + '/rest/v1/matches?id=eq.' + encodeURIComponent(id), { method: 'DELETE', headers: sbH() });
+      const d = await fetch(SB_URL + '/rest/v1/matches?' + filter, { method: 'DELETE', headers: sbH() });
       if (!d.ok) throw new Error('row delete ' + d.status);
-      return reply(200, { ok: true, removedFiles: paths });
+      return reply(200, { ok: true, removedRows: rows.length, removedFiles: paths });
     }
 
     // ── 고아 파일 스캔 ─────────────────────────────────────────────

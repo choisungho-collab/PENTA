@@ -51,13 +51,25 @@
 
   // ──────────────────────── Data Dragon ───────────────────────
   var _ver = null;
+  // localStorage 영구 캐시: 페이지를 이동해도 DataDragon 재요청 안 함(딜레이 제거).
+  //  - 버전: 24시간마다 갱신  - 챔피언맵: 버전이 바뀔 때만 갱신
+  function _lsGet(k){ try{ return localStorage.getItem(k); }catch(_){ return null; } }
+  function _lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(_){} }
   async function ddVersion() {
     if (_ver) return _ver;
+    try {
+      var cached = JSON.parse(_lsGet('penta_dd_ver') || 'null');
+      if (cached && cached.v && (Date.now() - cached.t) < 86400000) { _ver = cached.v; return _ver; }
+    } catch (_) {}
     try {
       var r = await fetch('https://ddragon.leagueoflegends.com/api/versions.json');
       var v = await r.json();
       _ver = (Array.isArray(v) && v[0]) || '15.1.1';
-    } catch (e) { _ver = '15.1.1'; }
+      _lsSet('penta_dd_ver', JSON.stringify({ v: _ver, t: Date.now() }));
+    } catch (e) {
+      var stale = null; try { stale = JSON.parse(_lsGet('penta_dd_ver') || 'null'); } catch (_) {}
+      _ver = (stale && stale.v) || '15.1.1';   // 오프라인이어도 마지막 값 재사용
+    }
     return _ver;
   }
   // Match-V5의 championName은 대부분 DDragon 파일명과 같다. 알려진 예외만 보정.
@@ -66,12 +78,27 @@
   var _champMap = null;
   async function ddChampMap(ver) {
     if (_champMap) return _champMap;
+    // 버전별 캐시: 같은 버전이면 champion.json(수백 KB) 재요청 안 함
+    var CKEY = 'penta_dd_champ_' + (ver || '');
+    try {
+      var cached = JSON.parse(_lsGet(CKEY) || 'null');
+      if (cached && typeof cached === 'object' && Object.keys(cached).length) { _champMap = cached; return _champMap; }
+    } catch (_) {}
     _champMap = {};
     try {
       var r = await fetch('https://ddragon.leagueoflegends.com/cdn/' + ver + '/data/ko_KR/champion.json');
       var j = await r.json();
       var d = (j && j.data) || {};
       for (var key in d) { if (d[key] && d[key].name) _champMap[d[key].name] = d[key].id || key; }
+      if (Object.keys(_champMap).length) {
+        _lsSet(CKEY, JSON.stringify(_champMap));
+        try {   // 옛 버전 캐시는 정리(용량 누적 방지)
+          for (var i = localStorage.length - 1; i >= 0; i--) {
+            var k = localStorage.key(i);
+            if (k && k.indexOf('penta_dd_champ_') === 0 && k !== CKEY) localStorage.removeItem(k);
+          }
+        } catch (_) {}
+      }
     } catch (e) {}
     return _champMap;
   }
