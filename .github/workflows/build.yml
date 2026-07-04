@@ -34,18 +34,6 @@ jobs:
           pip install -r requirements-recorder.txt
           pip install pyinstaller
 
-      - name: Build (onefile)
-        run: pyinstaller --onefile --windowed --name penta_recorder --noupx --add-data "fonts;fonts" --hidden-import psutil --hidden-import requests --hidden-import tkinter --hidden-import windows_capture --hidden-import pyaudiowpatch --collect-all windows_capture --exclude-module cv2 --exclude-module opencv-python --exclude-module matplotlib penta_recorder.py
-
-      - name: Package exe as zip
-        run: Compress-Archive -Path dist\penta_recorder.exe -DestinationPath penta_recorder.zip -Force
-
-      - name: Upload zip artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: penta_recorder-windows
-          path: penta_recorder.zip
-
       # 다음 버전 자동 계산: 태그를 직접 밀면 그 태그를, 아니면 최신 vX.Y.Z의 패치 +1
       - name: Compute release tag
         id: ver
@@ -64,6 +52,27 @@ jobs:
           fi
           echo "tag=${tag}" >> "$GITHUB_OUTPUT"
           echo "→ release tag: ${tag}"
+
+      # exe 안에 자기 버전을 박음 → 실행 시 GitHub Releases 최신 태그와 비교해 업데이트 배너 표시
+      - name: Inject version into recorder
+        shell: bash
+        run: |
+          sed -i "s/^APP_VERSION = .*/APP_VERSION = \"${{ steps.ver.outputs.tag }}\"/" penta_recorder.py
+          grep -n '^APP_VERSION' penta_recorder.py
+
+      # 참고: UPX 압축은 용량을 줄이지만 백신 오탐(특히 캡처+업로드 하는 우리 앱)을 유발해
+      # 유저 PC 에서 실행이 막힐 수 있어 사용하지 않음(--noupx). 안전한 모듈 제외로만 감량.
+      - name: Build (onefile)
+        run: pyinstaller --onefile --windowed --name penta_recorder --noupx --icon penta.ico --add-data "fonts;fonts" --hidden-import psutil --hidden-import requests --hidden-import tkinter --hidden-import windows_capture --hidden-import pyaudiowpatch --hidden-import numpy --collect-all windows_capture --exclude-module cv2 --exclude-module opencv-python --exclude-module matplotlib --exclude-module scipy --exclude-module pandas --exclude-module PIL --exclude-module setuptools --exclude-module pytest penta_recorder.py
+
+      - name: Package exe as zip
+        run: Compress-Archive -Path dist\penta_recorder.exe -DestinationPath penta_recorder.zip -Force
+
+      - name: Upload zip artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: penta_recorder-windows
+          path: penta_recorder.zip
 
       # 자동 릴리즈. 커밋 메시지에 [skip release] 가 있으면 빌드만 하고 릴리즈는 건너뜀.
       - name: Publish Release (auto)
