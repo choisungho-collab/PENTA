@@ -34,7 +34,7 @@
  --ease:cubic-bezier(.22,.9,.28,1.08);
 }
 *{box-sizing:border-box}html,body{margin:0;overflow-x:clip}
-body{background:var(--bg);color:var(--ink);font-family:var(--fd);font-size:15px;line-height:1.65;word-break:keep-all;overflow-wrap:break-word;-webkit-font-smoothing:antialiased;letter-spacing:-.01em;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
+body{background:radial-gradient(60% 45% at 18% 8%,rgba(222,199,156,.06),transparent 60%),radial-gradient(55% 50% at 88% 20%,rgba(82,163,195,.055),transparent 62%),radial-gradient(75% 55% at 50% 112%,rgba(120,110,180,.05),transparent 66%),#080A0E;background-attachment:fixed;color:var(--ink);font-family:var(--fd);font-size:15px;line-height:1.65;word-break:keep-all;overflow-wrap:break-word;-webkit-font-smoothing:antialiased;letter-spacing:-.01em;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
 body::before{content:'';position:fixed;inset:0;z-index:9999;pointer-events:none;opacity:.035;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='120' height='120' filter='url(%23n)' opacity='.6'/></svg>");background-size:120px 120px}
 a{color:inherit;text-decoration:none}svg{display:block}img{display:block;max-width:100%}
 button:active,.dl:active,.povchip:active{transform:scale(.965)}
@@ -86,11 +86,18 @@ button:active,.dl:active,.povchip:active{transform:scale(.965)}
 
 /* 헤더 */
 .head{padding:54px 0 30px;position:relative}
+.head::before{content:'';position:absolute;top:-40px;left:-120px;width:520px;height:340px;z-index:0;pointer-events:none;background:radial-gradient(ellipse at center,rgba(222,199,156,.13),rgba(222,199,156,.04) 42%,transparent 70%);filter:blur(8px)}
+.head>*{position:relative;z-index:1}
 .head .eb{font-family:var(--fm);font-size:11px;letter-spacing:.3em;color:var(--gold);text-transform:uppercase;margin-bottom:18px;display:flex;align-items:center;gap:10px}
 .head .eb .dd{width:6px;height:6px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 4px var(--gold-soft)}
 .head h1{font-family:var(--fs);font-weight:400;font-size:clamp(38px,6vw,62px);margin:0;letter-spacing:.01em;color:var(--ink);line-height:1.04}
-.head h1 .g{color:var(--gold)}
+.head h1 .g{color:var(--gold);background:linear-gradient(100deg,#EFDDBC,#DEC79C 45%,#C9A86E);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;text-shadow:0 0 34px rgba(222,199,156,.28)}
 .head .desc{font-family:var(--fd);font-size:17px;line-height:1.7;color:var(--ink2);margin:20px 0 0;max-width:660px}
+@keyframes heroIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+.head .eb{animation:heroIn .6s cubic-bezier(.2,.7,.2,1) both}
+.head h1{animation:heroIn .7s cubic-bezier(.2,.7,.2,1) .08s both}
+.head .desc{animation:heroIn .7s cubic-bezier(.2,.7,.2,1) .18s both}
+@media(prefers-reduced-motion:reduce){.head .eb,.head h1,.head .desc,.toolbar{animation:none}}
 .head .desc b{color:var(--ink);font-weight:600}
 
 /* 통계 줄 */
@@ -99,7 +106,7 @@ button:active,.dl:active,.povchip:active{transform:scale(.965)}
 .stat{padding:0 22px;border-left:1px solid var(--line)}
 .stat:first-child{padding-left:0;border-left:0}
 .stat .v{font-family:var(--fs);font-weight:400;font-size:26px;line-height:1;font-variant-numeric:tabular-nums;color:var(--ink)}
-.stat .v.g{color:var(--gold)}.stat .v.t{color:var(--win)}
+.stat .v.g{color:var(--gold);text-shadow:0 0 20px rgba(222,199,156,.25)}.stat .v.t{color:var(--win)}
 .stat .k{font-family:var(--fd);font-weight:600;font-size:11.5px;letter-spacing:.02em;color:var(--dim);margin-top:9px}
 .filters{display:flex;gap:7px}
 .fchip{font-family:var(--fd);font-weight:600;font-size:13px;color:var(--dim);background:var(--surface);border:1px solid var(--line);padding:9px 15px;border-radius:100px;cursor:pointer;transition:.14s}
@@ -491,9 +498,27 @@ button:active,.dl:active,.povchip:active{transform:none}
       if(g.length>1) pov++;
       g.forEach(function(r){ (r.players||[]).forEach(function(p){ penta += (p.pentas||0); }); });
     });
-    document.getElementById('s-games').textContent = games;
-    document.getElementById('s-penta').textContent = penta;
-    document.getElementById('s-pov').textContent = pov;
+    countUp(document.getElementById('s-games'), games);
+    countUp(document.getElementById('s-penta'), penta);
+    countUp(document.getElementById('s-pov'), pov);
+  }
+
+  // 숫자 카운트업: 0 → 목표값까지 부드럽게(첫 로드 임팩트). reduced-motion 이면 즉시.
+  function countUp(el, target){
+    if(!el) return;
+    target = target|0;
+    var reduce = false;
+    try{ reduce = window.matchMedia('(prefers-reduced-motion:reduce)').matches; }catch(_){}
+    if(reduce || target<=0){ el.textContent = target; return; }
+    var dur = 900, t0 = null;
+    function tick(ts){
+      if(t0===null) t0=ts;
+      var p = Math.min(1, (ts-t0)/dur);
+      var eased = 1-Math.pow(1-p, 3);          // ease-out cubic
+      el.textContent = Math.round(target*eased);
+      if(p<1) requestAnimationFrame(tick); else el.textContent = target;
+    }
+    requestAnimationFrame(tick);
   }
 
   async function load(){
@@ -529,9 +554,18 @@ button:active,.dl:active,.povchip:active{transform:none}
   addEventListener('scroll', function(){ document.getElementById('bar').classList.toggle('scrolled', scrollY>4); });
 
   // 로그인 칩 (#code 소비 → 토큰; 자동 로그인)
-  async function renderAuth(){
+  var _authVerified=false;
+  async function renderAuth(seed){
     var host=document.getElementById('auth'); if(!host) return;
-    var me=null; try{ me=await P.initAuth(); }catch(e){}
+    var me=seed;
+    if(seed===undefined){
+      // 캐시된 세션으로 즉시 그리고(네트워크 대기 0), 서버 검증은 백그라운드에서 1회만.
+      me=(P.whoamiCached&&P.whoamiCached())||null;
+      if(!_authVerified){ _authVerified=true; P.initAuth().then(function(v){
+        var a=(v&&v.puuid)?v.puuid:null, b=(me&&me.puuid)?me.puuid:null;
+        if(a!==b) renderAuth(v||null);   // 검증 결과가 캐시와 다르면 다시 그림
+      }).catch(function(){}); }
+    }
     if(me && me.puuid){
       var nm=(me.name||'').split('#')[0] || '소환사';
       host.innerHTML='<span class="authstat in" title="'+esc(me.name||'')+'"><span class="dot"></span>'+esc(nm)+'</span><a class="me-link" href="me.html">나의 협곡</a><button class="lo" id="loBtn">로그아웃</button>';
