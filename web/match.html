@@ -140,7 +140,7 @@ a{color:inherit;text-decoration:none}svg{display:block}img{display:block;max-wid
 /* 요약 바 */
 .summary{margin-top:24px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r2);padding:18px 20px;display:flex;align-items:center;gap:22px;flex-wrap:wrap}
 .summary .verdict{font-family:var(--fs);font-weight:400;font-size:26px;letter-spacing:.01em;padding-right:22px;border-right:1px solid var(--line)}
-.summary .verdict.w{color:var(--win)}.summary .verdict.l{color:var(--loss)}
+.summary .verdict.w{color:var(--win);text-shadow:0 0 22px rgba(82,195,172,.3)}.summary .verdict.l{color:var(--loss);text-shadow:0 0 22px rgba(224,107,107,.22)}
 .summary .si{display:flex;flex-direction:column;gap:4px}
 .summary .si .k{font-family:var(--fd);font-size:11px;color:var(--dim);letter-spacing:.02em}
 .summary .si .v{font-family:var(--fm);font-size:15px;color:var(--ink);font-variant-numeric:tabular-nums}
@@ -232,6 +232,16 @@ h2.sec .ln{flex:1;height:1px;background:var(--line)}
 .state{padding:90px 24px;text-align:center}
 .state .mk{width:50px;height:50px;color:var(--line2);margin:0 auto 20px}
 .state h3{font-family:var(--fs);font-weight:400;font-size:22px;color:var(--ink);margin:0 0 10px}
+/* 로딩 별: 골드로 은은하게 맥동(불러오는 동안 생동감) */
+#loading .mk{color:var(--gold);animation:starPulse 1.5s ease-in-out infinite}
+@keyframes starPulse{0%,100%{opacity:.55;filter:drop-shadow(0 0 6px rgba(222,199,156,.2))}50%{opacity:1;filter:drop-shadow(0 0 18px rgba(222,199,156,.5))}}
+/* 콘텐츠 등장: 로딩 끝나고 영상+요약이 부드럽게 나타남 */
+@keyframes matchIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.match-in{animation:matchIn .5s cubic-bezier(.2,.7,.2,1) both}
+/* 스크롤 리빌: 아래 섹션들이 뷰포트에 들어올 때 부드럽게 떠오름(2025 트렌드, 성능 안전) */
+.reveal{opacity:0;transform:translateY(22px);transition:opacity .6s cubic-bezier(.2,.7,.2,1),transform .6s cubic-bezier(.2,.7,.2,1)}
+.reveal.in{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){#loading .mk{animation:none}.match-in{animation:none}.reveal{opacity:1;transform:none;transition:none}}
 .state p{font-family:var(--fd);font-size:14.5px;color:var(--dim);margin:0 auto;max-width:420px;line-height:1.7}
 .state a{color:var(--gold-ink);font-weight:600}
 
@@ -590,6 +600,30 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
 .mvbar .mvtime{flex:0 0 auto;font-family:var(--fm);font-size:11.5px;color:var(--dim);font-variant-numeric:tabular-nums;white-space:nowrap}
 .mvbar .mvrate{width:auto;min-width:42px;padding:0 8px;font-family:var(--fm);font-size:11px;font-variant-numeric:tabular-nums}
 #stagehost{position:relative}
+/* ── 시네마틱 인트로: 경기 진입 시 대결카드 연출(영상 위 오버레이, 재생 로직과 무관) ── */
+.matchintro{position:absolute;inset:0;z-index:20;overflow:hidden;background:#05080b;display:grid;place-items:center;cursor:pointer}
+.matchintro .mibg{position:absolute;inset:0;background-size:cover;background-position:center;filter:brightness(.4) saturate(1.1);transform:scale(1.08);animation:miZoom 2.6s ease-out both}
+.matchintro .miveil{position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(5,8,11,.2),rgba(5,8,11,.82) 78%)}
+@keyframes miZoom{from{transform:scale(1.16)}to{transform:scale(1.04)}}
+.matchintro .miteam{position:absolute;top:50%;transform:translateY(-50%);display:flex;gap:6px;z-index:2}
+.matchintro .miteam.blue{left:5%;animation:miInL .7s cubic-bezier(.16,.8,.3,1) both}
+.matchintro .miteam.red{right:5%;animation:miInR .7s cubic-bezier(.16,.8,.3,1) both}
+@keyframes miInL{from{opacity:0;transform:translateY(-50%) translateX(-46px)}to{opacity:1;transform:translateY(-50%) translateX(0)}}
+@keyframes miInR{from{opacity:0;transform:translateY(-50%) translateX(46px)}to{opacity:1;transform:translateY(-50%) translateX(0)}}
+.matchintro .mic{width:clamp(30px,5.4vw,52px);height:clamp(30px,5.4vw,52px);border-radius:10px;overflow:hidden;border:1.5px solid rgba(255,255,255,.14);box-shadow:0 6px 18px rgba(0,0,0,.55);background:#0c1016}
+.matchintro .miteam.blue .mic{border-color:rgba(45,155,214,.5)}
+.matchintro .miteam.red .mic{border-color:rgba(224,107,107,.5)}
+.matchintro .mic img{width:100%;height:100%;object-fit:cover;display:block}
+.matchintro .mivs{position:relative;z-index:3;font-family:var(--fs);font-weight:400;font-size:clamp(46px,10vw,104px);line-height:1;color:var(--gold);text-shadow:0 0 40px rgba(222,199,156,.55),0 4px 20px rgba(0,0,0,.7);letter-spacing:.02em;animation:miVs .55s cubic-bezier(.2,1.5,.4,1) .34s both}
+@keyframes miVs{0%{opacity:0;transform:scale(2.4)}60%{opacity:1}100%{opacity:1;transform:scale(1)}}
+.matchintro .miresult{position:absolute;bottom:11%;left:0;right:0;text-align:center;z-index:3;font-family:var(--fd);font-weight:800;font-size:clamp(15px,2.6vw,22px);letter-spacing:.18em;animation:miInUp .5s ease .7s both}
+.matchintro .miresult.w{color:var(--win);text-shadow:0 0 26px rgba(82,195,172,.5)}
+.matchintro .miresult.l{color:var(--loss);text-shadow:0 0 26px rgba(224,107,107,.4)}
+.matchintro .miskip{position:absolute;bottom:14px;right:16px;z-index:4;font-family:var(--fm);font-size:11px;color:rgba(236,231,221,.5);letter-spacing:.06em;animation:miInUp .4s ease 1.1s both}
+@keyframes miInUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.matchintro.out{animation:miOut .45s ease forwards}
+@keyframes miOut{to{opacity:0;visibility:hidden}}
+@media(prefers-reduced-motion:reduce){.matchintro{display:none}}
 .clipshare{position:absolute;top:10px;right:10px;z-index:7;display:inline-flex;align-items:center;gap:7px;padding:7px 12px;background:rgba(8,10,14,.74);border:1px solid var(--line2);border-radius:8px;color:var(--ink2);font-size:11.5px;font-family:var(--fm);cursor:pointer;opacity:0;transition:opacity .18s,color .14s,border-color .14s;backdrop-filter:blur(4px)}
 .clipshare svg{width:13px;height:13px;display:block}
 #stagehost:hover .clipshare{opacity:1}
@@ -2154,7 +2188,10 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
       + '<h2 class="sec">댓글<span class="ln"></span></h2>'
       + '<div class="cmts"><div class="cform"><input id="cauthor" placeholder="이름(선택)" maxlength="24"><input id="cbody" placeholder="댓글을 입력하세요" maxlength="300"><button id="cpost">등록</button></div><div class="clist" id="clist"></div></div>';
 
+    try{ main.classList.remove('match-in'); void main.offsetWidth; main.classList.add('match-in'); }catch(_){}
     renderStage(); renderPovBar(); bindPov(); runCounts(); renderManage(); animateChart();
+    setupReveal();
+    playIntro(rep, won);
     document.getElementById('likebtn').addEventListener('click', function(){ toggleLike(this); });
     document.getElementById('cpost').addEventListener('click', postComment);
     document.getElementById('cbody').addEventListener('keydown', function(e){ if(e.key==='Enter') postComment(); });
@@ -2196,6 +2233,71 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
       var L=p.getTotalLength(); if(!L) return;
       p.style.strokeDasharray=L; p.style.strokeDashoffset=L;
       requestAnimationFrame(function(){ requestAnimationFrame(function(){ p.style.strokeDashoffset=0; }); });
+    }catch(e){}
+  }
+
+  // 시네마틱 인트로: 경기 진입 시 '대결 카드' 연출을 영상 위에 잠깐 덮는다.
+  //  재생/감독판 로직과 완전히 분리 — 오버레이가 사라지면 아래 원래 스테이지가 그대로 남는다.
+  var _introShown=false;
+  function playIntro(rep, won){
+    try{
+      if(_introShown) return; _introShown=true;
+      var host=document.getElementById('stagehost'); if(!host) return;
+      var reduce=false; try{ reduce=window.matchMedia('(prefers-reduced-motion:reduce)').matches; }catch(_){}
+      if(reduce) return;
+      var players=ANALYSIS.players||[];
+      var blue=players.filter(function(p){return p.team===100;});
+      var red=players.filter(function(p){return p.team===200;});
+      if(!blue.length && !red.length) return;   // 데이터 없으면 인트로 생략
+      function champs(list){
+        return list.slice(0,5).map(function(p){
+          return '<div class="mic"><img src="'+P.champIcon(ver,p.champion)+'" alt="" onerror="this.parentNode.style.display=\'none\'"></div>';
+        }).join('');
+      }
+      // 배경: 대표 시점 썸네일(있으면). 없으면 어두운 배경만.
+      var thumb=(rep&&rep.thumb)||'';
+      var bgStyle=thumb?(' style="background-image:url('+"'"+thumb+"'"+')"'):'';
+      var resultTxt = won===true?'<div class="miresult w">VICTORY</div>':(won===false?'<div class="miresult l">DEFEAT</div>':'');
+      var el=document.createElement('div');
+      el.className='matchintro';
+      el.innerHTML='<div class="mibg"'+bgStyle+'></div><div class="miveil"></div>'
+        +'<div class="miteam blue">'+champs(blue)+'</div>'
+        +'<div class="mivs">VS</div>'
+        +'<div class="miteam red">'+champs(red)+'</div>'
+        +resultTxt
+        +'<div class="miskip">탭하여 건너뛰기</div>';
+      host.appendChild(el);
+      var done=false;
+      function dismiss(){
+        if(done) return; done=true;
+        el.classList.add('out');
+        setTimeout(function(){ try{ el.remove(); }catch(_){} }, 480);
+      }
+      el.addEventListener('click', dismiss);
+      setTimeout(dismiss, 2600);   // 2.6초 후 자동으로 사라짐
+    }catch(e){}
+  }
+
+  // 스크롤 리빌: 아래 섹션들이 화면에 들어올 때 부드럽게 나타남. IntersectionObserver 로 성능 안전.
+  function setupReveal(){
+    try{
+      var reduce=false; try{ reduce=window.matchMedia('(prefers-reduced-motion:reduce)').matches; }catch(_){}
+      // 다시보기(영상)는 맨 위라 바로 보이므로 제외. 그 아래 섹션(제목+콘텐츠)부터 리빌.
+      var secs=main.querySelectorAll('h2.sec');
+      var targets=[];
+      secs.forEach(function(h,idx){
+        if(idx===0) return;                         // 첫 h2(다시보기)는 제외
+        targets.push(h);
+        var nx=h.nextElementSibling;                // 제목 다음 콘텐츠 블록도 함께 리빌
+        if(nx && nx.tagName!=='H2') targets.push(nx);
+      });
+      if(!targets.length) return;
+      if(reduce || !('IntersectionObserver' in window)){ targets.forEach(function(t){ t.classList.add('reveal','in'); }); return; }
+      targets.forEach(function(t){ t.classList.add('reveal'); });
+      var io=new IntersectionObserver(function(entries){
+        entries.forEach(function(en){ if(en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); } });
+      }, { threshold:0.12, rootMargin:'0px 0px -8% 0px' });
+      targets.forEach(function(t){ io.observe(t); });
     }catch(e){}
   }
 
