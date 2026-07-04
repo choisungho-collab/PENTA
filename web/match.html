@@ -616,46 +616,42 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
 #stagehost:fullscreen .dirlabel{top:24px;left:24px}
 #stagehost:-webkit-full-screen .dirlabel{top:24px;left:24px}
 /* ── 시네마틱 인트로: 경기 진입 시 대결카드 연출(영상 위 오버레이, 재생 로직과 무관) ── */
-.matchintro{position:absolute;inset:0;z-index:20;overflow:hidden;background:#05080b;display:grid;place-items:center;cursor:pointer}
-.matchintro .mibg{position:absolute;inset:0;background-size:cover;background-position:center;filter:brightness(.34) saturate(1.1);transform:scale(1.08);animation:miZoom 10.5s ease-out both}
-.matchintro .miveil{position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(5,8,11,.28),rgba(5,8,11,.86) 80%)}
-@keyframes miZoom{from{transform:scale(1.16)}to{transform:scale(1.02)}}
-/* 팀 세로 스택 (5명) */
-.matchintro .miteam{position:absolute;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:clamp(6px,1.4vh,14px);z-index:2}
-.matchintro .miteam.blue{left:4%;animation:miInL .7s cubic-bezier(.16,.8,.3,1) both}
-.matchintro .miteam.red{right:4%;animation:miInR .7s cubic-bezier(.16,.8,.3,1) both}
-@keyframes miInL{from{opacity:0;transform:translateY(-50%) translateX(-54px)}to{opacity:1;transform:translateY(-50%) translateX(0)}}
-@keyframes miInR{from{opacity:0;transform:translateY(-50%) translateX(54px)}to{opacity:1;transform:translateY(-50%) translateX(0)}}
-/* 선수 카드: 세로 초상화 + 소환사 ID */
-.matchintro .mpc{display:flex;align-items:center;gap:10px;animation:mpcIn .55s cubic-bezier(.2,.9,.3,1) both}
-.matchintro .miteam.red .mpc{flex-direction:row-reverse;text-align:right}
-.matchintro .miteam.blue .mpc:nth-child(1){animation-delay:.12s}.matchintro .miteam.blue .mpc:nth-child(2){animation-delay:.20s}.matchintro .miteam.blue .mpc:nth-child(3){animation-delay:.28s}.matchintro .miteam.blue .mpc:nth-child(4){animation-delay:.36s}.matchintro .miteam.blue .mpc:nth-child(5){animation-delay:.44s}
-.matchintro .miteam.red .mpc:nth-child(1){animation-delay:.12s}.matchintro .miteam.red .mpc:nth-child(2){animation-delay:.20s}.matchintro .miteam.red .mpc:nth-child(3){animation-delay:.28s}.matchintro .miteam.red .mpc:nth-child(4){animation-delay:.36s}.matchintro .miteam.red .mpc:nth-child(5){animation-delay:.44s}
-@keyframes mpcIn{from{opacity:0;transform:scale(.82)}to{opacity:1;transform:scale(1)}}
-.matchintro .mpc-img{width:clamp(46px,7vw,74px);height:clamp(58px,9vw,96px);border-radius:10px;overflow:hidden;border:1.5px solid rgba(255,255,255,.16);box-shadow:0 8px 22px rgba(0,0,0,.6);background:#0c1016;flex:0 0 auto;position:relative}
-.matchintro .miteam.blue .mpc-img{border-color:rgba(45,155,214,.55);box-shadow:0 8px 22px rgba(0,0,0,.6),0 0 0 1px rgba(45,155,214,.25)}
-.matchintro .miteam.red .mpc-img{border-color:rgba(224,107,107,.55);box-shadow:0 8px 22px rgba(0,0,0,.6),0 0 0 1px rgba(224,107,107,.25)}
-.matchintro .mpc-img img{width:100%;height:100%;object-fit:cover;object-position:center 18%;display:block}
-.matchintro .mpc-img.sq img{object-position:center}   /* 폴백 정사각 아이콘일 때 */   /* 폴백 정사각 아이콘일 때 */
-.matchintro .mpc-nm{font-family:var(--fd);font-weight:700;font-size:clamp(12px,1.5vw,16px);color:var(--ink);max-width:clamp(70px,11vw,130px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 2px 8px rgba(0,0,0,.8)}
-/* VS 배지 */
-.matchintro .mivs{position:relative;z-index:3;width:clamp(120px,24vw,230px);animation:miVs .6s cubic-bezier(.2,1.5,.4,1) .38s both;filter:drop-shadow(0 0 38px rgba(222,199,156,.55)) drop-shadow(0 6px 22px rgba(0,0,0,.7))}
-.matchintro .mivs svg{width:100%;height:auto;display:block}
-.matchintro .mivs .vsspark{transform-origin:center;animation:vsSpark 2.4s ease-in-out .9s infinite}
-@keyframes vsSpark{0%,100%{opacity:.35}50%{opacity:.95}}
-@keyframes miVs{0%{opacity:0;transform:scale(2.4) rotate(-6deg)}60%{opacity:1}100%{opacity:1;transform:scale(1) rotate(0)}}
-.matchintro .miskip{position:absolute;bottom:14px;right:16px;z-index:4;font-family:var(--fm);font-size:11px;color:rgba(236,231,221,.5);letter-spacing:.06em;animation:miInUp .4s ease 1.2s both}
-@keyframes miInUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-/* 멋있게 사라짐: 팀은 양옆으로 흩어지고, VS는 커지며 페이드, 전체 블러 */
-.matchintro.out{animation:miOutVeil .9s ease forwards}
-.matchintro.out .miteam.blue{animation:miOutL .8s cubic-bezier(.5,0,.75,0) forwards}
-.matchintro.out .miteam.red{animation:miOutR .8s cubic-bezier(.5,0,.75,0) forwards}
-.matchintro.out .mivs{animation:miOutVs .8s ease forwards}
-.matchintro.out .miskip{opacity:0;transition:opacity .2s}
-@keyframes miOutVeil{0%{opacity:1}70%{opacity:1}100%{opacity:0;visibility:hidden}}
-@keyframes miOutL{to{opacity:0;transform:translateY(-50%) translateX(-70px)}}
-@keyframes miOutR{to{opacity:0;transform:translateY(-50%) translateX(70px)}}
-@keyframes miOutVs{to{opacity:0;transform:scale(1.7);filter:blur(4px)}}
+.matchintro{position:absolute;inset:0;z-index:20;overflow:hidden;background:#05080b;cursor:pointer}
+/* 업로더 스테이지: 카드들을 가로로 배치(1명이면 꽉 채움) */
+.matchintro .upstage{position:absolute;inset:0;display:flex;z-index:1}
+.matchintro .upc{position:relative;flex:1 1 0;min-width:0;overflow:hidden;animation:upcIn .8s cubic-bezier(.16,.8,.3,1) both}
+.matchintro.up-2 .upc:nth-child(2),.matchintro.up-many .upc:nth-child(2){animation-delay:.12s}
+.matchintro.up-many .upc:nth-child(3){animation-delay:.24s}
+.matchintro.up-many .upc:nth-child(4){animation-delay:.36s}
+.matchintro.up-many .upc:nth-child(5){animation-delay:.48s}
+@keyframes upcIn{from{opacity:0;transform:scale(1.04)}to{opacity:1;transform:scale(1)}}
+/* 카드 사이 얇은 구분선(2명 이상) */
+.matchintro.up-2 .upc+.upc,.matchintro.up-many .upc+.upc{border-left:1px solid rgba(222,199,156,.22)}
+/* full 원화 배경 (centered) — 천천히 줌인 */
+.matchintro .upc-art{position:absolute;inset:0}
+.matchintro .upc-art img{width:100%;height:100%;object-fit:cover;object-position:center 30%;display:block;transform:scale(1.06);animation:upZoom 10.5s ease-out both}
+.matchintro .upc-art.sq img{object-fit:contain;object-position:center;background:#0c1016}
+@keyframes upZoom{from{transform:scale(1.14)}to{transform:scale(1.02)}}
+/* 어둡게 덮어 글자가 읽히게 (하단이 더 진함) */
+.matchintro .upc-veil{position:absolute;inset:0;background:linear-gradient(180deg,rgba(5,8,11,.15) 0%,rgba(5,8,11,.1) 45%,rgba(5,8,11,.88) 100%)}
+.matchintro .upc.blue .upc-veil{box-shadow:inset 0 -3px 0 rgba(45,155,214,.5)}
+.matchintro .upc.red .upc-veil{box-shadow:inset 0 -3px 0 rgba(224,107,107,.5)}
+/* 업로더 정보 (하단) */
+.matchintro .upc-info{position:absolute;left:0;right:0;bottom:0;padding:0 6% 8%;z-index:2;text-align:center;animation:upInfoIn .6s ease .5s both}
+.matchintro .upc-nm{font-family:var(--fs);font-weight:400;font-size:clamp(24px,4vw,52px);line-height:1.05;color:var(--ink);text-shadow:0 2px 18px rgba(0,0,0,.85);letter-spacing:.01em;word-break:break-all}
+.matchintro .upc-ch{margin-top:8px;font-family:var(--fd);font-weight:600;font-size:clamp(13px,1.6vw,19px);color:var(--gold);text-shadow:0 2px 12px rgba(0,0,0,.9)}
+.matchintro .upc-ch .upc-pos{color:var(--ink2);font-weight:500}
+@keyframes upInfoIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+/* 상단 라벨 '이 경기를 올린 소환사' */
+.matchintro .uplabel{position:absolute;top:5%;left:0;right:0;z-index:3;text-align:center;font-family:var(--fm);font-size:clamp(11px,1.4vw,14px);letter-spacing:.28em;text-transform:uppercase;color:var(--gold);text-shadow:0 2px 14px rgba(0,0,0,.9);animation:upInfoIn .6s ease .3s both}
+.matchintro .miskip{position:absolute;bottom:14px;right:16px;z-index:4;font-family:var(--fm);font-size:11px;color:rgba(236,231,221,.55);letter-spacing:.06em;text-shadow:0 1px 6px rgba(0,0,0,.9);animation:upInfoIn .4s ease 1.2s both}
+/* 멋있게 사라짐: 원화는 살짝 줌+블러, 전체 페이드 */
+.matchintro.out{animation:upOutVeil .9s ease forwards}
+.matchintro.out .upc-art img{animation:upOutZoom .9s ease forwards}
+.matchintro.out .upc-info,.matchintro.out .uplabel,.matchintro.out .miskip{animation:upOutInfo .5s ease forwards}
+@keyframes upOutVeil{0%{opacity:1}66%{opacity:1}100%{opacity:0;visibility:hidden}}
+@keyframes upOutZoom{to{transform:scale(1.12);filter:blur(3px)}}
+@keyframes upOutInfo{to{opacity:0;transform:translateY(-10px)}}
 @media(prefers-reduced-motion:reduce){.matchintro{display:none}}
 .clipshare{position:absolute;top:10px;right:10px;z-index:7;display:inline-flex;align-items:center;gap:7px;padding:7px 12px;background:rgba(8,10,14,.74);border:1px solid var(--line2);border-radius:8px;color:var(--ink2);font-size:11.5px;font-family:var(--fm);cursor:pointer;opacity:0;transition:opacity .18s,color .14s,border-color .14s;backdrop-filter:blur(4px)}
 .clipshare svg{width:13px;height:13px;display:block}
@@ -2345,29 +2341,47 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
       var reduce=false; try{ reduce=window.matchMedia('(prefers-reduced-motion:reduce)').matches; }catch(_){}
       if(reduce) return;
       var players=ANALYSIS.players||[];
-      var blue=players.filter(function(p){return p.team===100;});
-      var red=players.filter(function(p){return p.team===200;});
-      if(!blue.length && !red.length) return;   // 데이터 없으면 인트로 생략
-      function champs(list){
-        return list.slice(0,5).map(function(p){
-          var nm=(p.name||'').split('#')[0]||'-';
-          // 세로 초상화(portrait) 우선 → splash → loading → 정사각 아이콘 순 폴백. portrait 가 세로 카드에 가장 잘 맞음.
-          var portrait=P.champPortrait(p.champion), splash=P.champSplash(p.champion), load=P.champLoading(p.champion), icon=P.champIcon(ver,p.champion);
-          return '<div class="mpc">'
-            + '<div class="mpc-img"><img src="'+portrait+'" alt="" loading="eager" data-fb="0" onerror="var s=this;var st=+s.getAttribute(\'data-fb\')||0;s.setAttribute(\'data-fb\',st+1);if(st===0){s.src=\''+splash+'\';}else if(st===1){s.src=\''+load+'\';}else if(st===2){s.src=\''+icon+'\';s.parentNode.classList.add(\'sq\');}else{s.onerror=null;}"></div>'
-            + '<div class="mpc-nm">'+esc(nm)+'</div>'
-            + '</div>';
-        }).join('');
+      // ── 업로더(시점을 올린 실제 사용자)를 추출 ── ROWS 각 항목 = 한 명의 업로드.
+      function champOf(saver){
+        for(var i=0;i<players.length;i++){ if(players[i].name===saver) return players[i]; }
+        return null;
       }
-      // 배경: 대표 시점 썸네일(있으면). 없으면 어두운 배경만.
-      var thumb=(rep&&rep.thumb)||'';
-      var bgStyle=thumb?(' style="background-image:url('+"'"+thumb+"'"+')"'):'';
+      var uploaders=[];
+      (ROWS||[]).forEach(function(r){
+        if(!r || !r.saver) return;
+        var pl=champOf(r.saver);
+        if(!pl) return;
+        // 같은 사람이 중복 안 되게
+        if(uploaders.some(function(u){return u.name===r.saver;})) return;
+        uploaders.push({ name:r.saver, champion:pl.champion, position:pl.position, team:pl.team });
+      });
+      if(!uploaders.length) return;   // 업로더 정보 없으면 인트로 생략
+      var n=uploaders.length, many=n>=3;
+
+      // 각 업로더 카드: full 원화(centered) 배경 + ID + 챔피언.
+      function upCard(u){
+        var nm=(u.name||'').split('#')[0]||'-';
+        var pos=P.posKo(u.position)||'';
+        var team=u.team===200?'red':(u.team===100?'blue':'');
+        // 이미지 폴백: centered 원화 → portrait → splash → 아이콘
+        var centered='https://cdn.communitydragon.org/latest/champion/'+P.champKey(u.champion)+'/splash-art/centered';
+        var portrait=P.champPortrait(u.champion), splash=P.champSplash(u.champion), icon=P.champIcon(ver,u.champion);
+        return '<div class="upc '+team+'">'
+          + '<div class="upc-art"><img src="'+centered+'" alt="" loading="eager" data-fb="0" onerror="var s=this;var st=+s.getAttribute(\'data-fb\')||0;s.setAttribute(\'data-fb\',st+1);if(st===0){s.src=\''+portrait+'\';}else if(st===1){s.src=\''+splash+'\';}else if(st===2){s.src=\''+icon+'\';s.parentNode.classList.add(\'sq\');}else{s.onerror=null;}"></div>'
+          + '<div class="upc-veil"></div>'
+          + '<div class="upc-info">'
+          +   '<div class="upc-nm">'+esc(nm)+'</div>'
+          +   '<div class="upc-ch">'+esc(u.champion||'')+(pos?(' <span class="upc-pos">'+esc(pos)+'</span>'):'')+'</div>'
+          + '</div>'
+          + '</div>';
+      }
+
       var el=document.createElement('div');
-      el.className='matchintro';
-      el.innerHTML='<div class="mibg"'+bgStyle+'></div><div class="miveil"></div>'
-        +'<div class="miteam blue">'+champs(blue)+'</div>'
-        +'<div class="mivs">'+VS_SVG+'</div>'
-        +'<div class="miteam red">'+champs(red)+'</div>'
+      el.className='matchintro up-'+(many?'many':String(n));   // up-1 / up-2 / up-many
+      var label = n===1 ? '이 경기를 올린 소환사'
+                : '이 경기를 올린 소환사 '+n+'명';
+      el.innerHTML='<div class="upstage">'+uploaders.map(upCard).join('')+'</div>'
+        +'<div class="uplabel">'+label+'</div>'
         +'<div class="miskip">탭하여 건너뛰기</div>';
       host.appendChild(el);
       var done=false;
