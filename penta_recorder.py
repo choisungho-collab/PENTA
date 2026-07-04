@@ -1260,18 +1260,34 @@ def _upload_direct(local, path, ctype, on_progress=None):
             last_err = e.__class__.__name__       # 타임아웃/연결 끊김 등
     raise RuntimeError("storage upload failed after retries: %s" % last_err)
 def cloud_selftest():
-    """작은 파일을 실제 업로드해 업로드 권한을 즉시 진단(전체 게임 없이). 결과를 GUI 로그에 남긴다."""
-    import tempfile
+    """업로드 경로 자가진단. 현재 표준 경로(서명 프록시 /api/storage) 응답을 먼저 확인하고,
+    프록시가 없으면(구 배포) 레거시 직접 업로드로 폴백 진단. security_pass.sql 이후
+    직접 업로드가 정책으로 막힌 것은 '정상'이므로 더 이상 에러로 표시하지 않는다."""
+    import tempfile, requests
+    # 1) 표준 경로: Netlify 서명 프록시 헬스체크 (알 수 없는 action -> 400 JSON = 함수 살아있음)
+    try:
+        r = requests.post(_gallery_origin() + "/api/storage", json={"action": "ping"}, timeout=10)
+        if r.status_code in (200, 400, 401, 405) and "error" in (r.text or ""):
+            log("Cloud upload self-test: OK \u2713  (signed route /api/storage is live - game uploads ready)")
+            return
+        # 404 HTML 등 -> 함수 미배포로 간주하고 폴백 진단으로
+        log("Signed route check: unexpected response %s - trying legacy direct upload..." % r.status_code)
+    except Exception as e:
+        log("Signed route check: unreachable (%s) - trying legacy direct upload..." % e.__class__.__name__)
+    # 2) 폴백: 레거시 직접 업로드 (보안 패스 이전 배포에서만 성공)
     p = os.path.join(tempfile.gettempdir(), "penta_selftest.txt")
     try:
         with open(p, "w", encoding="utf-8") as _f: _f.write("penta")
-        sb_upload(p, "_selftest/ping.txt", "text/plain")      # x-upsert 라 매번 같은 파일 덮어씀(누적 없음)
-        log("Cloud upload self-test: OK \u2713  (\uc5c5\ub85c\ub4dc \uad8c\ud55c \uc815\uc0c1)")
+        _upload_direct(p, "_selftest/ping.txt", "text/plain")   # x-upsert 라 매번 같은 파일 덮어씀(누적 없음)
+        log("Cloud upload self-test: OK \u2713  (legacy direct upload)")
     except Exception as e:
         _em = str(e)
-        log(f"Cloud upload self-test FAILED: {e}")            # 정확한 Supabase 응답을 그대로 노출
-        if ("row-level security" in _em) or (" 403" in _em) or ("403:" in _em) or ("Unauthorized" in _em):
-            log("\u2192 Direct upload is blocked by policy (expected after security_pass.sql). Game uploads use the signed route (/api/storage) automatically.")
+        if ("row-level security" in _em) or (" 403" in _em) or ("403" in _em) or ("Unauthorized" in _em):
+            # 직접 업로드 차단 + 서명 프록시도 없음 -> 진짜 문제 (functions 미배포)
+            log("Cloud upload self-test failed: direct upload is blocked by policy AND the signed route is not deployed.")
+            log("\u2192 Fix: push netlify/functions/storage.js + netlify.toml, and set SUPABASE_SERVICE_KEY in Netlify env.")
+        else:
+            log(f"Cloud upload self-test failed: {e}")
     finally:
         try: os.remove(p)
         except Exception: pass
