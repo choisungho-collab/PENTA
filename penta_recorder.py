@@ -1043,12 +1043,42 @@ def ensure_audio():
         log(f"  (audio) pyaudiowpatch install failed → recording without sound. Manual: pip install pyaudiowpatch ({e})")
         return False
 
+def _bin_dir():
+    """ffmpeg/ffprobe 고정 저장소. exe 를 새 폴더에 풀어도(=업데이트) 재다운로드 안 하도록
+    데이터 폴더(ReplayCast) 아래에 둔다."""
+    d = os.path.join(DATA_DIR, "bin")
+    try: os.makedirs(d, exist_ok=True)
+    except Exception: pass
+    return d
+
+def ffprobe_path():
+    """ffprobe 실행 경로. 고정 폴더 우선 → 예전 exe 폴더(레거시) → PATH."""
+    p = os.path.join(_bin_dir(), "ffprobe.exe")
+    if os.path.isfile(p): return p
+    legacy = os.path.join(HERE, "ffprobe.exe")
+    if os.path.isfile(legacy):
+        try: shutil.copy2(legacy, p); return p   # 다음부터 고정 폴더에서 사용
+        except Exception: return legacy
+    return shutil.which("ffprobe") or "ffprobe"
+
 def ensure_ffmpeg():
-    local = os.path.join(HERE, "ffmpeg.exe")
-    if os.path.isfile(local): return local
+    bindir = _bin_dir()
+    local = os.path.join(bindir, "ffmpeg.exe")
+    if os.path.isfile(local): return local                  # 고정 폴더에 이미 있음 → 재사용(업데이트해도 유지)
+    # 레거시: 예전 버전이 exe 폴더에 받아둔 것 → 고정 폴더로 이관(한 번만) 후 재사용
+    legacy = os.path.join(HERE, "ffmpeg.exe")
+    if os.path.isfile(legacy):
+        try:
+            shutil.copy2(legacy, local)
+            lp = os.path.join(HERE, "ffprobe.exe")
+            if os.path.isfile(lp): shutil.copy2(lp, os.path.join(bindir, "ffprobe.exe"))
+            log("Reusing existing ffmpeg (moved to shared folder - no re-download on future updates).")
+            return local
+        except Exception:
+            return legacy
     found = shutil.which("ffmpeg")
     if found: return found
-    log("Downloading ffmpeg… (~80MB, first run only, 1–3 min)")
+    log("Downloading ffmpeg\u2026 (~80MB, first run only, 1\u20133 min) \u2014 kept in a shared folder, so updates won't re-download.")
     sources = [
         ("gyan-essentials", "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"),
         ("BtbN", "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip"),
@@ -1072,7 +1102,7 @@ def ensure_ffmpeg():
             except Exception as e:
                 last = e
                 if _i < tries - 1:
-                    log(f"    Retrying {_i+1}/{tries-1} ({type(e).__name__})…"); time.sleep(2.0 * (_i + 1))
+                    log(f"    Retrying {_i+1}/{tries-1} ({type(e).__name__})\u2026"); time.sleep(2.0 * (_i + 1))
         raise last
     # BtbN 최신 릴리스에서 win64-gpl 자산을 동적으로 찾아 추가 (파일명이 또 바뀌어도 대응)
     try:
@@ -1095,14 +1125,14 @@ def ensure_ffmpeg():
             try:
                 pm = next((n for n in z.namelist() if n.lower().endswith("/bin/ffprobe.exe")), None)
                 if pm:
-                    with z.open(pm) as src, open(os.path.join(HERE, "ffprobe.exe"), "wb") as dst:
+                    with z.open(pm) as src, open(os.path.join(bindir, "ffprobe.exe"), "wb") as dst:
                         shutil.copyfileobj(src, dst)
             except Exception:
                 pass
             log(f"ffmpeg ready. (source: {label})")
             return local
         except Exception as e:
-            log(f"    {label} failed: {e} → trying next source")
+            log(f"    {label} failed: {e} \u2192 trying next source")
     log("[!] ffmpeg auto-download failed on all sources. Please download manually:")
     log("    1) Download https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip")
     log("    2) Unzip and find  bin\\ffmpeg.exe  inside")
@@ -1669,8 +1699,7 @@ def _encoder_args():
 def _probe_height(src):
     """ffprobe로 소스 영상 세로 해상도(px). 실패하면 0(안전하게 스케일 적용)."""
     try:
-        fp = os.path.join(HERE, "ffprobe.exe")
-        if not os.path.isfile(fp): fp = "ffprobe"
+        fp = ffprobe_path()
         r = _run([fp, "-v", "error", "-select_streams", "v:0",
                   "-show_entries", "stream=height", "-of", "csv=p=0", src],
                  capture_output=True, text=True, timeout=20)
@@ -2311,8 +2340,7 @@ def _sec_mmss(s):
 def _video_dur(video_path):
     """ffprobe로 영상 실제 길이(초)를 잰다. 분석을 못 했을 때 길이 판단용. 실패하면 0."""
     try:
-        fp = os.path.join(HERE, "ffprobe.exe")
-        if not os.path.isfile(fp): fp = "ffprobe"
+        fp = ffprobe_path()
         out = subprocess.run([fp, "-v", "error", "-show_entries", "format=duration",
                               "-of", "default=nw=1:nk=1", video_path],
                              capture_output=True, text=True, timeout=30).stdout.strip()
