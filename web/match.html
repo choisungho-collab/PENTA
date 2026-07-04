@@ -620,13 +620,23 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
 /* 업로더 스테이지: 카드들을 가로로 배치(1명이면 꽉 채움) */
 .matchintro .upstage{position:absolute;inset:0;display:flex;z-index:1}
 .matchintro .upc{position:relative;flex:1 1 0;min-width:0;overflow:hidden;animation:upcIn .45s cubic-bezier(.16,.9,.3,1) both}
+/* ── 2명: 대각선 분할 (수직 반반 대신 비스듬히 가름) ── */
+.matchintro.up-2 .upstage{display:block}
+.matchintro.up-2 .upc{position:absolute;top:0;bottom:0;width:100%;flex:none}
+.matchintro.up-2 .upc:nth-child(1){clip-path:polygon(0 0,57% 0,43% 100%,0 100%);animation:upDiagL .55s cubic-bezier(.16,.9,.3,1) both}
+.matchintro.up-2 .upc:nth-child(2){clip-path:polygon(57% 0,100% 0,100% 100%,43% 100%);animation:upDiagR .55s cubic-bezier(.16,.9,.3,1) both}
+/* 대각선 경계의 골드 슬래시 라인 (가운데를 가로지름) */
+.matchintro.up-2 .upstage::after{content:'';position:absolute;top:-6%;left:50%;width:clamp(3px,.4vw,5px);height:112%;z-index:3;background:linear-gradient(180deg,rgba(222,199,156,0),rgba(255,240,205,.9) 20%,rgba(222,199,156,.95) 50%,rgba(255,240,205,.9) 80%,rgba(222,199,156,0));transform:translateX(-50%) rotate(7.4deg);box-shadow:0 0 22px rgba(222,199,156,.6);animation:slashIn .6s ease .12s both}
+@keyframes upDiagL{from{opacity:0;transform:translateX(-40px)}to{opacity:1;transform:translateX(0)}}
+@keyframes upDiagR{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
+@keyframes slashIn{from{opacity:0;transform:translateX(-50%) rotate(7.4deg) scaleY(.4)}to{opacity:1;transform:translateX(-50%) rotate(7.4deg) scaleY(1)}}
 .matchintro.up-2 .upc:nth-child(2),.matchintro.up-many .upc:nth-child(2){animation-delay:.08s}
 .matchintro.up-many .upc:nth-child(3){animation-delay:.16s}
 .matchintro.up-many .upc:nth-child(4){animation-delay:.24s}
 .matchintro.up-many .upc:nth-child(5){animation-delay:.32s}
 @keyframes upcIn{from{opacity:0;transform:scale(1.06)}to{opacity:1;transform:scale(1)}}
 /* 카드 사이 얇은 구분선(2명 이상) */
-.matchintro.up-2 .upc+.upc,.matchintro.up-many .upc+.upc{border-left:1px solid rgba(222,199,156,.22)}
+.matchintro.up-many .upc+.upc{border-left:1px solid rgba(222,199,156,.22)}
 /* full 원화 배경 (centered) — 천천히 줌인 */
 .matchintro .upc-art{position:absolute;inset:0}
 .matchintro .upc-art img{width:100%;height:100%;object-fit:cover;object-position:center 30%;display:block;transform:scale(1.06);animation:upZoom 8s ease-out both}
@@ -638,6 +648,9 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
 .matchintro .upc.red .upc-veil{box-shadow:inset 0 -3px 0 rgba(224,107,107,.5)}
 /* 업로더 정보 (하단) — 빠르게 등장 */
 .matchintro .upc-info{position:absolute;left:0;right:0;bottom:0;padding:0 6% 8%;z-index:2;text-align:center;animation:upInfoIn .5s ease .28s both}
+/* 2명 대각선: 정보를 각자 바깥쪽으로 치우쳐 겹침 방지 */
+.matchintro.up-2 .upc:nth-child(1) .upc-info{right:auto;width:52%;text-align:center;padding-left:3%}
+.matchintro.up-2 .upc:nth-child(2) .upc-info{left:auto;width:52%;text-align:center;padding-right:3%}
 .matchintro .upc-nm{font-family:var(--fs);font-weight:400;font-size:clamp(24px,4vw,52px);line-height:1.05;color:var(--ink);text-shadow:0 2px 18px rgba(0,0,0,.85);letter-spacing:.01em;word-break:break-all}
 .matchintro .upc-ch{margin-top:8px;font-family:var(--fd);font-weight:600;font-size:clamp(13px,1.6vw,19px);color:var(--gold);text-shadow:0 2px 12px rgba(0,0,0,.9)}
 .matchintro .upc-ch .upc-pos{color:var(--ink2);font-weight:500}
@@ -658,21 +671,24 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
 /* ── 카운트다운: GAME STARTING + 5→1 (골드 숫자, 펄스, 원형 링) ── */
 .matchintro .countwrap{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:7;display:flex;flex-direction:column;align-items:center;gap:clamp(10px,2vh,20px);opacity:0;pointer-events:none;transition:opacity .4s ease}
 .matchintro.counting .countwrap{opacity:1}
-.matchintro .countlabel{font-family:var(--fm);font-size:clamp(12px,1.7vw,17px);letter-spacing:.42em;text-transform:uppercase;color:var(--gold);text-shadow:0 2px 16px rgba(0,0,0,.9),0 0 24px rgba(222,199,156,.4);padding-left:.42em;animation:countLabelIn .5s ease both}
-@keyframes countLabelIn{from{opacity:0;letter-spacing:.2em}to{opacity:1;letter-spacing:.42em}}
+.matchintro .countlabel{width:clamp(200px,28vw,320px);animation:countLabelIn .55s ease both;filter:drop-shadow(0 2px 12px rgba(0,0,0,.9)) drop-shadow(0 0 16px rgba(222,199,156,.35))}
+.matchintro .countlabel svg{width:100%;height:auto;display:block}
+@keyframes countLabelIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
 .matchintro .countnum{position:relative;width:clamp(120px,17vw,180px);height:clamp(120px,17vw,180px);display:grid;place-items:center}
 .matchintro .countring{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
 .matchintro .countring .ringbg{fill:none;stroke:rgba(222,199,156,.14);stroke-width:2.5}
-.matchintro .countring .ringfg{fill:none;stroke:var(--gold);stroke-width:2.5;stroke-linecap:round;stroke-dasharray:289;stroke-dashoffset:0;filter:drop-shadow(0 0 6px rgba(222,199,156,.6));animation:ringShrink 1s linear infinite}
+.matchintro .countring .ringfg{fill:none;stroke:var(--gold);stroke-width:2.5;stroke-linecap:round;stroke-dasharray:289;stroke-dashoffset:0;filter:drop-shadow(0 0 6px rgba(222,199,156,.6))}
+.matchintro .countring .ringfg.go{animation:ringShrink 1s linear both}
 @keyframes ringShrink{from{stroke-dashoffset:0}to{stroke-dashoffset:289}}
 .matchintro .countn{font-family:var(--fs);font-weight:400;font-size:clamp(64px,11vw,124px);line-height:1;color:var(--gold);text-shadow:0 4px 30px rgba(0,0,0,.8),0 0 40px rgba(222,199,156,.5);font-variant-numeric:tabular-nums}
 .matchintro .countn.pulse{animation:countPulse 1s cubic-bezier(.2,.8,.3,1) both}
 @keyframes countPulse{0%{opacity:0;transform:scale(1.7)}22%{opacity:1;transform:scale(1)}100%{opacity:.55;transform:scale(.94)}}
-/* 마지막 3-2-1: 더 크게 + 강조(밝은 골드) */
-.matchintro .countwrap.final .countn{color:#FFF0CD;text-shadow:0 4px 30px rgba(0,0,0,.85),0 0 50px rgba(255,240,205,.7)}
+/* 마지막 3-2-1: 더 크게 + 빨강 강조(긴장감) */
+.matchintro .countwrap.final .countn{color:#FF5B5B;text-shadow:0 4px 30px rgba(0,0,0,.85),0 0 54px rgba(255,70,70,.75)}
 .matchintro .countwrap.final .countn.pulse{animation:countPulseFinal 1s cubic-bezier(.2,.8,.3,1) both}
 @keyframes countPulseFinal{0%{opacity:0;transform:scale(2.1)}22%{opacity:1;transform:scale(1.14)}100%{opacity:.6;transform:scale(1)}}
-.matchintro .countwrap.final .countring .ringfg{stroke:#FFF0CD;filter:drop-shadow(0 0 10px rgba(255,240,205,.85))}
+.matchintro .countwrap.final .countring .ringfg{stroke:#FF5B5B;filter:drop-shadow(0 0 12px rgba(255,70,70,.9))}
+.matchintro .countwrap.final .countring .ringbg{stroke:rgba(255,91,91,.16)}
 @media(prefers-reduced-motion:reduce){.matchintro{display:none}}
 .clipshare{position:absolute;top:10px;right:10px;z-index:7;display:inline-flex;align-items:center;gap:7px;padding:7px 12px;background:rgba(8,10,14,.74);border:1px solid var(--line2);border-radius:8px;color:var(--ink2);font-size:11.5px;font-family:var(--fm);cursor:pointer;opacity:0;transition:opacity .18s,color .14s,border-color .14s;backdrop-filter:blur(4px)}
 .clipshare svg{width:13px;height:13px;display:block}
@@ -2404,7 +2420,16 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
         +'<div class="fxflash"></div>'
         +'<div class="fxsweep"></div>'
         +'<div class="countwrap">'
-        +  '<div class="countlabel">GAME STARTING</div>'
+        +  '<div class="countlabel">'
+        +    '<svg viewBox="0 0 320 24" xmlns="http://www.w3.org/2000/svg">'
+        +      '<defs><linearGradient id="clg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F5E7C6"/><stop offset="1" stop-color="#C9A86E"/></linearGradient></defs>'
+        +      '<line x1="8" y1="12" x2="86" y2="12" stroke="url(#clg)" stroke-width="1" opacity="0.55"/>'
+        +      '<path d="M96 12 L102 7 L108 12 L102 17 Z" fill="url(#clg)"/>'
+        +      '<text x="160" y="16" text-anchor="middle" font-family="Marcellus, Georgia, serif" font-size="13" letter-spacing="3.5" fill="url(#clg)">GAME STARTING</text>'
+        +      '<path d="M224 12 L230 7 L236 12 L230 17 Z" fill="url(#clg)"/>'
+        +      '<line x1="246" y1="12" x2="312" y2="12" stroke="url(#clg)" stroke-width="1" opacity="0.55"/>'
+        +    '</svg>'
+        +  '</div>'
         +  '<div class="countnum"><svg class="countring" viewBox="0 0 100 100"><circle class="ringbg" cx="50" cy="50" r="46"></circle><circle class="ringfg" cx="50" cy="50" r="46"></circle></svg><span class="countn"></span></div>'
         +'</div>';
       host.appendChild(el);
@@ -2417,6 +2442,7 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
       }
       // 카운트다운: 원화 등장 후 ~1.8초 뒤부터 5→1 (매 1초). 끝나면 영상으로 전환.
       var numEl=el.querySelector('.countn'), wrap=el.querySelector('.countwrap');
+      var ringEl=el.querySelector('.countring .ringfg');
       var cnt=5;
       var _countTimer=null;
       setTimeout(function(){
@@ -2426,8 +2452,12 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
           if(done) return;
           if(cnt<=0){ if(_countTimer){clearInterval(_countTimer);_countTimer=null;} dismiss(); return; }
           numEl.textContent=cnt;
-          // 매 초 펄스 재시작 + 마지막 3-2-1 강조
-          numEl.classList.remove('pulse'); void numEl.offsetWidth; numEl.classList.add('pulse');
+          // 숫자와 링을 같은 순간에 재시작 → 타이밍 완전 동기화(reflow 로 애니메이션 리셋)
+          numEl.classList.remove('pulse');
+          if(ringEl) ringEl.classList.remove('go');
+          void numEl.offsetWidth;                       // 강제 리플로우: 두 애니메이션이 동시에 처음부터
+          numEl.classList.add('pulse');
+          if(ringEl) ringEl.classList.add('go');
           wrap.classList.toggle('final', cnt<=3);
           cnt--;
         }
