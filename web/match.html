@@ -616,42 +616,63 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
 #stagehost:fullscreen .dirlabel{top:24px;left:24px}
 #stagehost:-webkit-full-screen .dirlabel{top:24px;left:24px}
 /* ── 시네마틱 인트로: 경기 진입 시 대결카드 연출(영상 위 오버레이, 재생 로직과 무관) ── */
-.matchintro{position:absolute;inset:0;z-index:20;overflow:hidden;background:#05080b;cursor:pointer}
+.matchintro{position:absolute;inset:0;z-index:20;overflow:hidden;background:#05080b}
 /* 업로더 스테이지: 카드들을 가로로 배치(1명이면 꽉 채움) */
 .matchintro .upstage{position:absolute;inset:0;display:flex;z-index:1}
-.matchintro .upc{position:relative;flex:1 1 0;min-width:0;overflow:hidden;animation:upcIn .8s cubic-bezier(.16,.8,.3,1) both}
-.matchintro.up-2 .upc:nth-child(2),.matchintro.up-many .upc:nth-child(2){animation-delay:.12s}
-.matchintro.up-many .upc:nth-child(3){animation-delay:.24s}
-.matchintro.up-many .upc:nth-child(4){animation-delay:.36s}
-.matchintro.up-many .upc:nth-child(5){animation-delay:.48s}
-@keyframes upcIn{from{opacity:0;transform:scale(1.04)}to{opacity:1;transform:scale(1)}}
+.matchintro .upc{position:relative;flex:1 1 0;min-width:0;overflow:hidden;animation:upcIn .45s cubic-bezier(.16,.9,.3,1) both}
+.matchintro.up-2 .upc:nth-child(2),.matchintro.up-many .upc:nth-child(2){animation-delay:.08s}
+.matchintro.up-many .upc:nth-child(3){animation-delay:.16s}
+.matchintro.up-many .upc:nth-child(4){animation-delay:.24s}
+.matchintro.up-many .upc:nth-child(5){animation-delay:.32s}
+@keyframes upcIn{from{opacity:0;transform:scale(1.06)}to{opacity:1;transform:scale(1)}}
 /* 카드 사이 얇은 구분선(2명 이상) */
 .matchintro.up-2 .upc+.upc,.matchintro.up-many .upc+.upc{border-left:1px solid rgba(222,199,156,.22)}
 /* full 원화 배경 (centered) — 천천히 줌인 */
 .matchintro .upc-art{position:absolute;inset:0}
-.matchintro .upc-art img{width:100%;height:100%;object-fit:cover;object-position:center 30%;display:block;transform:scale(1.06);animation:upZoom 10.5s ease-out both}
+.matchintro .upc-art img{width:100%;height:100%;object-fit:cover;object-position:center 30%;display:block;transform:scale(1.06);animation:upZoom 8s ease-out both}
 .matchintro .upc-art.sq img{object-fit:contain;object-position:center;background:#0c1016}
 @keyframes upZoom{from{transform:scale(1.14)}to{transform:scale(1.02)}}
 /* 어둡게 덮어 글자가 읽히게 (하단이 더 진함) */
 .matchintro .upc-veil{position:absolute;inset:0;background:linear-gradient(180deg,rgba(5,8,11,.15) 0%,rgba(5,8,11,.1) 45%,rgba(5,8,11,.88) 100%)}
 .matchintro .upc.blue .upc-veil{box-shadow:inset 0 -3px 0 rgba(45,155,214,.5)}
 .matchintro .upc.red .upc-veil{box-shadow:inset 0 -3px 0 rgba(224,107,107,.5)}
-/* 업로더 정보 (하단) */
-.matchintro .upc-info{position:absolute;left:0;right:0;bottom:0;padding:0 6% 8%;z-index:2;text-align:center;animation:upInfoIn .6s ease .5s both}
+/* 업로더 정보 (하단) — 빠르게 등장 */
+.matchintro .upc-info{position:absolute;left:0;right:0;bottom:0;padding:0 6% 8%;z-index:2;text-align:center;animation:upInfoIn .5s ease .28s both}
 .matchintro .upc-nm{font-family:var(--fs);font-weight:400;font-size:clamp(24px,4vw,52px);line-height:1.05;color:var(--ink);text-shadow:0 2px 18px rgba(0,0,0,.85);letter-spacing:.01em;word-break:break-all}
 .matchintro .upc-ch{margin-top:8px;font-family:var(--fd);font-weight:600;font-size:clamp(13px,1.6vw,19px);color:var(--gold);text-shadow:0 2px 12px rgba(0,0,0,.9)}
 .matchintro .upc-ch .upc-pos{color:var(--ink2);font-weight:500}
 @keyframes upInfoIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
-/* 상단 라벨 '이 경기를 올린 소환사' */
-.matchintro .uplabel{position:absolute;top:5%;left:0;right:0;z-index:3;text-align:center;font-family:var(--fm);font-size:clamp(11px,1.4vw,14px);letter-spacing:.28em;text-transform:uppercase;color:var(--gold);text-shadow:0 2px 14px rgba(0,0,0,.9);animation:upInfoIn .6s ease .3s both}
-.matchintro .miskip{position:absolute;bottom:14px;right:16px;z-index:4;font-family:var(--fm);font-size:11px;color:rgba(236,231,221,.55);letter-spacing:.06em;text-shadow:0 1px 6px rgba(0,0,0,.9);animation:upInfoIn .4s ease 1.2s both}
-/* 멋있게 사라짐: 원화는 살짝 줌+블러, 전체 페이드 */
+/* ── 등장 효과 C: 라이트 플래시 (순간 밝게 번쩍) ── */
+.matchintro .fxflash{position:absolute;inset:0;z-index:5;background:radial-gradient(ellipse at center,rgba(255,248,230,.9),rgba(255,240,205,.5) 45%,transparent 72%);pointer-events:none;opacity:0;animation:fxFlash .5s ease-out both}
+@keyframes fxFlash{0%{opacity:.95}100%{opacity:0}}
+/* ── 등장 효과 A: 골드 스윕 (골드빛 광선이 좌→우로 쓸고 지나감) ── */
+.matchintro .fxsweep{position:absolute;top:0;bottom:0;left:0;width:60%;z-index:6;pointer-events:none;background:linear-gradient(105deg,transparent 0%,rgba(222,199,156,.0) 30%,rgba(255,240,205,.55) 48%,rgba(222,199,156,.85) 50%,rgba(255,240,205,.55) 52%,transparent 70%);filter:blur(2px);transform:translateX(-120%);animation:fxSweep .85s cubic-bezier(.5,0,.4,1) both}
+@keyframes fxSweep{0%{transform:translateX(-120%)}100%{transform:translateX(280%)}}
+/* ── 퇴장 효과 F: 줌 + 블러 페이드 (영상으로 빨려드는 느낌) ── */
 .matchintro.out{animation:upOutVeil .9s ease forwards}
-.matchintro.out .upc-art img{animation:upOutZoom .9s ease forwards}
-.matchintro.out .upc-info,.matchintro.out .uplabel,.matchintro.out .miskip{animation:upOutInfo .5s ease forwards}
-@keyframes upOutVeil{0%{opacity:1}66%{opacity:1}100%{opacity:0;visibility:hidden}}
-@keyframes upOutZoom{to{transform:scale(1.12);filter:blur(3px)}}
-@keyframes upOutInfo{to{opacity:0;transform:translateY(-10px)}}
+.matchintro.out .upc-art img{animation:upOutZoom .9s cubic-bezier(.5,0,.75,0) forwards}
+.matchintro.out .upc-info{animation:upOutInfo .5s ease forwards}
+@keyframes upOutVeil{0%{opacity:1}60%{opacity:1}100%{opacity:0;visibility:hidden}}
+@keyframes upOutZoom{to{transform:scale(1.28);filter:blur(9px)}}
+@keyframes upOutInfo{to{opacity:0;transform:translateY(-14px);filter:blur(2px)}}
+/* ── 카운트다운: GAME STARTING + 5→1 (골드 숫자, 펄스, 원형 링) ── */
+.matchintro .countwrap{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:7;display:flex;flex-direction:column;align-items:center;gap:clamp(10px,2vh,20px);opacity:0;pointer-events:none;transition:opacity .4s ease}
+.matchintro.counting .countwrap{opacity:1}
+.matchintro .countlabel{font-family:var(--fm);font-size:clamp(12px,1.7vw,17px);letter-spacing:.42em;text-transform:uppercase;color:var(--gold);text-shadow:0 2px 16px rgba(0,0,0,.9),0 0 24px rgba(222,199,156,.4);padding-left:.42em;animation:countLabelIn .5s ease both}
+@keyframes countLabelIn{from{opacity:0;letter-spacing:.2em}to{opacity:1;letter-spacing:.42em}}
+.matchintro .countnum{position:relative;width:clamp(120px,17vw,180px);height:clamp(120px,17vw,180px);display:grid;place-items:center}
+.matchintro .countring{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
+.matchintro .countring .ringbg{fill:none;stroke:rgba(222,199,156,.14);stroke-width:2.5}
+.matchintro .countring .ringfg{fill:none;stroke:var(--gold);stroke-width:2.5;stroke-linecap:round;stroke-dasharray:289;stroke-dashoffset:0;filter:drop-shadow(0 0 6px rgba(222,199,156,.6));animation:ringShrink 1s linear infinite}
+@keyframes ringShrink{from{stroke-dashoffset:0}to{stroke-dashoffset:289}}
+.matchintro .countn{font-family:var(--fs);font-weight:400;font-size:clamp(64px,11vw,124px);line-height:1;color:var(--gold);text-shadow:0 4px 30px rgba(0,0,0,.8),0 0 40px rgba(222,199,156,.5);font-variant-numeric:tabular-nums}
+.matchintro .countn.pulse{animation:countPulse 1s cubic-bezier(.2,.8,.3,1) both}
+@keyframes countPulse{0%{opacity:0;transform:scale(1.7)}22%{opacity:1;transform:scale(1)}100%{opacity:.55;transform:scale(.94)}}
+/* 마지막 3-2-1: 더 크게 + 강조(밝은 골드) */
+.matchintro .countwrap.final .countn{color:#FFF0CD;text-shadow:0 4px 30px rgba(0,0,0,.85),0 0 50px rgba(255,240,205,.7)}
+.matchintro .countwrap.final .countn.pulse{animation:countPulseFinal 1s cubic-bezier(.2,.8,.3,1) both}
+@keyframes countPulseFinal{0%{opacity:0;transform:scale(2.1)}22%{opacity:1;transform:scale(1.14)}100%{opacity:.6;transform:scale(1)}}
+.matchintro .countwrap.final .countring .ringfg{stroke:#FFF0CD;filter:drop-shadow(0 0 10px rgba(255,240,205,.85))}
 @media(prefers-reduced-motion:reduce){.matchintro{display:none}}
 .clipshare{position:absolute;top:10px;right:10px;z-index:7;display:inline-flex;align-items:center;gap:7px;padding:7px 12px;background:rgba(8,10,14,.74);border:1px solid var(--line2);border-radius:8px;color:var(--ink2);font-size:11.5px;font-family:var(--fm);cursor:pointer;opacity:0;transition:opacity .18s,color .14s,border-color .14s;backdrop-filter:blur(4px)}
 .clipshare svg{width:13px;height:13px;display:block}
@@ -2378,20 +2399,41 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
 
       var el=document.createElement('div');
       el.className='matchintro up-'+(many?'many':String(n));   // up-1 / up-2 / up-many
-      var label = n===1 ? '이 경기를 올린 소환사'
-                : '이 경기를 올린 소환사 '+n+'명';
+      // upstage(원화) + 등장효과(플래시/스윕) + 카운트다운(문구+숫자+링)
       el.innerHTML='<div class="upstage">'+uploaders.map(upCard).join('')+'</div>'
-        +'<div class="uplabel">'+label+'</div>'
-        +'<div class="miskip">탭하여 건너뛰기</div>';
+        +'<div class="fxflash"></div>'
+        +'<div class="fxsweep"></div>'
+        +'<div class="countwrap">'
+        +  '<div class="countlabel">GAME STARTING</div>'
+        +  '<div class="countnum"><svg class="countring" viewBox="0 0 100 100"><circle class="ringbg" cx="50" cy="50" r="46"></circle><circle class="ringfg" cx="50" cy="50" r="46"></circle></svg><span class="countn"></span></div>'
+        +'</div>';
       host.appendChild(el);
       var done=false;
       function dismiss(){
         if(done) return; done=true;
         el.classList.add('out');
+        if(_countTimer){ clearInterval(_countTimer); _countTimer=null; }
         setTimeout(function(){ try{ el.remove(); }catch(_){} }, 900);   // 아웃 애니메이션(0.9s) 후 제거
       }
-      el.addEventListener('click', dismiss);
-      setTimeout(dismiss, 10000);   // 10초 후 자동으로 사라짐
+      // 카운트다운: 원화 등장 후 ~1.8초 뒤부터 5→1 (매 1초). 끝나면 영상으로 전환.
+      var numEl=el.querySelector('.countn'), wrap=el.querySelector('.countwrap');
+      var cnt=5;
+      var _countTimer=null;
+      setTimeout(function(){
+        if(done) return;
+        el.classList.add('counting');
+        function tick(){
+          if(done) return;
+          if(cnt<=0){ if(_countTimer){clearInterval(_countTimer);_countTimer=null;} dismiss(); return; }
+          numEl.textContent=cnt;
+          // 매 초 펄스 재시작 + 마지막 3-2-1 강조
+          numEl.classList.remove('pulse'); void numEl.offsetWidth; numEl.classList.add('pulse');
+          wrap.classList.toggle('final', cnt<=3);
+          cnt--;
+        }
+        tick();                          // 즉시 5 표시
+        _countTimer=setInterval(tick, 1000);
+      }, 2200);                          // 등장 2.2초 후 카운트 시작 → 총 약 7.2초
     }catch(e){}
   }
 
