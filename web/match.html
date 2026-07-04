@@ -34,7 +34,7 @@
  --r1:10px;--r2:14px;--r3:18px;--sh:0 18px 44px -22px rgba(0,0,0,.8);
 }
 *{box-sizing:border-box}html,body{margin:0;overflow-x:clip}
-body{background:var(--bg);color:var(--ink);font-family:var(--fd);font-size:15px;line-height:1.65;word-break:keep-all;overflow-wrap:break-word;-webkit-font-smoothing:antialiased;letter-spacing:-.01em;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
+body{background:radial-gradient(70% 55% at 15% 4%,rgba(222,199,156,.12),transparent 55%),radial-gradient(65% 60% at 92% 16%,rgba(78,168,205,.12),transparent 58%),radial-gradient(85% 65% at 50% 116%,rgba(130,115,205,.12),transparent 62%),#0A0D13;background-attachment:fixed;color:var(--ink);font-family:var(--fd);font-size:15px;line-height:1.65;word-break:keep-all;overflow-wrap:break-word;-webkit-font-smoothing:antialiased;letter-spacing:-.01em;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
 a{color:inherit;text-decoration:none}svg{display:block}img{display:block;max-width:100%}
 .ic{width:1em;height:1em;flex-shrink:0}
 ::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:var(--line2);border-radius:6px;border:3px solid var(--bg)}
@@ -635,8 +635,8 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
 .matchintro .mpc-img{width:clamp(46px,7vw,74px);height:clamp(58px,9vw,96px);border-radius:10px;overflow:hidden;border:1.5px solid rgba(255,255,255,.16);box-shadow:0 8px 22px rgba(0,0,0,.6);background:#0c1016;flex:0 0 auto;position:relative}
 .matchintro .miteam.blue .mpc-img{border-color:rgba(45,155,214,.55);box-shadow:0 8px 22px rgba(0,0,0,.6),0 0 0 1px rgba(45,155,214,.25)}
 .matchintro .miteam.red .mpc-img{border-color:rgba(224,107,107,.55);box-shadow:0 8px 22px rgba(0,0,0,.6),0 0 0 1px rgba(224,107,107,.25)}
-.matchintro .mpc-img img{width:100%;height:100%;object-fit:cover;object-position:center 22%;display:block}
-.matchintro .mpc-img.sq img{object-position:center}   /* 폴백 정사각 아이콘일 때 */
+.matchintro .mpc-img img{width:100%;height:100%;object-fit:cover;object-position:38% 26%;display:block}
+.matchintro .mpc-img.sq img{object-position:center}   /* 폴백 정사각 아이콘일 때 */   /* 폴백 정사각 아이콘일 때 */
 .matchintro .mpc-nm{font-family:var(--fd);font-weight:700;font-size:clamp(12px,1.5vw,16px);color:var(--ink);max-width:clamp(70px,11vw,130px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 2px 8px rgba(0,0,0,.8)}
 /* VS 배지 */
 .matchintro .mivs{position:relative;z-index:3;width:clamp(120px,24vw,230px);animation:miVs .6s cubic-bezier(.2,1.5,.4,1) .38s both;filter:drop-shadow(0 0 38px rgba(222,199,156,.55)) drop-shadow(0 6px 22px rgba(0,0,0,.7))}
@@ -1891,7 +1891,7 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
           var ni=ti+1;
           if(ni<_dirSched.length){
             var nseg=_dirSched[ni];
-            if(nseg.pov!==curPov && nseg.gt-gt<=4 && nseg.gt-gt>0 && _dirWarm!==ni && POOL){
+            if(nseg.pov!==curPov && nseg.gt-gt<=6 && nseg.gt-gt>0 && _dirWarm!==ni && POOL){
               var wv=POOL.querySelector('.pvid[data-pv="'+nseg.pov+'"]');
               if(wv && !wv._err){
                 _dirWarm=ni;
@@ -2096,7 +2096,7 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
     });
     var haveRows=Object.keys(pidToRow).length;
     if(haveRows<1) return [];
-    var LEAD=3.0;   // 킬 몇 초 전에 미리 전환(킬 순간을 그 시점으로 보게)
+    var LEAD=5.0;   // 킬 몇 초 전에 미리 전환(킬로 이어지는 교전부터 그 시점으로 보게). Riot 킬 시각과 영상 시각의 오차도 흡수.
     var kills=(ANALYSIS.kills||[]).filter(function(e){return e&&typeof e.t==='number';}).slice().sort(function(a,b){return a.t-b.t;});
     var seg=[];
     kills.forEach(function(k){
@@ -2351,9 +2351,10 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
       function champs(list){
         return list.slice(0,5).map(function(p){
           var nm=(p.name||'').split('#')[0]||'-';
-          var load=P.champLoading(p.champion), icon=P.champIcon(ver,p.champion);
+          // 원화(splash) 우선 → 실패 시 로딩 초상화 → 그래도 실패 시 정사각 아이콘. splash 가 가장 고화질.
+          var splash=P.champSplash(p.champion), load=P.champLoading(p.champion), icon=P.champIcon(ver,p.champion);
           return '<div class="mpc">'
-            + '<div class="mpc-img"><img src="'+load+'" alt="" loading="eager" onerror="this.onerror=null;this.src=\''+icon+'\';this.parentNode.classList.add(\'sq\')"></div>'
+            + '<div class="mpc-img"><img src="'+splash+'" alt="" loading="eager" data-fb="0" onerror="var s=this;var st=+s.getAttribute(\'data-fb\')||0;s.setAttribute(\'data-fb\',st+1);if(st===0){s.src=\''+load+'\';}else if(st===1){s.src=\''+icon+'\';s.parentNode.classList.add(\'sq\');}else{s.onerror=null;}"></div>'
             + '<div class="mpc-nm">'+esc(nm)+'</div>'
             + '</div>';
         }).join('');
