@@ -2467,30 +2467,8 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
     if(!pool.length) pool = nums;
     return pool[Math.floor(Math.random()*pool.length)];
   }
-  // 원화를 다른 스킨으로 부드럽게 교체(프리로드 후 오버레이 페이드 → 원본 src 갱신).
-  //  - 프리로드 성공한 URL만 반영하므로 로딩 실패 시 기존 원화 유지(깜빡임/깨짐 없음)
-  function swapArt(artEl, url){
-    if(!artEl) return;
-    var pre = new Image();
-    pre.onload = function(){
-      var ov = document.createElement('img');
-      ov.src = url;
-      ov.style.cssText = 'position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;object-position:center 30%;opacity:0;transition:opacity .5s ease;will-change:opacity';
-      artEl.appendChild(ov);
-      void ov.offsetWidth;
-      ov.style.opacity = '1';
-      setTimeout(function(){
-        var base = artEl.querySelector('img[data-fb]');
-        if(base){ base.src = url; }
-        artEl.classList.remove('sq');   // 정상 원화로 교체됐으니 정사각(아이콘) 모드 해제
-        try{ ov.remove(); }catch(_){}
-      }, 520);
-    };
-    pre.onerror = function(){};
-    pre.src = url;
-  }
 
-  function playIntro(rep, won){
+  async function playIntro(rep, won){
     try{
       if(_introShown) return; _introShown=true;
       var host=document.getElementById('stagehost'); if(!host) return;
@@ -2514,16 +2492,27 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
       if(!uploaders.length) return;   // 업로더 정보 없으면 인트로 생략
       var n=uploaders.length, many=n>=3;
 
-      // 각 업로더 카드: full 원화(centered) 배경 + ID + 챔피언.
-      function upCard(u, idx){
+      // 스킨 데이터를 먼저 로드해서 처음부터 랜덤 스킨 원화로 등장시킨다(기본 원화 깜빡임 제거).
+      //  캐시돼 있으면 즉시, 없으면 최대 1.2초 기다린 뒤 진행(로드 안 된 챔프는 기본 원화로).
+      var _sd={};
+      try{
+        await Promise.race([
+          Promise.all(uploaders.map(function(u){ return loadSkinNums(u.champion).then(function(nums){ _sd[u.champion]=nums; }).catch(function(){}); })),
+          new Promise(function(res){ setTimeout(res,1200); })
+        ]);
+      }catch(_){}
+      uploaders.forEach(function(u){ var nums=_sd[u.champion]; u.skinNum=(nums&&nums.length>1)?pickSkin(nums,0):0; });
+
+      // 각 업로더 카드: 처음부터 랜덤 스킨 원화(splash). 스킨 없으면 _0(기본). 폴백: centered → portrait → 아이콘.
+      function upCard(u){
         var nm=(u.name||'').split('#')[0]||'-';
         var pos=P.posKo(u.position)||'';
         var team=u.team===200?'red':(u.team===100?'blue':'');
-        // 이미지 폴백: centered 원화 → portrait → splash → 아이콘
+        var skinUrl=splashOf(u.champion, u.skinNum||0);
         var centered='https://cdn.communitydragon.org/latest/champion/'+P.champKey(u.champion)+'/splash-art/centered';
-        var portrait=P.champPortrait(u.champion), splash=P.champSplash(u.champion), icon=P.champIcon(ver,u.champion);
-        return '<div class="upc '+team+'" data-uc="'+idx+'">'
-          + '<div class="upc-art"><img src="'+centered+'" alt="" loading="eager" data-fb="0" onerror="var s=this;var st=+s.getAttribute(\'data-fb\')||0;s.setAttribute(\'data-fb\',st+1);if(st===0){s.src=\''+portrait+'\';}else if(st===1){s.src=\''+splash+'\';}else if(st===2){s.src=\''+icon+'\';s.parentNode.classList.add(\'sq\');}else{s.onerror=null;}"></div>'
+        var portrait=P.champPortrait(u.champion), icon=P.champIcon(ver,u.champion);
+        return '<div class="upc '+team+'">'
+          + '<div class="upc-art"><img src="'+skinUrl+'" alt="" loading="eager" data-fb="0" onerror="var s=this;var st=+s.getAttribute(\'data-fb\')||0;s.setAttribute(\'data-fb\',st+1);if(st===0){s.src=\''+centered+'\';}else if(st===1){s.src=\''+portrait+'\';}else if(st===2){s.src=\''+icon+'\';s.parentNode.classList.add(\'sq\');}else{s.onerror=null;}"></div>'
           + '<div class="upc-veil"></div>'
           + '<div class="upc-info">'
           +   '<div class="upc-nm">'+esc(nm)+'</div>'
@@ -2535,7 +2524,7 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
       var el=document.createElement('div');
       el.className='matchintro up-'+(many?'many':String(n));   // up-1 / up-2 / up-many
       // upstage(원화) + 등장효과(플래시/스윕) + 카운트다운(문구+숫자+링)
-      el.innerHTML='<div class="upstage">'+uploaders.map(function(u,i){return upCard(u,i);}).join('')+'</div>'
+      el.innerHTML='<div class="upstage">'+uploaders.map(upCard).join('')+'</div>'
         +'<div class="fxshimmer"></div>'
         +'<div class="fxparticles">'+Array(14).fill(0).map(function(_,i){return '<span class="pt pt'+(i%7)+'"></span>';}).join('')+'</div>'
         +'<div class="fxflash"></div>'
@@ -2554,15 +2543,6 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
         +'</div>'
         +'<div class="fxfinal"><div class="fxburst"></div><div class="fxshock"></div><div class="fxshock fxshock2"></div></div>';
       host.appendChild(el);
-      // ── 각 업로더 원화에 랜덤 스킨을 하나씩 입힌다(등장 후 부드럽게 교체). 매 경기 다른 스킨이 뜬다. ──
-      uploaders.forEach(function(u, i){
-        loadSkinNums(u.champion).then(function(nums){
-          if(!nums || nums.length<=1) return;   // 스킨 없으면 기본 원화 유지
-          var card = el.querySelector('.upc[data-uc="'+i+'"]');
-          if(!card) return;
-          swapArt(card.querySelector('.upc-art'), splashOf(u.champion, pickSkin(nums, 0)));
-        }).catch(function(){});
-      });
       var done=false;
       function dismiss(){
         if(done) return; done=true;
