@@ -863,6 +863,17 @@ def log(m):
 # ===================== 크래시 로그 (전역 excepthook) =====================
 CRASH_LOG = os.path.join(DATA_DIR, "crash.log")
 
+# 네이티브(C/Rust) 크래시도 스택을 남긴다 — windowed 빌드는 stderr 가 없어 세그폴트/패닉이 로그 없이 증발하므로 파일로 덤프.
+#  (windows_capture 세션 중지 등 확장 모듈 크래시는 파이썬 excepthook 이 못 잡음 → faulthandler 로만 흔적을 남길 수 있다.)
+try:
+    import faulthandler as _faulthandler
+    _fh_file = open(CRASH_LOG, "a", encoding="utf-8", errors="replace")
+    _fh_file.write("\n----- faulthandler armed | %s | %s -----\n" % (datetime.datetime.now().isoformat(timespec="seconds"), APP_VERSION))
+    _fh_file.flush()
+    _faulthandler.enable(file=_fh_file)
+except Exception:
+    pass
+
 def _write_crash(exc_type, exc, tb, where="main"):
     try:
         txt = "".join(traceback.format_exception(exc_type, exc, tb))
@@ -2052,9 +2063,26 @@ class Recorder:
                     # 즉시 복사: windows-capture 가 이 버퍼를 다음 프레임에 재사용하면, 참조만 들고 있던
                     # 피더가 읽는 도중 내용이 바뀌어 '위/아래가 다른 순간'으로 찢어짐(tearing). copy 로 스냅샷 고정.
                     _w = frame.width
-                    if _fb.shape[1] != _w: _fb = _fb[:, :_w]        # 스트라이드 보정
+                    _h = frame.height
+                    # 진단: 버퍼 형태/방향(strides)이 바뀔 때만 1줄 로그 → 간헐적 위아래 반전/노이즈 원인 추적.
+                    try:
+                        _sig = (_fb.ndim, tuple(_fb.shape), tuple(getattr(_fb, "strides", ()) or ()))
+                        if shared.get("_dbgshp") != _sig:
+                            shared["_dbgshp"] = _sig
+                            log("WGC buf: shape=%s strides=%s w=%d h=%d" % (_fb.shape, getattr(_fb, "strides", None), _w, _h))
+                    except Exception: pass
+                    # 스트라이드(행 패딩) 보정: GPU 버퍼는 한 행이 width*4 보다 넓을 수 있음(정렬 패딩).
+                    #  → 패딩을 제거해 정확히 (h, w, 4) 로 만들어야 대각선 노이즈가 안 생긴다. 버퍼 형태별 처리.
+                    if _fb.ndim == 3:
+                        if _fb.shape[1] != _w: _fb = _fb[:, :_w, :]                 # (h, padded_w, 4) → (h, w, 4)
+                    elif _fb.ndim == 2:
+                        if _fb.shape[1] > _w * 4: _fb = _fb[:, :_w * 4]             # (h, padded_bytes) → (h, w*4)
+                        _fb = _fb.reshape(_h, _w, 4)
+                    elif _fb.ndim == 1 and _fb.size >= _w * _h * 4:
+                        _st = _fb.size // _h                                        # 행당 실제 바이트(패딩 포함)
+                        _fb = _fb.reshape(_h, _st)[:, :_w * 4].reshape(_h, _w, 4)   # 패딩 제거 후 재구성
                     shared["buf"] = _np.ascontiguousarray(_fb)      # 연속 메모리 복사본(피더가 안전하게 재사용)
-                    shared["wh"] = (_w, frame.height)
+                    shared["wh"] = (_w, _h)
                     shared["n"] = shared.get("n", 0) + 1
                 except Exception as e:
                     if shared.get("err") is None: shared["err"] = repr(e)
@@ -2236,6 +2264,7 @@ class Recorder:
             st = self._wgc_state or {}
             ev = st.get("stop")
             if ev: ev.set()
+            time.sleep(0.05)   # on_frame_arrived 가 마지막 프레임을 마무리하고 stop_ev 로 스스로 멈출 여유 → 세션 파괴와 경쟁(네이티브 크래시) 방지
             try:
                 if self._wgc_control: self._wgc_control.stop()
             except Exception: pass
