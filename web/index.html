@@ -432,7 +432,7 @@ button:active,.dl:active,.povchip:active{transform:none}
     // 소유자 삭제 버튼: 로그인한 내 puuid 가 이 그룹의 어떤 시점의 owner 와 일치할 때만 노출
     var myPuuid = P.sessionPuuid && P.sessionPuuid();
     var myRow = myPuuid ? group.filter(function(x){ return x.owner_puuid===myPuuid; }) : [];
-    var delHTML = myRow.length ? ('<button class="carddel" type="button" data-delmid="'+esc(gk)+'" title="내 영상 삭제" aria-label="삭제"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></button>') : '';
+    var delHTML = '';   // 아카이브에선 삭제 버튼 미노출(시점 버튼과 겹침) — 삭제는 '나의 협곡(me)'에서 진행
 
     return '<a class="card '+(won===true?'win':won===false?'loss':'')+'" href="match.html?id='+encodeURIComponent(P.groupKeyOf(r))+(r.id!=null?'&pov='+encodeURIComponent(r.id):'')+'">'
       + '<div class="thumb">'

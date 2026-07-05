@@ -1804,12 +1804,12 @@ def _ffmpeg_progress(args, dur, timeout):
 
 def make_preview(src, dst, dur=0):
     """원본을 갤러리용으로 재인코딩 — 최대 1080p(초과분만 다운스케일, 업스케일 안 함) + '또렷한' 화질.
-    화질 노브: config.json 의 preview_cq(NVENC, 낮을수록 고화질, 기본 28) / preview_crf(x264, 기본 28).
+    화질 노브: config.json 의 preview_cq(NVENC, 낮을수록 고화질, 기본 24) / preview_crf(x264, 기본 24).
     값을 더 낮추면(예: cq18/crf19) 더 선명·용량↑. 성공 시 dst, 실패 시 None(원본 업로드로 폴백)."""
     if not (FFMPEG and src and os.path.isfile(src)): return None
     enc = _encoder_args() or []
-    cq  = str(CFG.get("preview_cq", 28))    # NVENC 품질(0~51, 낮을수록 고화질). 기본 28 = 화질 유지 + 용량 ~20% 절감
-    crf = str(CFG.get("preview_crf", 28))   # x264/QSV 품질(0~51, 낮을수록 고화질). 기본 28
+    cq  = str(CFG.get("preview_cq", 24))    # NVENC 품질(0~51, 낮을수록 고화질). 기본 24 = 한타 등 복잡한 장면도 또렷(용량↑ ~60%)
+    crf = str(CFG.get("preview_crf", 24))   # x264/QSV 품질(0~51, 낮을수록 고화질). 기본 24
     if "h264_nvenc" in enc:
         # p6(고품질 프리셋) + VBR 기반 CQ. maxrate 로 최대 비트레이트만 막아 용량 폭주 방지.
         venc = ["-c:v", "h264_nvenc", "-preset", "p6", "-rc", "vbr", "-cq", cq,
@@ -2797,6 +2797,17 @@ def recorder_loop(cfg):
             # 게임 종료: "계속" 클릭(프로세스 종료) 또는 GameEnd(승리/패배 화면) 후 잠깐 - 둘 중 먼저. 늘어짐 방지.
             _game_over = active and saw_game and ((not run) or (ended_at and (time.time()-ended_at) >= float(cfg.get("result_tail", 8))))
             if _game_over:
+                # 승패(GameEnd)를 아직 못 받았으면 — 결과 화면이 살아있는 동안 몇 번 더 폴링해 확보(미확인 방지).
+                if not any((e.get("EventName") == "GameEnd") for e in live_evts):
+                    for _ in range(6):   # 최대 ~3초, 0.5초 간격 — 결과 화면이면 GameEnd 잡힘, 게임 종료됐으면 즉시 중단
+                        try:
+                            _elast = penta_lol.live_events()
+                        except Exception:
+                            break
+                        if not _elast: break                 # Live API 응답 없음(게임 인스턴스 종료) → 더 못 받음
+                        if len(_elast) >= len(live_evts): live_evts = _elast
+                        if any((e.get("EventName") == "GameEnd") for e in _elast): break
+                        time.sleep(0.5)
                 # GameEnd로 결과 화면을 이미 담았으면 추가 tail 생략, 아니면(감지 실패) 기존처럼 잠깐 더.
                 _tail = (0.0 if ended_at else float(cfg.get("postgame_tail", 6)))
                 if _tail > 0:

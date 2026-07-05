@@ -673,12 +673,14 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
 .matchintro .fxparticles .pt7{left:15%}.matchintro .fxparticles .pt8{left:30%}.matchintro .fxparticles .pt9{left:45%}.matchintro .fxparticles .pt10{left:60%}.matchintro .fxparticles .pt11{left:73%}.matchintro .fxparticles .pt12{left:86%}.matchintro .fxparticles .pt13{left:97%}
 @keyframes ptFloat{0%{opacity:0;transform:translateY(0) translateX(0)}12%{opacity:.9}50%{transform:translateY(-55vh) translateX(14px)}88%{opacity:.7}100%{opacity:0;transform:translateY(-105vh) translateX(-10px)}}
 /* ── 퇴장 효과 F: 줌 + 블러 페이드 (영상으로 빨려드는 느낌) ── */
-.matchintro.out{animation:upOutVeil .9s ease forwards}
+.matchintro.out{animation:upOutVeil .9s ease forwards, irisOut .9s cubic-bezier(.55,0,.1,1) forwards}
 .matchintro.out .upc-art img{animation:upOutZoom .9s cubic-bezier(.5,0,.75,0) forwards}
 .matchintro.out .upc-info{animation:upOutInfo .5s ease forwards}
 @keyframes upOutVeil{0%{opacity:1}60%{opacity:1}100%{opacity:0;visibility:hidden}}
 @keyframes upOutZoom{0%{transform:scale(1)}20%{transform:scale(.97)}100%{transform:scale(1.6);filter:blur(16px)}}
 @keyframes upOutInfo{to{opacity:0;transform:translateY(-14px);filter:blur(2px)}}
+/* 인트로가 원형으로 확 걷히며(조리개) 게임 화면이 바깥부터 드러난다 */
+@keyframes irisOut{0%,42%{clip-path:circle(150% at 50% 50%)}100%{clip-path:circle(0% at 50% 50%)}}
 /* ── 카운트다운: 5→1 (골드 숫자, 펄스, 원형 링) ── */
 .matchintro .countwrap{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:7;display:flex;flex-direction:column;align-items:center;gap:clamp(10px,2vh,20px);opacity:0;pointer-events:none;transition:opacity .4s ease}
 .matchintro.counting .countwrap{opacity:1}
