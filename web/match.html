@@ -2466,11 +2466,10 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
     return 'https://ddragon.leagueoflegends.com/cdn/img/champion/splash/' + P.champKey(champ) + '_' + (num||0) + '.jpg';
   }
   // 기본(0) 제외 우선으로 랜덤 스킨을 고른다. 직전 스킨(exclude)과 다르게.
-  function pickSkin(nums, exclude){
-    var pool = nums.filter(function(n){ return n!==0 && n!==exclude; });
-    if(!pool.length) pool = nums.filter(function(n){ return n!==exclude; });
-    if(!pool.length) pool = nums;
-    return pool[Math.floor(Math.random()*pool.length)];
+  // 기본(0)도 다른 스킨과 동일 확률로 균등 랜덤 (가끔 기본 원화가 반갑게 등장)
+  function pickSkin(nums){
+    if(!nums || !nums.length) return 0;
+    return nums[Math.floor(Math.random()*nums.length)];
   }
   // 캐시(localStorage)에 있으면 즉시 스킨번호 반환, 없으면 null(백그라운드 로드 대상).
   function cachedSkinNums(champ){
@@ -2525,7 +2524,7 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
       // 캐시된 스킨은 즉시 처음부터 반영(재방문이면 대부분 여기). 미캐시(null)는 인트로 뜬 뒤 로드해 교체.
       uploaders.forEach(function(u){
         var nums=cachedSkinNums(u.champion);
-        u.skinNum = nums ? ((nums.length>1)?pickSkin(nums,0):0) : null;
+        u.skinNum = nums ? pickSkin(nums) : null;
       });
 
       // 각 업로더 카드: 캐시된 스킨이 있으면 그 스킨으로 시작, 없으면 centered(기본)로 시작(뒤에서 교체). 폴백: centered → portrait → 아이콘.
@@ -2575,7 +2574,7 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
         function apply(nums){
           if(!nums || nums.length<=1) return;
           var card=el.querySelector('.upc[data-uc="'+i+'"]');
-          if(card) swapArt(card.querySelector('.upc-art'), splashOf(u.champion, pickSkin(nums,0)));
+          if(card) swapArt(card.querySelector('.upc-art'), splashOf(u.champion, pickSkin(nums)));
         }
         P.skinsAll().then(function(){
           var nums=P.champSkinNums(u.champion);
