@@ -625,7 +625,7 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
 .matchintro.up-many .upc:nth-child(3){animation-delay:.16s}
 .matchintro.up-many .upc:nth-child(4){animation-delay:.24s}
 .matchintro.up-many .upc:nth-child(5){animation-delay:.32s}
-@keyframes upcIn{from{opacity:0;transform:scale(1.06)}to{opacity:1;transform:scale(1)}}
+@keyframes upcIn{0%{opacity:0;filter:blur(10px);transform:scale(1.2)}50%{opacity:1;filter:blur(0)}100%{opacity:1;transform:scale(1)}}
 /* 카드 사이 얇은 구분선(2명 이상) */
 .matchintro.up-2 .upc+.upc,.matchintro.up-many .upc+.upc{border-left:1px solid rgba(222,199,156,.22)}
 /* full 원화 배경 (centered) — 천천히 줌인 */
@@ -651,7 +651,7 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
 .matchintro .upc-ch .upc-pos{color:var(--ink2);font-weight:500}
 @keyframes upInfoIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 /* ── 등장 효과 C: 라이트 플래시 (순간 밝게 번쩍) ── */
-.matchintro .fxflash{position:absolute;inset:0;z-index:5;background:radial-gradient(ellipse at center,rgba(255,248,230,.9),rgba(255,240,205,.5) 45%,transparent 72%);pointer-events:none;opacity:0;animation:fxFlash .5s ease-out both}
+.matchintro .fxflash{position:absolute;inset:0;z-index:5;background:radial-gradient(ellipse at center,rgba(255,252,244,.98),rgba(255,242,212,.62) 45%,transparent 74%);pointer-events:none;opacity:0;animation:fxFlash .6s ease-out both}
 @keyframes fxFlash{0%{opacity:.95}100%{opacity:0}}
 /* ── 등장 효과 A: 골드 스윕 (골드빛 광선이 좌→우로 쓸고 지나감) ── */
 .matchintro .fxsweep{position:absolute;top:0;bottom:0;left:0;width:60%;z-index:6;pointer-events:none;background:linear-gradient(105deg,transparent 0%,rgba(222,199,156,.0) 30%,rgba(255,240,205,.55) 48%,rgba(222,199,156,.85) 50%,rgba(255,240,205,.55) 52%,transparent 70%);filter:blur(2px);transform:translateX(-120%);animation:fxSweep .85s cubic-bezier(.5,0,.4,1) both}
@@ -677,12 +677,14 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
 .matchintro.out .upc-art img{animation:upOutZoom .9s cubic-bezier(.5,0,.75,0) forwards}
 .matchintro.out .upc-info{animation:upOutInfo .5s ease forwards}
 @keyframes upOutVeil{0%{opacity:1}60%{opacity:1}100%{opacity:0;visibility:hidden}}
-@keyframes upOutZoom{to{transform:scale(1.28);filter:blur(9px)}}
+@keyframes upOutZoom{0%{transform:scale(1)}20%{transform:scale(.97)}100%{transform:scale(1.6);filter:blur(16px)}}
 @keyframes upOutInfo{to{opacity:0;transform:translateY(-14px);filter:blur(2px)}}
 /* ── 카운트다운: 5→1 (골드 숫자, 펄스, 원형 링) ── */
 .matchintro .countwrap{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:7;display:flex;flex-direction:column;align-items:center;gap:clamp(10px,2vh,20px);opacity:0;pointer-events:none;transition:opacity .4s ease}
 .matchintro.counting .countwrap{opacity:1}
 .matchintro .countnum{position:relative;width:clamp(120px,17vw,180px);height:clamp(120px,17vw,180px);display:grid;place-items:center}
+.matchintro .countnum.punch{animation:numPunch .55s cubic-bezier(.2,.8,.3,1.25) both}
+@keyframes numPunch{0%{transform:scale(1.16)}42%{transform:scale(.96)}70%{transform:scale(1.03)}100%{transform:scale(1)}}
 /* 숫자 뒤 발광 오라 (색은 골드→빨강으로 변함) */
 .matchintro .countglow{position:absolute;width:90%;height:90%;border-radius:50%;background:radial-gradient(circle,rgba(222,199,156,.42),rgba(222,199,156,.1) 55%,transparent 72%);filter:blur(7px)}
 .matchintro .countglow.pulse{animation:glowPulse 1s ease both}
@@ -708,13 +710,13 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
 @keyframes raysGo{0%{opacity:0;transform:translate(-50%,-50%) scale(.5) rotate(-18deg)}22%{opacity:.9}100%{opacity:0;transform:translate(-50%,-50%) scale(1.6) rotate(14deg)}}
 .matchintro .countwrap.final .countrays{background:repeating-conic-gradient(from 0deg,rgba(255,120,120,0) 0deg,rgba(255,120,120,.2) 1.5deg,rgba(255,120,120,0) 4.5deg)}
 .matchintro .countn.pulse{animation:countPulse 1s cubic-bezier(.16,.9,.3,1.1) both}
-@keyframes countPulse{0%{opacity:0;filter:blur(16px);transform:translateY(-30px) scale(2.3) rotate(-7deg)}16%{opacity:1;filter:blur(0);transform:translateY(0) scale(1) rotate(0)}30%{transform:scale(1.11)}45%{transform:scale(1)}100%{opacity:.5;filter:blur(0);transform:scale(.9)}}
+@keyframes countPulse{0%{opacity:0;filter:blur(16px);transform:perspective(680px) translateZ(-380px) rotateX(40deg)}17%{opacity:1;filter:blur(0);transform:perspective(680px) translateZ(46px) rotateX(-5deg)}32%{transform:perspective(680px) translateZ(0) rotateX(0)}48%{transform:perspective(680px) translateZ(16px)}100%{opacity:.42;filter:blur(3px);transform:perspective(680px) translateZ(-100px)}}
 /* ── 마지막 3-2-1: 빨강 강조 + 더 강렬 ── */
 .matchintro .countwrap.final .countglow{background:radial-gradient(circle,rgba(255,70,70,.4),rgba(255,70,70,.1) 55%,transparent 72%)}
 .matchintro .countwrap.final .countripple{border-color:rgba(255,80,80,.7)}
 .matchintro .countwrap.final .countn{color:#FF5B5B;text-shadow:0 4px 30px rgba(0,0,0,.85),0 0 58px rgba(255,70,70,.85)}
 .matchintro .countwrap.final .countn.pulse{animation:countPulseFinal 1s cubic-bezier(.16,.9,.3,1.15) both}
-@keyframes countPulseFinal{0%{opacity:0;filter:blur(20px);transform:translateY(-38px) scale(2.7) rotate(-9deg)}16%{opacity:1;filter:blur(0);transform:translateY(0) scale(1.16) rotate(0)}32%{transform:scale(1.28)}48%{transform:scale(1.12)}100%{opacity:.55;filter:blur(0);transform:scale(1)}}
+@keyframes countPulseFinal{0%{opacity:0;filter:blur(22px);transform:perspective(680px) translateZ(-480px) rotateX(48deg)}17%{opacity:1;filter:blur(0);transform:perspective(680px) translateZ(64px) rotateX(-7deg)}34%{transform:perspective(680px) translateZ(8px) rotateX(0)}50%{transform:perspective(680px) translateZ(26px)}100%{opacity:.48;filter:blur(4px);transform:perspective(680px) translateZ(-120px)}}
 .matchintro .countwrap.final .countring .ringfg{stroke:#FF5B5B;stroke-width:3.5;filter:drop-shadow(0 0 14px rgba(255,70,70,.95))}
 .matchintro .countwrap.final .countring .ringbg{stroke:rgba(255,91,91,.16)}
 .matchintro .countwrap.final .countring .ringdash{stroke:rgba(255,91,91,.5);animation-duration:5s}
@@ -2593,7 +2595,7 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
       // 카운트다운: 원화 등장 후 ~1.8초 뒤부터 5→1 (매 1초). 끝나면 영상으로 전환.
       var numEl=el.querySelector('.countn'), wrap=el.querySelector('.countwrap');
       var ringEl=el.querySelector('.countring .ringfg');
-      var glowEl=el.querySelector('.countglow'), rippleEl=el.querySelector('.countripple'), raysEl=el.querySelector('.countrays');
+      var glowEl=el.querySelector('.countglow'), rippleEl=el.querySelector('.countripple'), raysEl=el.querySelector('.countrays'), numBox=el.querySelector('.countnum');
       var cnt=5;
       var _countTimer=null;
       setTimeout(function(){
@@ -2609,12 +2611,14 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
           if(glowEl) glowEl.classList.remove('pulse');
           if(rippleEl) rippleEl.classList.remove('go');
           if(raysEl) raysEl.classList.remove('go');
+          if(numBox) numBox.classList.remove('punch');
           void numEl.offsetWidth;                       // 강제 리플로우: 모든 애니메이션이 동시에 처음부터
           numEl.classList.add('pulse');
           if(ringEl) ringEl.classList.add('go');
           if(glowEl) glowEl.classList.add('pulse');
           if(rippleEl) rippleEl.classList.add('go');
           if(raysEl) raysEl.classList.add('go');
+          if(numBox) numBox.classList.add('punch');
           wrap.classList.toggle('final', cnt<=3);
           el.classList.toggle('lastone', cnt===1);   // 마지막 1: 화면 진동 + 강한 플래시
           cnt--;
