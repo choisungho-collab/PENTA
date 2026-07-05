@@ -351,6 +351,25 @@
     return j;
   }
 
+  // ── 사용자 활동 분석 (접속/행동 로그, IP 아닌 익명 방문자 ID) ──
+  function _visitorId() {
+    try {
+      var v = localStorage.getItem('penta_vid');
+      if (!v) { v = 'v_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); localStorage.setItem('penta_vid', v); }
+      return v;
+    } catch (e) { return 'v_anon'; }
+  }
+  function trackEvent(event, page, detail) {
+    try {
+      var s = _sessRead();
+      var nm = (s && s.name) ? s.name : '';
+      var vid = (s && s.puuid) ? s.puuid : _visitorId();
+      sbRpc('log_event', { p_visitor: vid, p_name: nm, p_event: String(event || ''),
+                           p_page: page || (location.pathname || ''), p_detail: detail || {} });
+    } catch (e) { /* 기록 실패는 무시 */ }
+  }
+  try { trackEvent('page_view', (location.pathname || '')); } catch (e) {}   // 페이지 로드 시 자동 기록
+
   global.PENTA = {
     SB_URL: SB_URL, SB_ANON: SB_ANON,
     sbSelect: sbSelect, sbInsert: sbInsert, sbRpc: sbRpc,
@@ -365,6 +384,6 @@
     likeGroup: likeGroup, viewGroup: viewGroup, statsAll: statsAll, statsOne: statsOne,
     session: session, sessionPuuid: sessionPuuid, loginWithCode: loginWithCode, lastLoginError: lastLoginError, loginViaRecorder: loginViaRecorder,
     whoami: whoami, whoamiCached: whoamiCached, logout: logout, initAuth: initAuth,
-    updateMatchMeta: updateMatchMeta, deleteMatch: deleteMatch
+    updateMatchMeta: updateMatchMeta, deleteMatch: deleteMatch, trackEvent: trackEvent
   };
 })(typeof window !== 'undefined' ? window : globalThis);

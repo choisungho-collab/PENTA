@@ -164,6 +164,14 @@ exports.handler = async (event) => {
     }
 
     // ── 매치 목록/검색 ─────────────────────────────────────────────
+    if (body.action === 'analytics') {
+      const stats = await fetch(SB_URL + '/rest/v1/rpc/event_stats', { method: 'POST', headers: sbH(), body: '{}' })
+        .then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { return {}; });
+      const rr = await fetch(SB_URL + '/rest/v1/events?select=ts,visitor,name,event,page,detail&order=ts.desc&limit=80', { headers: sbH() });
+      const recent = rr.ok ? await rr.json() : [];
+      return reply(200, { stats: stats, recent: recent });
+    }
+
     if (body.action === 'matches') {
       const limit = Math.min(Math.max(parseInt(body.limit, 10) || 60, 1), 200);
       // 개별 시점 행을 넉넉히 가져와 match_id 로 그룹화(같은 게임을 여러 명이 녹화한 멀티 POV 를 한 줄로).

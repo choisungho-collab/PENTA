@@ -1440,6 +1440,7 @@ def process_retry_queue():
             log("Retry dropped (too many attempts): %s" % eid); continue
         try:
             safe = e.get("safe") or ""
+            safe = "".join(ch if (ch.isascii() and (ch.isalnum() or ch in "._-")) else "_" for ch in safe)   # 구버전 큐의 한글/특수문자 파일명 → ASCII (InvalidKey 재실패 방지)
             rid = e.get("riot_id") or ""
             _ident = riot_key(rid); _sec = device_secret() if _ident else None
             _idp = (_ident, _sec) if (_ident and _sec) else None
@@ -2101,7 +2102,7 @@ class Recorder:
                     elif _fb.ndim == 1 and _fb.size >= _w * _h * 4:
                         _st = _fb.size // _h                                        # 행당 실제 바이트(패딩 포함)
                         _fb = _fb.reshape(_h, _st)[:, :_w * 4].reshape(_h, _w, 4)   # 패딩 제거 후 재구성
-                    shared["buf"] = _np.ascontiguousarray(_fb)      # 연속 메모리 복사본(피더가 안전하게 재사용)
+                    shared["buf"] = _np.ascontiguousarray(_fb).copy()   # .copy() 필수 — 원본 frame_buffer 는 다음 프레임에 재사용/해제됨. 참조만 두면 피더가 해제된 메모리를 tobytes() 로 읽어 access violation(즉시 크래시) → 반드시 독립 메모리로 복사한다.
                     shared["wh"] = (_w, _h)
                     shared["n"] = shared.get("n", 0) + 1
                 except Exception as e:
