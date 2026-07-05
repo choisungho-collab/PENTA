@@ -92,6 +92,47 @@ exports.handler = async (event) => {
   try { body = JSON.parse(event.body || '{}'); } catch (_) { return reply(400, { error: 'bad json' }); }
   const { action, puuid, secret, paths, bytes } = body;
 
+  // ── 매치 삭제: 로그인 토큰으로 소유 확인 후 파일(Storage API)+행 제거 ──
+  //    storage.objects 직접 DELETE 가 정책상 막혀 SQL RPC 는 401 → 서버(service_role)가 Storage API 로 지운다.
+  if (action === 'delete-match') {
+    const token = body.token, matchId = body.match_id;
+    if (!token || !matchId) return reply(400, { error: 'missing token/match_id' });
+    try {
+      // 1) 토큰 → puuid (세션 검증)
+      const sRes = await fetch(SB_URL + '/rest/v1/sessions?select=puuid&token=eq.' + encodeURIComponent(String(token)), { headers: sbHeaders() });
+      const sess = await sRes.json().catch(() => []);
+      const owner = Array.isArray(sess) && sess[0] && sess[0].puuid;
+      if (!owner) return reply(401, { error: 'not logged in' });
+      // 2) 소유 매치의 video/thumb 조회 (본인 것만)
+      const q = 'match_id=eq.' + encodeURIComponent(String(matchId)) + '&owner_puuid=eq.' + encodeURIComponent(owner);
+      const mRes = await fetch(SB_URL + '/rest/v1/matches?select=video,thumb&' + q, { headers: sbHeaders() });
+      const rows = await mRes.json().catch(() => []);
+      if (!Array.isArray(rows) || !rows.length) return reply(404, { error: 'not found or not yours' });
+      // 3) 스토리지 파일 삭제 — public URL 에서 버킷 뒤 경로만 뽑아 DELETE (허용 경로만)
+      const marker = '/object/public/' + BUCKET + '/';
+      const keys = [];
+      for (const row of rows) {
+        for (const u of [row.video, row.thumb]) {
+          if (typeof u === 'string' && u.indexOf(marker) >= 0) {
+            const key = u.split(marker)[1];
+            if (key && PATH_RE.test(key) && keys.indexOf(key) < 0) keys.push(key);
+          }
+        }
+      }
+      for (const key of keys) {
+        await fetch(SB_URL + '/storage/v1/object/' + BUCKET + '/' + key, { method: 'DELETE', headers: sbHeaders() }).catch(() => {});
+      }
+      // 4) 매치 행 삭제 (service_role → RLS 우회, 소유 조건 유지)
+      const dRes = await fetch(SB_URL + '/rest/v1/matches?' + q, { method: 'DELETE', headers: sbHeaders() });
+      if (!dRes.ok) return reply(502, { error: 'row delete failed ' + dRes.status });
+      return reply(200, { ok: true, removedRows: rows.length, removedFiles: keys.length });
+    } catch (e) {
+      const msg = String(e && e.message || e).slice(0, 240);
+      await logError('storage/delete', msg, {});
+      return reply(502, { error: msg });
+    }
+  }
+
   if (action !== 'sign-upload') return reply(400, { error: 'unknown action' });
   if (!puuid || !secret || String(secret).length < 16) return reply(401, { error: 'bad identity' });
   if (!Array.isArray(paths) || paths.length < 1 || paths.length > MAX_PATHS) return reply(400, { error: 'bad paths' });

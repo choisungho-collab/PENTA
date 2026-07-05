@@ -273,8 +273,25 @@ footer{border-top:1px solid var(--line);margin-top:70px}
 .mgbtn:hover{color:var(--ink,#ECE7DD);border-color:var(--gold-line,#3a3526)}
 .mgbtn.del:hover{color:#E8A0A0;border-color:#5a2b33}
 .mgbtn.ok{color:#57C98A;border-color:#2b5a41}
+.pmodal-ov{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;background:rgba(4,6,10,.72);backdrop-filter:blur(4px);padding:20px}
+.pmodal-ov.on{display:flex}
+.pmodal{width:100%;max-width:380px;background:var(--surface);border:1px solid var(--line2);border-radius:14px;padding:22px 22px 18px;box-shadow:0 20px 60px -12px rgba(0,0,0,.7);animation:pmIn .22s cubic-bezier(.16,.9,.3,1) both}
+@keyframes pmIn{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+.pmodal .pm-t{font-family:var(--fg,var(--fd));font-weight:600;font-size:17px;color:var(--ink);margin-bottom:8px}
+.pmodal .pm-m{font-size:14px;color:var(--ink2);line-height:1.6;white-space:pre-line;margin-bottom:20px}
+.pmodal .pm-btns{display:flex;gap:9px;justify-content:flex-end}
+.pmodal .pm-b{font-family:var(--fd);font-weight:600;font-size:13.5px;padding:9px 16px;border-radius:9px;cursor:pointer;border:1px solid var(--line2);background:none;color:var(--ink2);transition:.14s}
+.pmodal .pm-b:hover{color:var(--ink);border-color:var(--gold-line)}
+.pmodal .pm-b.danger{background:var(--loss-soft);border-color:var(--loss-line);color:var(--loss)}
+.pmodal .pm-b.danger:hover{background:rgba(222,116,128,.22);color:#fff}
+.pmodal .pm-b.primary{background:linear-gradient(180deg,#D8BC82,#DEC79C);border:0;color:var(--bg)}
+.ptoast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(20px);z-index:210;background:var(--surface2);border:1px solid var(--line2);color:var(--ink);font-size:13.5px;font-weight:500;padding:11px 18px;border-radius:10px;box-shadow:0 10px 30px -8px rgba(0,0,0,.6);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;max-width:90vw;text-align:center}
+.ptoast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.ptoast.err{border-color:var(--loss-line);color:var(--loss)}
 </style></head>
 <body>
+<div class="pmodal-ov" id="pmodal"><div class="pmodal"><div class="pm-t" id="pm-title"></div><div class="pm-m" id="pm-msg"></div><div class="pm-btns"><button class="pm-b" id="pm-cancel" type="button">취소</button><button class="pm-b" id="pm-ok" type="button"></button></div></div></div>
+<div class="ptoast" id="ptoast"></div>
 
 <header class="bar" id="bar">
  <div class="bar-in">
@@ -417,6 +434,31 @@ footer{border-top:1px solid var(--line);margin-top:70px}
     + '</a>';
   }
 
+  // 커스텀 확인 모달 / 토스트 (브라우저 confirm·alert 대체)
+  function confirmModal(title, msg, okLabel, danger){
+    return new Promise(function(resolve){
+      var ov=document.getElementById('pmodal');
+      document.getElementById('pm-title').textContent=title||'확인';
+      document.getElementById('pm-msg').textContent=msg||'';
+      var okb=document.getElementById('pm-ok'), cb=document.getElementById('pm-cancel');
+      okb.textContent=okLabel||'확인';
+      okb.className='pm-b '+(danger?'danger':'primary');
+      function close(v){ ov.classList.remove('on'); okb.onclick=null; cb.onclick=null; ov.onclick=null; document.onkeydown=null; resolve(v); }
+      okb.onclick=function(){ close(true); };
+      cb.onclick=function(){ close(false); };
+      ov.onclick=function(ev){ if(ev.target===ov) close(false); };
+      document.onkeydown=function(ev){ if(ev.key==='Escape') close(false); };
+      ov.classList.add('on');
+    });
+  }
+  var _toastT=null;
+  function toast(msg, err){
+    var t=document.getElementById('ptoast'); if(!t) return;
+    t.textContent=msg; t.className='ptoast on'+(err?' err':'');
+    if(_toastT) clearTimeout(_toastT);
+    _toastT=setTimeout(function(){ t.classList.remove('on'); }, err?3200:2000);
+  }
+
   // 카드의 [제목]/[삭제] — 카드 링크 대신 관리 동작 (상세페이지와 같은 RPC)
   var _mgGrid=document.getElementById('grid');
   if(_mgGrid) _mgGrid.addEventListener('click', async function(e){
@@ -428,11 +470,13 @@ footer{border-top:1px solid var(--line);margin-top:70px}
       var nv=prompt('영상 제목 (비우면 제목 없음)', cur);
       if(nv===null) return;
       try{ await P.updateMatchMeta(mid, nv.trim()); b.setAttribute('data-title', nv.trim()); b.classList.add('ok'); setTimeout(function(){ b.classList.remove('ok'); }, 1400); }
-      catch(err){ alert('저장 실패: '+String(err&&err.message||err)); }
+      catch(err){ toast('저장 실패: '+String(err&&err.message||err), true); }
     } else if(act==='del'){
-      if(!confirm('이 게임에 올린 내 영상을 삭제할까요? 되돌릴 수 없습니다.')) return;
-      try{ await P.deleteMatch(mid); location.reload(); }
-      catch(err){ alert('삭제 실패: '+String(err&&err.message||err)); }
+      var okc=await confirmModal('영상 삭제','이 게임에 올린 내 영상을 삭제할까요?\n영상·썸네일이 함께 지워지며 되돌릴 수 없습니다.','삭제',true);
+      if(!okc) return;
+      b.disabled=true; var _bt=b.textContent; b.textContent='삭제 중…';
+      try{ await P.deleteMatch(mid); toast('삭제되었습니다'); setTimeout(function(){ location.reload(); }, 650); }
+      catch(err){ toast('삭제 실패: '+String(err&&err.message||err), true); b.disabled=false; b.textContent=_bt; }
     }
   }, true);
 

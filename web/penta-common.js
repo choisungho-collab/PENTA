@@ -116,7 +116,7 @@
   var _skinsAll = null, _skinsFetch = null;
   function _skinsCached() {
     if (_skinsAll) return _skinsAll;
-    try { var c = JSON.parse(_lsGet('penta_skins_all') || 'null'); if (c && c.champions && c.t && (Date.now() - c.t < 86400000)) { _skinsAll = c.champions; return _skinsAll; } } catch (_) {}
+    try { var c = JSON.parse(_lsGet('penta_skins_all_v2') || 'null'); if (c && c.champions && c.t && (Date.now() - c.t < 86400000)) { _skinsAll = c.champions; return _skinsAll; } } catch (_) {}
     return null;
   }
   function skinsAll() {
@@ -125,7 +125,7 @@
     if (_skinsFetch) return _skinsFetch;
     _skinsFetch = fetch('skins.json').then(function (r) { return r.json(); }).then(function (j) {
       _skinsAll = (j && j.champions) || {};
-      try { _lsSet('penta_skins_all', JSON.stringify({ champions: _skinsAll, version: (j && j.version) || '', t: Date.now() })); } catch (_) {}
+      try { _lsSet('penta_skins_all_v2', JSON.stringify({ champions: _skinsAll, version: (j && j.version) || '', t: Date.now() })); } catch (_) {}
       return _skinsAll;
     }).catch(function () { _skinsAll = _skinsAll || {}; return _skinsAll; });
     return _skinsFetch;
@@ -343,7 +343,13 @@
     throw (lastErr || new Error('recorder not running'));
   }
   async function updateMatchMeta(mid, title) { var s = _sessRead(); if (!s || !s.token) throw new Error('not logged in'); return sbRpc('update_match_meta', { p_token: s.token, p_match_id: mid, p_title: title }); }
-  async function deleteMatch(mid) { var s = _sessRead(); if (!s || !s.token) throw new Error('not logged in'); return sbRpc('delete_match', { p_token: s.token, p_match_id: mid }); }
+  async function deleteMatch(mid) {
+    var s = _sessRead(); if (!s || !s.token) throw new Error('not logged in');
+    var r = await fetch('/api/storage', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'delete-match', token: s.token, match_id: mid }) });
+    var j = await r.json().catch(function () { return {}; });
+    if (!r.ok || j.error) throw new Error(j.error || ('delete failed ' + r.status));
+    return j;
+  }
 
   global.PENTA = {
     SB_URL: SB_URL, SB_ANON: SB_ANON,

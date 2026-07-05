@@ -2432,7 +2432,7 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
   //  - skins 배열엔 크로마가 없고 num이 정확 → 불연속/크로마/신규챔프 함정 자동 회피
   //  - 버전별 localStorage 캐시로 재요청 없음(챔피언당 수십 바이트)
   var _skinNumsCache = {};
-  function _skinLsKey(key){ return 'penta_dd_skins_' + ver + '_' + key; }
+  function _skinLsKey(key){ return 'penta_dd_skins_v2_' + ver + '_' + key; }
   async function loadSkinNums(champ){
     var key = P.champKey(champ);
     if(_skinNumsCache[key]) return _skinNumsCache[key];
@@ -2447,7 +2447,7 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
       var d = j && j.data && j.data[key];
       var sk = (d && d.skins) || [];
       var out = [];
-      for(var i=0;i<sk.length;i++){ if(typeof sk[i].num === 'number') out.push(sk[i].num); }
+      for(var i=0;i<sk.length;i++){ if(sk[i] && sk[i].parentSkin==null && typeof sk[i].num === 'number') out.push(sk[i].num); }
       if(out.length) nums = out;
       try{ localStorage.setItem(_skinLsKey(key), JSON.stringify(nums)); }catch(_){}
       // 옛 버전 스킨 캐시 정리(용량 누적 방지)

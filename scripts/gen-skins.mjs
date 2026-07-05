@@ -16,7 +16,11 @@ async function main() {
   const champions = {};
   for (const key in data) {
     const skins = (data[key] && data[key].skins) || [];
-    const nums = skins.map((s) => s.num).filter((n) => typeof n === 'number');
+    // 크로마는 원화(splash)가 없다 → parentSkin 필드가 있는 항목(=크로마) 제외, base 스킨만.
+    const nums = skins
+      .filter((s) => s && s.parentSkin == null)
+      .map((s) => s.num)
+      .filter((n) => typeof n === 'number');
     if (nums.length) champions[key] = nums;
   }
 
