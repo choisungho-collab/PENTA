@@ -1737,14 +1737,47 @@ def _probe_height(src):
         return 0
 
 
-def make_preview(src, dst):
+def _ffmpeg_progress(args, dur, timeout):
+    """ffmpeg 를 -progress 로 실행하며 압축 진행률(%)을 REC_STATE['prep_pct'] 에 갱신. returncode 반환."""
+    full = list(args) + ["-progress", "pipe:1", "-nostats"]
+    cf = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    try:
+        p = subprocess.Popen(full, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, bufsize=1, creationflags=cf)
+    except Exception:
+        return 1
+    t0 = time.time()
+    try:
+        for line in p.stdout:
+            line = line.strip()
+            if dur and line.startswith("out_time_us="):
+                try:
+                    sec = int(line.split("=", 1)[1]) / 1000000.0
+                    pct = int(sec / dur * 100)
+                    REC_STATE["prep_pct"] = 0 if pct < 0 else (99 if pct > 99 else pct)
+                except Exception: pass
+            elif line == "progress=end":
+                REC_STATE["prep_pct"] = 100
+            if timeout and (time.time() - t0) > timeout:
+                try: p.kill()
+                except Exception: pass
+                break
+    except Exception:
+        pass
+    try: p.wait(timeout=30)
+    except Exception:
+        try: p.kill()
+        except Exception: pass
+    return p.returncode if p.returncode is not None else 1
+
+
+def make_preview(src, dst, dur=0):
     """원본을 갤러리용으로 재인코딩 — 최대 1080p(초과분만 다운스케일, 업스케일 안 함) + '또렷한' 화질.
-    화질 노브: config.json 의 preview_cq(NVENC, 낮을수록 고화질, 기본 26) / preview_crf(x264, 기본 26).
+    화질 노브: config.json 의 preview_cq(NVENC, 낮을수록 고화질, 기본 28) / preview_crf(x264, 기본 28).
     값을 더 낮추면(예: cq18/crf19) 더 선명·용량↑. 성공 시 dst, 실패 시 None(원본 업로드로 폴백)."""
     if not (FFMPEG and src and os.path.isfile(src)): return None
     enc = _encoder_args() or []
-    cq  = str(CFG.get("preview_cq", 26))    # NVENC 품질(0~51, 낮을수록 고화질). 기본 26 = 적당 화질 + 더 작은 용량
-    crf = str(CFG.get("preview_crf", 26))   # x264 품질(0~51, 낮을수록 고화질). 기본 26
+    cq  = str(CFG.get("preview_cq", 28))    # NVENC 품질(0~51, 낮을수록 고화질). 기본 28 = 화질 유지 + 용량 ~20% 절감
+    crf = str(CFG.get("preview_crf", 28))   # x264/QSV 품질(0~51, 낮을수록 고화질). 기본 28
     if "h264_nvenc" in enc:
         # p6(고품질 프리셋) + VBR 기반 CQ. maxrate 로 최대 비트레이트만 막아 용량 폭주 방지.
         venc = ["-c:v", "h264_nvenc", "-preset", "p6", "-rc", "vbr", "-cq", cq,
@@ -1761,15 +1794,18 @@ def make_preview(src, dst):
     hws = ([["-hwaccel", "cuda"], []] if "h264_nvenc" in enc else [[]])   # NVENC: GPU decode first, CPU fallback
     try:
         log("Compressing for gallery (1080p, sharper)\u2026")
+        REC_STATE["prep_pct"] = 0
+        rc = 1
         for _hw in hws:
-            r = _run([FFMPEG, "-y", "-loglevel", "error", *_hw, "-i", src,
+            REC_STATE["prep_pct"] = 0
+            rc = _ffmpeg_progress([FFMPEG, "-y", "-loglevel", "error", *_hw, "-i", src,
                       *venc, *vf,
                       "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", dst],
-                     timeout=5400)
-            if r.returncode == 0 and os.path.isfile(dst) and os.path.getsize(dst) > 0:
+                     dur, 5400)
+            if rc == 0 and os.path.isfile(dst) and os.path.getsize(dst) > 0:
                 return dst
-            if _hw: log("GPU-decode attempt failed (code %s) - retrying with CPU decode." % r.returncode)
-        log("Gallery re-encode returned code %s \u2014 uploading original instead." % r.returncode)
+            if _hw: log("GPU-decode attempt failed (code %s) - retrying with CPU decode." % rc)
+        log("Gallery re-encode returned code %s \u2014 uploading original instead." % rc)
     except Exception as e:
         log("Gallery re-encode failed (%s) \u2014 uploading original instead." % e)
     return None
@@ -2047,13 +2083,19 @@ class Recorder:
             except Exception:
                 return
             proc_box["p"] = p; self._vt0 = time.time()
-            interval = 1.0 / max(1, fps); nxt = time.time()
+            interval = 1.0 / max(1, fps); nxt = time.time(); last_good = None
             while not stop_ev.is_set():
                 b = shared["buf"]
                 if b is not None:
-                    try:
-                        p.stdin.write(b.tobytes())   # 이미 콜백에서 복사·스트라이드보정된 연속버퍼 → 그대로 안전
-                    except Exception: break
+                    # Alt+Tab/해상도 변경으로 프레임 크기가 초기 w×h 와 달라지면 → 노이즈·파이프 깨짐(에러/크래시).
+                    #  크기가 맞는 프레임만 인코더에 쓰고, 안 맞으면 직전 정상 프레임을 반복(해상도 복귀 시 자동 정상화).
+                    if b.shape[1] == w and b.shape[0] == h:
+                        bb = b.tobytes(); last_good = bb
+                    else:
+                        bb = last_good
+                    if bb is not None:
+                        try: p.stdin.write(bb)   # 콜백에서 복사·스트라이드보정된 연속버퍼(크기검증 통과) → 그대로 안전
+                        except Exception: break
                 nxt += interval; d = nxt - time.time()
                 if d > 0: time.sleep(d)
                 else: nxt = time.time()
@@ -2559,7 +2601,7 @@ def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr", 
     tmp_thumb = os.path.join(base, "thumb.jpg"); has_thumb = make_thumb(video_path, tmp_thumb)
     # 갤러리용 프리뷰(최대 1080p, 또렷한 화질)만 업로드. 원본(고화질)은 PC에 그대로 보관(다운로드 없음).
     preview = os.path.join(base, "preview.mp4")
-    up_src = make_preview(video_path, preview) or video_path
+    up_src = make_preview(video_path, preview, dur) or video_path
     up_size = os.path.getsize(up_src)
     if up_src != video_path:
         log("Gallery video ready (1080p) \u2014 %d MB. Full-quality original kept on your PC." % (up_size // 1048576))
@@ -2895,6 +2937,9 @@ def run_gui(cfg, url):
     W=466
     _load_recorder_fonts()
     root=tk.Tk(); root.title("myPENTA"); root.configure(bg=BG)
+    # windowed(콘솔 없음) 빌드에서 tkinter 콜백 예외가 stderr 부재로 창을 통째로 닫는 것 방지 → crash.log 기록 후 계속.
+    try: root.report_callback_exception = lambda et, e, tb: _write_crash(et, e, tb, "tk-callback")
+    except Exception: pass
     try: root.iconphoto(True, tk.PhotoImage(data=_PENTA_ICON))
     except Exception: pass
     try:
@@ -3170,6 +3215,7 @@ def run_gui(cfg, url):
 
     _rec={"since":None,"blink":False,"psince":None}
     def poll():
+        root.after(500, poll)   # 다음 갱신을 먼저 예약 → 본문에서 예외가 나도 GUI 루프가 멈추지 않음
         if UPDATE_INFO.get("tag") and not st.get("upd"):
             st["upd"]=True
             updbar.config(text="New version "+UPDATE_INFO["tag"]+" is available - click here to download")
@@ -3215,16 +3261,16 @@ def run_gui(cfg, url):
             _rec["blink"]=not _rec["blink"]
             cv.itemconfig(did,fill=(BLUE if _rec["blink"] else "#22344f")); cv.itemconfig(halo,fill="#162640")
             _pct=REC_STATE.get("upload_pct") or 0
-            _pm,_ps=divmod(int(_now-_rec["psince"]),60)
             cv.itemconfig(status_lbl,text=("Uploading %d%%"%_pct) if _pct>0 else "Uploading",fill=BLUE)
-            cv.itemconfig(sub_lbl,text="%d:%02d"%(_pm,_ps),fill=SUB)
+            cv.itemconfig(sub_lbl,text="to cloud",fill=SUB)
         elif _preparing:   # 업로드 준비중 — 분석·트림·인코딩(파란 점멸, 진행률 없음)
             _rec["since"]=None
             if _rec["psince"] is None: _rec["psince"]=_now
             _rec["blink"]=not _rec["blink"]
             cv.itemconfig(did,fill=(BLUE if _rec["blink"] else "#22344f")); cv.itemconfig(halo,fill="#162640")
-            _pm,_ps=divmod(int(_now-_rec["psince"]),60)
-            cv.itemconfig(status_lbl,text="Processing\u2026",fill=BLUE); cv.itemconfig(sub_lbl,text="%d:%02d"%(_pm,_ps),fill=SUB)
+            _pp=REC_STATE.get("prep_pct") or 0
+            cv.itemconfig(status_lbl,text=("Processing %d%%"%_pp) if _pp>0 else "Processing\u2026",fill=BLUE)
+            cv.itemconfig(sub_lbl,text="compressing",fill=SUB)
         elif REC_STATE.get("skipped_at") and (_now-REC_STATE.get("skipped_at",0) < 6):   # 저장 안 함 알림(6초)
             _rec["since"]=None; _rec["blink"]=False; _rec["psince"]=None
             _why=REC_STATE.get("skipped_why") or "not saved"
@@ -3272,8 +3318,6 @@ def run_gui(cfg, url):
         if LAST_ERR.get("msg") and (time.time()-LAST_ERR.get("t",0)<8):
             if not st["log"]: set_log(True)
             else: errbar.config(text="\u26a0 "+LAST_ERR["msg"])
-        root.after(500,poll)
-
     try: root.update()
     except Exception: pass
     try:  # 내용에 맞춰 창 높이 자동 — 푸터(Settings/Log/Quit)가 빈 공간 없이 바로 아래 붙도록
