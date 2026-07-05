@@ -273,6 +273,7 @@ h2.sec .ln{flex:1;height:1px;background:var(--line)}
 .crow .ico{flex:0 0 auto;width:20px;height:20px;border-radius:6px;display:grid;place-items:center;font-size:12px;font-weight:800;margin-top:1px}
 .crow.g .ico{background:var(--win-soft);color:var(--win)}
 .crow.b .ico{background:rgba(232,90,90,.13);color:var(--loss)}
+.cjumps{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
 .crow .ct{flex:1;min-width:0}
 .crow .ct .t{font-weight:700;font-size:14px;color:var(--ink)}
 .crow .ct .a{font-size:13px;color:var(--dim);margin-top:4px;line-height:1.62}
@@ -629,7 +630,14 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
 .matchintro.up-2 .upc+.upc,.matchintro.up-many .upc+.upc{border-left:1px solid rgba(222,199,156,.22)}
 /* full 원화 배경 (centered) — 천천히 줌인 */
 .matchintro .upc-art{position:absolute;inset:0}
-.matchintro .upc-art img{width:100%;height:100%;object-fit:cover;object-position:center 30%;display:block;transform:scale(1.06);animation:upZoom 8s ease-out both}
+.matchintro .upc-art img{width:100%;height:100%;object-fit:cover;object-position:center 30%;display:block;transform:scale(1.06);animation:upZoom 8s ease-out both;will-change:transform}
+/* 켄번즈: 줌 + 미세한 팬 (카메라가 훑는 느낌). 1명/기본 */
+@keyframes upZoom{0%{transform:scale(1.14) translate(0,0)}100%{transform:scale(1.04) translate(0,-1.5%)}}
+/* 2명: 각자 다른 방향으로 팬 (왼쪽은 오른쪽 위로, 오른쪽은 왼쪽 위로 → 서로 마주보는 긴장감) */
+.matchintro.up-2 .upc:nth-child(1) .upc-art img{animation:upZoomL 8s ease-out both}
+.matchintro.up-2 .upc:nth-child(2) .upc-art img{animation:upZoomR 8s ease-out both}
+@keyframes upZoomL{0%{transform:scale(1.16) translate(-1%,0)}100%{transform:scale(1.05) translate(1.5%,-1.5%)}}
+@keyframes upZoomR{0%{transform:scale(1.16) translate(1%,0)}100%{transform:scale(1.05) translate(-1.5%,-1.5%)}}
 .matchintro .upc-art.sq img{object-fit:contain;object-position:center;background:#0c1016}
 @keyframes upZoom{from{transform:scale(1.14)}to{transform:scale(1.02)}}
 /* 어둡게 덮어 글자가 읽히게 (하단이 더 진함) */
@@ -648,6 +656,22 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
 /* ── 등장 효과 A: 골드 스윕 (골드빛 광선이 좌→우로 쓸고 지나감) ── */
 .matchintro .fxsweep{position:absolute;top:0;bottom:0;left:0;width:60%;z-index:6;pointer-events:none;background:linear-gradient(105deg,transparent 0%,rgba(222,199,156,.0) 30%,rgba(255,240,205,.55) 48%,rgba(222,199,156,.85) 50%,rgba(255,240,205,.55) 52%,transparent 70%);filter:blur(2px);transform:translateX(-120%);animation:fxSweep .85s cubic-bezier(.5,0,.4,1) both}
 @keyframes fxSweep{0%{transform:translateX(-120%)}100%{transform:translateX(280%)}}
+/* ── C. 빛 스윕(shimmer): 골드빛이 원화 표면을 천천히 반복해서 훑음 ── */
+.matchintro .fxshimmer{position:absolute;inset:0;z-index:2;pointer-events:none;background:linear-gradient(115deg,transparent 30%,rgba(255,240,205,.07) 45%,rgba(255,248,230,.14) 50%,rgba(255,240,205,.07) 55%,transparent 70%);background-size:250% 100%;mix-blend-mode:screen;animation:shimmerMove 4.5s ease-in-out .8s infinite}
+@keyframes shimmerMove{0%{background-position:170% 0}100%{background-position:-70% 0}}
+/* ── D. 파티클: 골드 빛 입자가 위로 떠오름(마법 분위기) ── */
+.matchintro .fxparticles{position:absolute;inset:0;z-index:3;pointer-events:none;overflow:hidden}
+.matchintro .fxparticles .pt{position:absolute;bottom:-8%;width:4px;height:4px;border-radius:50%;background:radial-gradient(circle,rgba(255,240,205,.95),rgba(222,199,156,.4) 60%,transparent);box-shadow:0 0 6px rgba(222,199,156,.7);opacity:0;animation:ptFloat 6s linear infinite}
+.matchintro .fxparticles .pt0{left:8%;animation-delay:0s;animation-duration:6.5s}
+.matchintro .fxparticles .pt1{left:22%;animation-delay:1.2s;animation-duration:5.5s;width:3px;height:3px}
+.matchintro .fxparticles .pt2{left:37%;animation-delay:2.4s;animation-duration:7s}
+.matchintro .fxparticles .pt3{left:52%;animation-delay:.6s;animation-duration:6s;width:5px;height:5px}
+.matchintro .fxparticles .pt4{left:66%;animation-delay:3s;animation-duration:5.8s;width:3px;height:3px}
+.matchintro .fxparticles .pt5{left:79%;animation-delay:1.8s;animation-duration:6.8s}
+.matchintro .fxparticles .pt6{left:92%;animation-delay:3.6s;animation-duration:5.2s;width:3px;height:3px}
+.matchintro .fxparticles .pt:nth-child(n+8){opacity:0;animation-delay:2.2s}
+.matchintro .fxparticles .pt7{left:15%}.matchintro .fxparticles .pt8{left:30%}.matchintro .fxparticles .pt9{left:45%}.matchintro .fxparticles .pt10{left:60%}.matchintro .fxparticles .pt11{left:73%}.matchintro .fxparticles .pt12{left:86%}.matchintro .fxparticles .pt13{left:97%}
+@keyframes ptFloat{0%{opacity:0;transform:translateY(0) translateX(0)}12%{opacity:.9}50%{transform:translateY(-55vh) translateX(14px)}88%{opacity:.7}100%{opacity:0;transform:translateY(-105vh) translateX(-10px)}}
 /* ── 퇴장 효과 F: 줌 + 블러 페이드 (영상으로 빨려드는 느낌) ── */
 .matchintro.out{animation:upOutVeil .9s ease forwards}
 .matchintro.out .upc-art img{animation:upOutZoom .9s cubic-bezier(.5,0,.75,0) forwards}
@@ -655,29 +679,55 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
 @keyframes upOutVeil{0%{opacity:1}60%{opacity:1}100%{opacity:0;visibility:hidden}}
 @keyframes upOutZoom{to{transform:scale(1.28);filter:blur(9px)}}
 @keyframes upOutInfo{to{opacity:0;transform:translateY(-14px);filter:blur(2px)}}
-/* ── 카운트다운: GAME STARTING + 5→1 (골드 숫자, 펄스, 원형 링) ── */
+/* ── 카운트다운: 5→1 (골드 숫자, 펄스, 원형 링) ── */
 .matchintro .countwrap{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:7;display:flex;flex-direction:column;align-items:center;gap:clamp(10px,2vh,20px);opacity:0;pointer-events:none;transition:opacity .4s ease}
 .matchintro.counting .countwrap{opacity:1}
-.matchintro .countlabel{display:flex;align-items:center;justify-content:center;gap:14px;animation:countLabelIn .55s ease both}
-.matchintro .countlabel::before,.matchintro .countlabel::after{content:'';height:1px;width:clamp(28px,5vw,64px);background:linear-gradient(90deg,transparent,rgba(222,199,156,.75))}
-.matchintro .countlabel::after{background:linear-gradient(90deg,rgba(222,199,156,.75),transparent)}
-.matchintro .cl-txt{font-family:var(--fm);font-size:clamp(11px,1.5vw,15px);font-weight:600;letter-spacing:.36em;text-transform:uppercase;background:linear-gradient(180deg,#F8EDD4,#C9A86E);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:var(--gold);padding-left:.36em;text-shadow:0 0 20px rgba(222,199,156,.3);white-space:nowrap;filter:drop-shadow(0 2px 8px rgba(0,0,0,.9))}
-@keyframes countLabelIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
 .matchintro .countnum{position:relative;width:clamp(120px,17vw,180px);height:clamp(120px,17vw,180px);display:grid;place-items:center}
+/* 숫자 뒤 발광 오라 (색은 골드→빨강으로 변함) */
+.matchintro .countglow{position:absolute;width:78%;height:78%;border-radius:50%;background:radial-gradient(circle,rgba(222,199,156,.32),rgba(222,199,156,.08) 55%,transparent 72%);filter:blur(6px)}
+.matchintro .countglow.pulse{animation:glowPulse 1s ease both}
+@keyframes glowPulse{0%{opacity:0;transform:scale(.6)}30%{opacity:1;transform:scale(1.05)}100%{opacity:.5;transform:scale(.9)}}
+/* 매 초 퍼지는 원형 파동 */
+.matchintro .countripple{position:absolute;width:60%;height:60%;border-radius:50%;border:2px solid rgba(222,199,156,.6);opacity:0}
+.matchintro .countripple.go{animation:rippleOut 1s ease-out both}
+@keyframes rippleOut{0%{opacity:.8;transform:scale(.7)}100%{opacity:0;transform:scale(1.7)}}
+/* 링 (안쪽 진행 + 바깥 점선 회전) */
 .matchintro .countring{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
 .matchintro .countring .ringbg{fill:none;stroke:rgba(222,199,156,.14);stroke-width:2.5}
-.matchintro .countring .ringfg{fill:none;stroke:var(--gold);stroke-width:2.5;stroke-linecap:round;stroke-dasharray:289;stroke-dashoffset:0;filter:drop-shadow(0 0 6px rgba(222,199,156,.6))}
+.matchintro .countring .ringfg{fill:none;stroke:var(--gold);stroke-width:3;stroke-linecap:round;stroke-dasharray:289;stroke-dashoffset:0;filter:drop-shadow(0 0 7px rgba(222,199,156,.75))}
 .matchintro .countring .ringfg.go{animation:ringShrink 1s linear both}
 @keyframes ringShrink{from{stroke-dashoffset:0}to{stroke-dashoffset:289}}
-.matchintro .countn{font-family:var(--fs);font-weight:400;font-size:clamp(64px,11vw,124px);line-height:1;color:var(--gold);text-shadow:0 4px 30px rgba(0,0,0,.8),0 0 40px rgba(222,199,156,.5);font-variant-numeric:tabular-nums}
-.matchintro .countn.pulse{animation:countPulse 1s cubic-bezier(.2,.8,.3,1) both}
-@keyframes countPulse{0%{opacity:0;transform:scale(1.7)}22%{opacity:1;transform:scale(1)}100%{opacity:.55;transform:scale(.94)}}
-/* 마지막 3-2-1: 더 크게 + 빨강 강조(긴장감) */
-.matchintro .countwrap.final .countn{color:#FF5B5B;text-shadow:0 4px 30px rgba(0,0,0,.85),0 0 54px rgba(255,70,70,.75)}
-.matchintro .countwrap.final .countn.pulse{animation:countPulseFinal 1s cubic-bezier(.2,.8,.3,1) both}
-@keyframes countPulseFinal{0%{opacity:0;transform:scale(2.1)}22%{opacity:1;transform:scale(1.14)}100%{opacity:.6;transform:scale(1)}}
-.matchintro .countwrap.final .countring .ringfg{stroke:#FF5B5B;filter:drop-shadow(0 0 12px rgba(255,70,70,.9))}
+/* 바깥 점선 링: 천천히 회전(기계식 느낌) */
+.matchintro .countring .ringdash{fill:none;stroke:rgba(222,199,156,.4);stroke-width:1.5;stroke-dasharray:3 7;transform-origin:center;animation:dashSpin 8s linear infinite}
+@keyframes dashSpin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+/* 숫자: 위에서 쾅 떨어지며 등장 + 회전 잔상 */
+.matchintro .countn{position:relative;font-family:var(--fs);font-weight:400;font-size:clamp(70px,12vw,136px);line-height:1;color:var(--gold);text-shadow:0 4px 30px rgba(0,0,0,.8),0 0 44px rgba(222,199,156,.55);font-variant-numeric:tabular-nums}
+.matchintro .countn.pulse{animation:countPulse 1s cubic-bezier(.16,.9,.3,1.1) both}
+@keyframes countPulse{0%{opacity:0;transform:translateY(-38px) scale(1.9) rotate(-8deg)}18%{opacity:1;transform:translateY(0) scale(1) rotate(0)}30%{transform:scale(1.08)}45%{transform:scale(1)}100%{opacity:.5;transform:scale(.92)}}
+/* ── 마지막 3-2-1: 빨강 강조 + 더 강렬 ── */
+.matchintro .countwrap.final .countglow{background:radial-gradient(circle,rgba(255,70,70,.4),rgba(255,70,70,.1) 55%,transparent 72%)}
+.matchintro .countwrap.final .countripple{border-color:rgba(255,80,80,.7)}
+.matchintro .countwrap.final .countn{color:#FF5B5B;text-shadow:0 4px 30px rgba(0,0,0,.85),0 0 58px rgba(255,70,70,.85)}
+.matchintro .countwrap.final .countn.pulse{animation:countPulseFinal 1s cubic-bezier(.16,.9,.3,1.15) both}
+@keyframes countPulseFinal{0%{opacity:0;transform:translateY(-46px) scale(2.3) rotate(-10deg)}18%{opacity:1;transform:translateY(0) scale(1.16) rotate(0)}32%{transform:scale(1.24)}48%{transform:scale(1.12)}100%{opacity:.55;transform:scale(1)}}
+.matchintro .countwrap.final .countring .ringfg{stroke:#FF5B5B;stroke-width:3.5;filter:drop-shadow(0 0 14px rgba(255,70,70,.95))}
 .matchintro .countwrap.final .countring .ringbg{stroke:rgba(255,91,91,.16)}
+.matchintro .countwrap.final .countring .ringdash{stroke:rgba(255,91,91,.5);animation-duration:5s}
+/* ── F. 마지막 숫자 1 - 화면 미세 진동 + 붉은 플래시(클라이맥스) ── */
+.matchintro.lastone .upstage{animation:lastShake .5s ease-in-out both}
+@keyframes lastShake{0%,100%{transform:translate(0,0)}15%{transform:translate(-4px,2px)}30%{transform:translate(4px,-2px)}45%{transform:translate(-3px,-2px)}60%{transform:translate(3px,2px)}75%{transform:translate(-2px,1px)}}
+.matchintro.lastone::after{content:'';position:absolute;inset:0;z-index:4;pointer-events:none;background:radial-gradient(ellipse at center,rgba(255,90,90,.28),rgba(255,70,70,.08) 50%,transparent 72%);animation:lastFlash .6s ease-out both}
+@keyframes lastFlash{0%{opacity:.85}100%{opacity:0}}
+/* ── 최종 버스트: 마지막 1 → 영상 전환 순간, 화면 플래시 + 골드 충격파 링 2겹 ── */
+.matchintro .fxfinal{position:absolute;inset:0;z-index:8;pointer-events:none;overflow:hidden}
+.matchintro .fxburst{position:absolute;inset:0;opacity:0;background:radial-gradient(circle at center,rgba(255,255,255,.98),rgba(255,238,200,.66) 36%,rgba(255,214,150,.22) 60%,transparent 76%)}
+.matchintro.finalburst .fxburst{animation:finalBurst .72s ease-out both}
+.matchintro .fxshock{position:absolute;top:50%;left:50%;width:64px;height:64px;margin:-32px 0 0 -32px;border-radius:50%;opacity:0;border:3px solid rgba(255,240,205,.92);box-shadow:0 0 26px rgba(255,225,170,.85),inset 0 0 20px rgba(255,225,170,.5)}
+.matchintro.finalburst .fxshock{animation:finalShock .82s cubic-bezier(.2,.75,.3,1) both}
+.matchintro .fxshock2{border-width:2px;border-color:rgba(222,199,156,.72)}
+.matchintro.finalburst .fxshock2{animation:finalShock .82s cubic-bezier(.2,.75,.3,1) .08s both}
+@keyframes finalBurst{0%{opacity:0}10%{opacity:1}100%{opacity:0}}
+@keyframes finalShock{0%{opacity:0;transform:scale(.25)}14%{opacity:.95}100%{opacity:0;transform:scale(11)}}
 @media(prefers-reduced-motion:reduce){.matchintro{display:none}}
 .clipshare{position:absolute;top:10px;right:10px;z-index:7;display:inline-flex;align-items:center;gap:7px;padding:7px 12px;background:rgba(8,10,14,.74);border:1px solid var(--line2);border-radius:8px;color:var(--ink2);font-size:11.5px;font-family:var(--fm);cursor:pointer;opacity:0;transition:opacity .18s,color .14s,border-color .14s;backdrop-filter:blur(4px)}
 .clipshare svg{width:13px;height:13px;display:block}
@@ -924,25 +974,29 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
     var dpm10=(durSec/60)?(my.length/(durSec/60)*10):0;
     var iLeak=kills.length&&my.length>0&&my.length===tMax&&my.length>=Math.ceil(tAvg+1.5)&&tv.length>=3&&(my.length>=6||dpm10>=3.0);
     var ph={early:0,mid:0,late:0}; my.forEach(function(e){ ph[_phaseOf(e.t)]++; });
-    var clu=0; for(var i=1;i<my.length;i++){ if(my[i].t-my[i-1].t<=100) clu++; }
-    var deep=0,havePos=false; my.forEach(function(e){ var p=e.pos; if(!p||p.x==null)return; havePos=true; var s=p.x+p.y; if(myTeam===100?s>16500:s<13000) deep++; });
+    // 유형별 데스 시각(영상 바로가기용) — 각 약점에 그 장면 시각을 함께 실어 보낸다
+    var allTimes=my.map(function(e){return e.t;});
+    var earlyTimes=my.filter(function(e){return _phaseOf(e.t)==='early';}).map(function(e){return e.t;});
+    var lateTimes=my.filter(function(e){return _phaseOf(e.t)==='late';}).map(function(e){return e.t;});
+    var clu=0,cluTimes=[]; for(var i=1;i<my.length;i++){ if(my[i].t-my[i-1].t<=100){ clu++; if(cluTimes.indexOf(my[i-1].t)<0) cluTimes.push(my[i-1].t); cluTimes.push(my[i].t); } }
+    var deep=0,havePos=false,deepTimes=[]; my.forEach(function(e){ var p=e.pos; if(!p||p.x==null)return; havePos=true; var s=p.x+p.y; if(myTeam===100?s>16500:s<13000){ deep++; deepTimes.push(e.t); } });
     var role=me.position||'', isCarry=role==='BOTTOM'||role==='MIDDLE';
     if(kills.length&&n>0) out.flow='<div class="dflow"><span class="dfl">데스 흐름</span><span class="dfseg"><b>'+ph.early+'</b> 라인전(~14분)</span><span class="dfseg"><b>'+ph.mid+'</b> 중반(14~25분)</span><span class="dfseg"><b>'+ph.late+'</b> 후반(25분~)</span></div>';
     if(n<=3&&dpm10<=2) out.good.push(['죽지 않는 플레이',n+'데스로 깔끔했습니다. 데스 관리가 곧 골드·템포 관리예요 — 이 절제력이 가장 저평가된 실력입니다.']);
-    if(iLeak) out.bad.push(['팀 내 최다 데스','팀에서 가장 많이('+n+'회) 죽었습니다. 내 데스 하나가 상대에겐 골드+사형선고 타이밍이 됩니다. "이 죽음으로 상대가 뭘 얻었나?"를 매 데스마다 자문하세요.']);
-    if(ph.early>=3&&role!=='JUNGLE') out.bad.push(['라인전 단계 사망 과다','14분 전에 '+ph.early+'번 죽었습니다. 초반 데스는 상대 라이너에게 리드를 그대로 헌납합니다. 상대 정글 동선을 의식하고, 매치업이 불리하면 손해 교환보다 안전 파밍을 택하세요.']);
-    else if(ph.early>=2&&role==='JUNGLE') out.bad.push(['초반 동선 사망','14분 전 '+ph.early+'번 사망 — 갱·카정 동선이 읽혔거나 무리한 인베이드입니다. 상대 정글 시작 위치를 역산하고 시야 없는 적 정글 진입을 줄이세요.']);
-    if(clu>=2) out.bad.push(['연속으로 끊김','짧은 간격에 '+(clu+1)+'번 연달아 죽은 장면이 있습니다 — 이미 진 한타에 다시 들어갔거나 같은 자리에서 반복해 잘렸습니다. 죽은 직후엔 한 박자 리셋하고, 방금 죽은 그 위치로 다시 걸어 들어가지 마세요.']);
-    if(havePos&&deep>=2&&deep>=Math.ceil(n*0.4)) out.bad.push(['적 진영에서 잘림','데스 '+n+'회 중 '+deep+'회가 적 진영 깊숙한 곳에서 나왔습니다. 들어가기 전에 와드로 길목을 먼저 밝히고 혼자 무리하게 들어가지 마세요. 시야 없는 곳의 욕심이 가장 비싼 실수입니다.']);
-    if(isCarry&&ph.late>=2) out.bad.push(['후반 캐리 사망','캐리 역할인데 25분 이후 '+ph.late+'번 죽었습니다. 후반엔 캐리의 데스 한 번이 게임을 끝냅니다. 시야를 깔고 본인 프론트라인 뒤에서 딜만 넣고, 한타 시작 전 상대 진입기·점멸을 먼저 확인하세요.']);
+    if(iLeak) out.bad.push(['팀 내 최다 데스','팀에서 가장 많이('+n+'회) 죽었습니다. 내 데스 하나가 상대에겐 골드+사형선고 타이밍이 됩니다. "이 죽음으로 상대가 뭘 얻었나?"를 매 데스마다 자문하세요.',allTimes]);
+    if(ph.early>=3&&role!=='JUNGLE') out.bad.push(['라인전 단계 사망 과다','14분 전에 '+ph.early+'번 죽었습니다. 초반 데스는 상대 라이너에게 리드를 그대로 헌납합니다. 상대 정글 동선을 의식하고, 매치업이 불리하면 손해 교환보다 안전 파밍을 택하세요.',earlyTimes]);
+    else if(ph.early>=2&&role==='JUNGLE') out.bad.push(['초반 동선 사망','14분 전 '+ph.early+'번 사망 — 갱·카정 동선이 읽혔거나 무리한 인베이드입니다. 상대 정글 시작 위치를 역산하고 시야 없는 적 정글 진입을 줄이세요.',earlyTimes]);
+    if(clu>=2) out.bad.push(['연속으로 끊김','짧은 간격에 '+(clu+1)+'번 연달아 죽은 장면이 있습니다 — 이미 진 한타에 다시 들어갔거나 같은 자리에서 반복해 잘렸습니다. 죽은 직후엔 한 박자 리셋하고, 방금 죽은 그 위치로 다시 걸어 들어가지 마세요.',cluTimes]);
+    if(havePos&&deep>=2&&deep>=Math.ceil(n*0.4)) out.bad.push(['적 진영에서 잘림','데스 '+n+'회 중 '+deep+'회가 적 진영 깊숙한 곳에서 나왔습니다. 들어가기 전에 와드로 길목을 먼저 밝히고 혼자 무리하게 들어가지 마세요. 시야 없는 곳의 욕심이 가장 비싼 실수입니다.',deepTimes]);
+    if(isCarry&&ph.late>=2) out.bad.push(['후반 캐리 사망','캐리 역할인데 25분 이후 '+ph.late+'번 죽었습니다. 후반엔 캐리의 데스 한 번이 게임을 끝냅니다. 시야를 깔고 본인 프론트라인 뒤에서 딜만 넣고, 한타 시작 전 상대 진입기·점멸을 먼저 확인하세요.',lateTimes]);
     // 교환 없이 죽음 — 내가 죽은 시점 ±12초에 상대팀에서 아무도 안 죽었으면 '순수 손해'(픽당함/짤림). Live·Riot 양쪽 동작.
     var enemyTeam=myTeam===100?200:100;
     function _teamOf(p){ var x=players[p-1]; return x?x.team:null; }
     var enemyDeaths=kills.filter(function(e){ return _teamOf(e.victim)===enemyTeam; }).map(function(e){ return e.t; });
-    var uncontested=0;
-    my.forEach(function(e){ if(!enemyDeaths.some(function(t){ return Math.abs(t-e.t)<=12; })) uncontested++; });
+    var uncontested=0,uncTimes=[];
+    my.forEach(function(e){ if(!enemyDeaths.some(function(t){ return Math.abs(t-e.t)<=12; })){ uncontested++; uncTimes.push(e.t); } });
     if(kills.length && n>=4 && uncontested>=Math.ceil(n*0.5) && uncontested>=3)
-      out.bad.push(['교환 없이 죽음', n+'번의 죽음 중 '+uncontested+'번은 상대가 아무도 죽지 않은 순수 손해였습니다. 죽음 자체보다 "그 죽음으로 무엇을 얻었나"가 중요해요 — 교환이 안 될 자리라면 한 발 빼는 판단을 연습하세요.']);
+      out.bad.push(['교환 없이 죽음', n+'번의 죽음 중 '+uncontested+'번은 상대가 아무도 죽지 않은 순수 손해였습니다. 죽음 자체보다 "그 죽음으로 무엇을 얻었나"가 중요해요 — 교환이 안 될 자리라면 한 발 빼는 판단을 연습하세요.',uncTimes]);
     return out;
   }
   function fifteenInsights(me){
@@ -1001,7 +1055,7 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
     var fb=sorted[0];
     if(fb && fb.t<=300){
       if(fb.killer===pid) out.good.push(['선취점 획득','경기 첫 킬('+mmss(fb.t)+')을 따냈습니다. 초반 골드와 주도권을 동시에 가져왔어요 — 이 리드를 포탑 플레이트·다이브·정글 호응으로 바로 이으면 격차가 커집니다.']);
-      else if(fb.victim===pid) out.bad.push(['선취점 헌납','경기 첫 킬의 희생자였습니다('+mmss(fb.t)+'). 초반 선취점은 상대에게 골드와 라인 주도권을 한 번에 줍니다 — 시야 없는 구간과 상대 정글 위치를 의식하고 안전하게 출발하세요.']);
+      else if(fb.victim===pid) out.bad.push(['선취점 헌납','경기 첫 킬의 희생자였습니다('+mmss(fb.t)+'). 초반 선취점은 상대에게 골드와 라인 주도권을 한 번에 줍니다 — 시야 없는 구간과 상대 정글 위치를 의식하고 안전하게 출발하세요.',[fb.t]]);
     }
     // 단독 킬(어시스트 0)
     var solo=sorted.filter(function(e){ return e.killer===pid && (!e.assists||e.assists.length===0); });
@@ -1017,10 +1071,10 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
     if(objs.some(function(o){return o.team!=null;})){
       var myDeaths=sorted.filter(function(e){return e.victim===pid;}).map(function(e){return e.t;});
       var big=objs.filter(function(o){ return o.team===enemyTeam && (o.kind==='DRAGON'||o.kind==='BARON_NASHOR'||o.kind==='RIFTHERALD'); });
-      var gave=0, baron=0;
-      myDeaths.forEach(function(dt){ big.forEach(function(o){ if(o.t>=dt && o.t-dt<=45){ gave++; if(o.kind==='BARON_NASHOR') baron++; } }); });
+      var gave=0, baron=0, gaveTimes=[];
+      myDeaths.forEach(function(dt){ big.forEach(function(o){ if(o.t>=dt && o.t-dt<=45){ gave++; if(o.kind==='BARON_NASHOR') baron++; if(gaveTimes.indexOf(dt)<0) gaveTimes.push(dt); } }); });
       if(gave>=2 || baron>=1)
-        out.bad.push(['죽음이 오브젝트로','내가 죽은 직후 상대가 '+(baron>=1?'바론을 포함해 ':'')+'주요 오브젝트를 '+gave+'번 가져갔습니다. 데스의 진짜 비용은 골드가 아니라 그 사이 넘어가는 오브젝트예요 — 용·바론 스폰 1분 전엔 무리한 사이드·교전을 접고 생존을 1순위로 두세요.']);
+        out.bad.push(['죽음이 오브젝트로','내가 죽은 직후 상대가 '+(baron>=1?'바론을 포함해 ':'')+'주요 오브젝트를 '+gave+'번 가져갔습니다. 데스의 진짜 비용은 골드가 아니라 그 사이 넘어가는 오브젝트예요 — 용·바론 스폰 1분 전엔 무리한 사이드·교전을 접고 생존을 1순위로 두세요.',gaveTimes]);
     }
     return out;
   }
@@ -1060,7 +1114,7 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
     function sub(k,v,c){ return '<div class="substat '+(c||'')+'"><div class="k">'+k+'</div><div class="v">'+v+'</div></div>'; }
     var sg=''; key.forEach(function(s){ sg+=sub(s.k,s.v,s.c); });
     if(!isSup && me.cs_per_min!=null && keyNames.indexOf('분당 CS')<0) sg+=sub('분당 CS',me.cs_per_min,me.cs_per_min>=csGood?'up':(me.cs_per_min<csFloor?'down':''));
-    if(isLane && lane.mycs10!=null) sg+=sub('10분 CS',lane.mycs10,lane.mycs10>=80?'up':(lane.mycs10<60?'down':''));
+    if(isLane && lane.mycs10!=null) sg+=sub('10분 CS',lane.mycs10,lane.mycs10>=75?'up':(lane.mycs10<50?'down':''));
     if(me.kp!=null && keyNames.indexOf('킬관여')<0) sg+=sub('킬관여',Math.round(me.kp*100)+'%',me.kp>=kpB+0.15?'up':(me.kp<kpB-0.15?'down':''));
     sg+=sub('시야/분',vspm!=null?vspm:'–',vspm!=null?(vspm>=visGood?'up':(vspm<visFloor?'down':'')):'');
     if(me.gold!=null && keyNames.indexOf('팀 딜 비중')<0 && me.gold>0) sg+=sub('골드',P.compact(me.gold),'');
@@ -1069,8 +1123,8 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
     var good=[], bad=[];
     function rx(k,fb){ return (guide&&guide.fix&&guide.fix[k])?guide.fix[k]:fb; }
     if(isLane && lane.mycs10!=null){
-      if(lane.mycs10>=80) good.push(['파밍 우수','10분에 CS '+lane.mycs10+'개를 챙겼습니다. 라인 관리가 깔끔합니다.']);
-      else if(lane.mycs10<60) bad.push(['CS 수급 부족','10분 CS '+lane.mycs10+'개로 70개 목표에 못 미칩니다. '+rx('farm','웨이브를 끝까지 정리하세요.')]);
+      if(lane.mycs10>=75) good.push(['파밍 우수','10분에 CS '+lane.mycs10+'개를 챙겼습니다. 상위권 수준의 라인 관리예요.']);
+      else if(lane.mycs10<50) bad.push(['CS 수급 부족','10분 CS '+lane.mycs10+'개 — 라이너는 보통 10분에 60~70개가 무난한 기준입니다. '+rx('farm','웨이브를 끝까지 정리하세요.')]);
     }
     if(isJg && me.cs_per_min!=null && me.cs_per_min>=csGood) good.push(['정글 수급 우수','분당 CS '+me.cs_per_min+'개. 정글 동선이 효율적입니다.']);
     if(!isSup && me.cs_per_min!=null && me.cs_per_min<csFloor) bad.push(['파밍 효율 저조','분당 CS '+me.cs_per_min+'개. '+rx('farm','빈 라인을 정리해 분당 '+csGood+'개 이상을 노리세요.')]);
@@ -1095,7 +1149,15 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
     function evcol(title,arr,kind){
       var head='<div class="eh"><span class="dot"></span>'+title+'</div>';
       if(!arr.length) return '<div class="evalcol '+kind+'">'+head+'<div class="crow '+(kind==='good'?'g':'b')+'"><div class="ct"><div class="a" style="color:var(--faint)">'+(kind==='good'?'두드러진 강점이 기록되지 않았습니다.':'큰 약점이 없습니다. 좋은 흐름이에요.')+'</div></div></div></div>';
-      var rows=arr.map(function(x){ return '<div class="crow '+(kind==='good'?'g':'b')+'"><div class="ico">'+(kind==='good'?'✓':'!')+'</div><div class="ct"><div class="t">'+esc(x[0])+'</div><div class="a">'+esc(x[1])+'</div></div></div>'; }).join('');
+      var rows=arr.map(function(x){
+        var jump='';
+        if(x[2] && x[2].length){
+          var seen={},btns='';
+          x[2].forEach(function(t){ var s=Math.max(0,Math.round(t)); if(seen[s])return; seen[s]=1; btns+='<button class="jbtn" data-jump="'+s+'">▶ '+fmtT(s)+'</button>'; });
+          if(btns) jump='<div class="cjumps">'+btns+'</div>';
+        }
+        return '<div class="crow '+(kind==='good'?'g':'b')+'"><div class="ico">'+(kind==='good'?'✓':'!')+'</div><div class="ct"><div class="t">'+esc(x[0])+'</div><div class="a">'+esc(x[1])+'</div>'+jump+'</div></div>';
+      }).join('');
       return '<div class="evalcol '+kind+'">'+head+'<div class="ceval">'+rows+'</div></div>';
     }
     function p3(val,lo,hi){ return val==null?null:(val>=hi?2:(val<lo?0:1)); }
@@ -2360,6 +2422,74 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
   // 시네마틱 인트로: 경기 진입 시 '대결 카드' 연출을 영상 위에 잠깐 덮는다.
   //  재생/감독판 로직과 완전히 분리 — 오버레이가 사라지면 아래 원래 스테이지가 그대로 남는다.
   var _introShown=false;
+  // ─────────────── 스킨 원화 (인트로 다양성) ───────────────
+  // DataDragon 개별 챔피언 JSON의 skins 배열에서 실제 스킨 번호만 뽑는다.
+  //  - skins 배열엔 크로마가 없고 num이 정확 → 불연속/크로마/신규챔프 함정 자동 회피
+  //  - 버전별 localStorage 캐시로 재요청 없음(챔피언당 수십 바이트)
+  var _skinNumsCache = {};
+  function _skinLsKey(key){ return 'penta_dd_skins_' + ver + '_' + key; }
+  async function loadSkinNums(champ){
+    var key = P.champKey(champ);
+    if(_skinNumsCache[key]) return _skinNumsCache[key];
+    try{
+      var c = JSON.parse(localStorage.getItem(_skinLsKey(key)) || 'null');
+      if(c && c.length){ _skinNumsCache[key] = c; return c; }
+    }catch(_){}
+    var nums = [0];
+    try{
+      var r = await fetch('https://ddragon.leagueoflegends.com/cdn/' + ver + '/data/en_US/champion/' + key + '.json');
+      var j = await r.json();
+      var d = j && j.data && j.data[key];
+      var sk = (d && d.skins) || [];
+      var out = [];
+      for(var i=0;i<sk.length;i++){ if(typeof sk[i].num === 'number') out.push(sk[i].num); }
+      if(out.length) nums = out;
+      try{ localStorage.setItem(_skinLsKey(key), JSON.stringify(nums)); }catch(_){}
+      // 옛 버전 스킨 캐시 정리(용량 누적 방지)
+      try{
+        for(var x=localStorage.length-1;x>=0;x--){
+          var lk=localStorage.key(x);
+          if(lk && lk.indexOf('penta_dd_skins_')===0 && lk.indexOf('penta_dd_skins_'+ver+'_')!==0) localStorage.removeItem(lk);
+        }
+      }catch(_){}
+    }catch(e){}
+    _skinNumsCache[key] = nums;
+    return nums;
+  }
+  // 스킨번호 → 원화(splash) URL. 검증된 DataDragon 형식(_num).
+  function splashOf(champ, num){
+    return 'https://ddragon.leagueoflegends.com/cdn/img/champion/splash/' + P.champKey(champ) + '_' + (num||0) + '.jpg';
+  }
+  // 기본(0) 제외 우선으로 랜덤 스킨을 고른다. 직전 스킨(exclude)과 다르게.
+  function pickSkin(nums, exclude){
+    var pool = nums.filter(function(n){ return n!==0 && n!==exclude; });
+    if(!pool.length) pool = nums.filter(function(n){ return n!==exclude; });
+    if(!pool.length) pool = nums;
+    return pool[Math.floor(Math.random()*pool.length)];
+  }
+  // 원화를 다른 스킨으로 부드럽게 교체(프리로드 후 오버레이 페이드 → 원본 src 갱신).
+  //  - 프리로드 성공한 URL만 반영하므로 로딩 실패 시 기존 원화 유지(깜빡임/깨짐 없음)
+  function swapArt(artEl, url){
+    if(!artEl) return;
+    var pre = new Image();
+    pre.onload = function(){
+      var ov = document.createElement('img');
+      ov.src = url;
+      ov.style.cssText = 'position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;object-position:center 30%;opacity:0;transition:opacity .5s ease;will-change:opacity';
+      artEl.appendChild(ov);
+      void ov.offsetWidth;
+      ov.style.opacity = '1';
+      setTimeout(function(){
+        var base = artEl.querySelector('img[data-fb]');
+        if(base){ base.src = url; }
+        artEl.classList.remove('sq');   // 정상 원화로 교체됐으니 정사각(아이콘) 모드 해제
+        try{ ov.remove(); }catch(_){}
+      }, 520);
+    };
+    pre.onerror = function(){};
+    pre.src = url;
+  }
+
   function playIntro(rep, won){
     try{
       if(_introShown) return; _introShown=true;
@@ -2385,14 +2515,14 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
       var n=uploaders.length, many=n>=3;
 
       // 각 업로더 카드: full 원화(centered) 배경 + ID + 챔피언.
-      function upCard(u){
+      function upCard(u, idx){
         var nm=(u.name||'').split('#')[0]||'-';
         var pos=P.posKo(u.position)||'';
         var team=u.team===200?'red':(u.team===100?'blue':'');
         // 이미지 폴백: centered 원화 → portrait → splash → 아이콘
         var centered='https://cdn.communitydragon.org/latest/champion/'+P.champKey(u.champion)+'/splash-art/centered';
         var portrait=P.champPortrait(u.champion), splash=P.champSplash(u.champion), icon=P.champIcon(ver,u.champion);
-        return '<div class="upc '+team+'">'
+        return '<div class="upc '+team+'" data-uc="'+idx+'">'
           + '<div class="upc-art"><img src="'+centered+'" alt="" loading="eager" data-fb="0" onerror="var s=this;var st=+s.getAttribute(\'data-fb\')||0;s.setAttribute(\'data-fb\',st+1);if(st===0){s.src=\''+portrait+'\';}else if(st===1){s.src=\''+splash+'\';}else if(st===2){s.src=\''+icon+'\';s.parentNode.classList.add(\'sq\');}else{s.onerror=null;}"></div>'
           + '<div class="upc-veil"></div>'
           + '<div class="upc-info">'
@@ -2405,24 +2535,46 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
       var el=document.createElement('div');
       el.className='matchintro up-'+(many?'many':String(n));   // up-1 / up-2 / up-many
       // upstage(원화) + 등장효과(플래시/스윕) + 카운트다운(문구+숫자+링)
-      el.innerHTML='<div class="upstage">'+uploaders.map(upCard).join('')+'</div>'
+      el.innerHTML='<div class="upstage">'+uploaders.map(function(u,i){return upCard(u,i);}).join('')+'</div>'
+        +'<div class="fxshimmer"></div>'
+        +'<div class="fxparticles">'+Array(14).fill(0).map(function(_,i){return '<span class="pt pt'+(i%7)+'"></span>';}).join('')+'</div>'
         +'<div class="fxflash"></div>'
         +'<div class="fxsweep"></div>'
         +'<div class="countwrap">'
-        +  '<div class="countlabel"><span class="cl-txt">GAME STARTING</span></div>'
-        +  '<div class="countnum"><svg class="countring" viewBox="0 0 100 100"><circle class="ringbg" cx="50" cy="50" r="46"></circle><circle class="ringfg" cx="50" cy="50" r="46"></circle></svg><span class="countn"></span></div>'
-        +'</div>';
+        +  '<div class="countnum">'
+        +    '<div class="countglow"></div>'
+        +    '<div class="countripple"></div>'
+        +    '<svg class="countring" viewBox="0 0 100 100">'
+        +      '<circle class="ringbg" cx="50" cy="50" r="46"></circle>'
+        +      '<circle class="ringfg" cx="50" cy="50" r="46"></circle>'
+        +      '<circle class="ringdash" cx="50" cy="50" r="40"></circle>'
+        +    '</svg>'
+        +    '<span class="countn"></span>'
+        +  '</div>'
+        +'</div>'
+        +'<div class="fxfinal"><div class="fxburst"></div><div class="fxshock"></div><div class="fxshock fxshock2"></div></div>';
       host.appendChild(el);
+      // ── 각 업로더 원화에 랜덤 스킨을 하나씩 입힌다(등장 후 부드럽게 교체). 매 경기 다른 스킨이 뜬다. ──
+      uploaders.forEach(function(u, i){
+        loadSkinNums(u.champion).then(function(nums){
+          if(!nums || nums.length<=1) return;   // 스킨 없으면 기본 원화 유지
+          var card = el.querySelector('.upc[data-uc="'+i+'"]');
+          if(!card) return;
+          swapArt(card.querySelector('.upc-art'), splashOf(u.champion, pickSkin(nums, 0)));
+        }).catch(function(){});
+      });
       var done=false;
       function dismiss(){
         if(done) return; done=true;
-        el.classList.add('out');
         if(_countTimer){ clearInterval(_countTimer); _countTimer=null; }
-        setTimeout(function(){ try{ el.remove(); }catch(_){} }, 900);   // 아웃 애니메이션(0.9s) 후 제거
+        el.classList.add('finalburst');                          // 최종 플래시 + 골드 충격파
+        setTimeout(function(){ el.classList.add('out'); }, 150);  // 플래시 절정에서 원화 페이드아웃 시작
+        setTimeout(function(){ try{ el.remove(); }catch(_){} }, 1100);
       }
       // 카운트다운: 원화 등장 후 ~1.8초 뒤부터 5→1 (매 1초). 끝나면 영상으로 전환.
       var numEl=el.querySelector('.countn'), wrap=el.querySelector('.countwrap');
       var ringEl=el.querySelector('.countring .ringfg');
+      var glowEl=el.querySelector('.countglow'), rippleEl=el.querySelector('.countripple');
       var cnt=5;
       var _countTimer=null;
       setTimeout(function(){
@@ -2432,13 +2584,18 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
           if(done) return;
           if(cnt<=0){ if(_countTimer){clearInterval(_countTimer);_countTimer=null;} dismiss(); return; }
           numEl.textContent=cnt;
-          // 숫자와 링을 같은 순간에 재시작 → 타이밍 완전 동기화(reflow 로 애니메이션 리셋)
+          // 숫자·링·발광·파동을 같은 순간에 재시작 → 완전 동기화(reflow 로 애니메이션 리셋)
           numEl.classList.remove('pulse');
           if(ringEl) ringEl.classList.remove('go');
-          void numEl.offsetWidth;                       // 강제 리플로우: 두 애니메이션이 동시에 처음부터
+          if(glowEl) glowEl.classList.remove('pulse');
+          if(rippleEl) rippleEl.classList.remove('go');
+          void numEl.offsetWidth;                       // 강제 리플로우: 모든 애니메이션이 동시에 처음부터
           numEl.classList.add('pulse');
           if(ringEl) ringEl.classList.add('go');
+          if(glowEl) glowEl.classList.add('pulse');
+          if(rippleEl) rippleEl.classList.add('go');
           wrap.classList.toggle('final', cnt<=3);
+          el.classList.toggle('lastone', cnt===1);   // 마지막 1: 화면 진동 + 강한 플래시
           cnt--;
         }
         tick();                          // 즉시 5 표시
