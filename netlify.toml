@@ -1,4 +1,5 @@
 [build]
+  command = "node scripts/gen-skins.mjs"
   functions = "netlify/functions"
   publish = "web"
 

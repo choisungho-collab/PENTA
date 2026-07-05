@@ -684,7 +684,7 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
 .matchintro.counting .countwrap{opacity:1}
 .matchintro .countnum{position:relative;width:clamp(120px,17vw,180px);height:clamp(120px,17vw,180px);display:grid;place-items:center}
 /* 숫자 뒤 발광 오라 (색은 골드→빨강으로 변함) */
-.matchintro .countglow{position:absolute;width:78%;height:78%;border-radius:50%;background:radial-gradient(circle,rgba(222,199,156,.32),rgba(222,199,156,.08) 55%,transparent 72%);filter:blur(6px)}
+.matchintro .countglow{position:absolute;width:90%;height:90%;border-radius:50%;background:radial-gradient(circle,rgba(222,199,156,.42),rgba(222,199,156,.1) 55%,transparent 72%);filter:blur(7px)}
 .matchintro .countglow.pulse{animation:glowPulse 1s ease both}
 @keyframes glowPulse{0%{opacity:0;transform:scale(.6)}30%{opacity:1;transform:scale(1.05)}100%{opacity:.5;transform:scale(.9)}}
 /* 매 초 퍼지는 원형 파동 */
@@ -694,22 +694,27 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
 /* 링 (안쪽 진행 + 바깥 점선 회전) */
 .matchintro .countring{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
 .matchintro .countring .ringbg{fill:none;stroke:rgba(222,199,156,.14);stroke-width:2.5}
-.matchintro .countring .ringfg{fill:none;stroke:var(--gold);stroke-width:3;stroke-linecap:round;stroke-dasharray:289;stroke-dashoffset:0;filter:drop-shadow(0 0 7px rgba(222,199,156,.75))}
+.matchintro .countring .ringfg{fill:none;stroke:var(--gold);stroke-width:4;stroke-linecap:round;stroke-dasharray:289;stroke-dashoffset:0;filter:drop-shadow(0 0 11px rgba(222,199,156,.95))}
 .matchintro .countring .ringfg.go{animation:ringShrink 1s linear both}
 @keyframes ringShrink{from{stroke-dashoffset:0}to{stroke-dashoffset:289}}
 /* 바깥 점선 링: 천천히 회전(기계식 느낌) */
 .matchintro .countring .ringdash{fill:none;stroke:rgba(222,199,156,.4);stroke-width:1.5;stroke-dasharray:3 7;transform-origin:center;animation:dashSpin 8s linear infinite}
 @keyframes dashSpin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
 /* 숫자: 위에서 쾅 떨어지며 등장 + 회전 잔상 */
-.matchintro .countn{position:relative;font-family:var(--fs);font-weight:400;font-size:clamp(70px,12vw,136px);line-height:1;color:var(--gold);text-shadow:0 4px 30px rgba(0,0,0,.8),0 0 44px rgba(222,199,156,.55);font-variant-numeric:tabular-nums}
+.matchintro .countn{position:relative;z-index:1;font-family:var(--fs);font-weight:400;font-size:clamp(74px,13vw,144px);line-height:1;color:var(--gold);text-shadow:0 4px 30px rgba(0,0,0,.85),0 0 26px rgba(222,199,156,.7),0 0 60px rgba(222,199,156,.45);font-variant-numeric:tabular-nums}
+/* 방사형 빛살: 숫자가 바뀔 때마다 뒤에서 빛줄기가 확 퍼진다 */
+.matchintro .countrays{position:absolute;left:50%;top:50%;width:clamp(240px,36vw,360px);height:clamp(240px,36vw,360px);transform:translate(-50%,-50%);pointer-events:none;opacity:0;background:repeating-conic-gradient(from 0deg,rgba(255,240,205,0) 0deg,rgba(255,240,205,.17) 1.5deg,rgba(255,240,205,0) 4.5deg);-webkit-mask:radial-gradient(circle,transparent 25%,#000 40%,#000 60%,transparent 76%);mask:radial-gradient(circle,transparent 25%,#000 40%,#000 60%,transparent 76%)}
+.matchintro .countrays.go{animation:raysGo 1s ease-out both}
+@keyframes raysGo{0%{opacity:0;transform:translate(-50%,-50%) scale(.5) rotate(-18deg)}22%{opacity:.9}100%{opacity:0;transform:translate(-50%,-50%) scale(1.6) rotate(14deg)}}
+.matchintro .countwrap.final .countrays{background:repeating-conic-gradient(from 0deg,rgba(255,120,120,0) 0deg,rgba(255,120,120,.2) 1.5deg,rgba(255,120,120,0) 4.5deg)}
 .matchintro .countn.pulse{animation:countPulse 1s cubic-bezier(.16,.9,.3,1.1) both}
-@keyframes countPulse{0%{opacity:0;transform:translateY(-38px) scale(1.9) rotate(-8deg)}18%{opacity:1;transform:translateY(0) scale(1) rotate(0)}30%{transform:scale(1.08)}45%{transform:scale(1)}100%{opacity:.5;transform:scale(.92)}}
+@keyframes countPulse{0%{opacity:0;filter:blur(16px);transform:translateY(-30px) scale(2.3) rotate(-7deg)}16%{opacity:1;filter:blur(0);transform:translateY(0) scale(1) rotate(0)}30%{transform:scale(1.11)}45%{transform:scale(1)}100%{opacity:.5;filter:blur(0);transform:scale(.9)}}
 /* ── 마지막 3-2-1: 빨강 강조 + 더 강렬 ── */
 .matchintro .countwrap.final .countglow{background:radial-gradient(circle,rgba(255,70,70,.4),rgba(255,70,70,.1) 55%,transparent 72%)}
 .matchintro .countwrap.final .countripple{border-color:rgba(255,80,80,.7)}
 .matchintro .countwrap.final .countn{color:#FF5B5B;text-shadow:0 4px 30px rgba(0,0,0,.85),0 0 58px rgba(255,70,70,.85)}
 .matchintro .countwrap.final .countn.pulse{animation:countPulseFinal 1s cubic-bezier(.16,.9,.3,1.15) both}
-@keyframes countPulseFinal{0%{opacity:0;transform:translateY(-46px) scale(2.3) rotate(-10deg)}18%{opacity:1;transform:translateY(0) scale(1.16) rotate(0)}32%{transform:scale(1.24)}48%{transform:scale(1.12)}100%{opacity:.55;transform:scale(1)}}
+@keyframes countPulseFinal{0%{opacity:0;filter:blur(20px);transform:translateY(-38px) scale(2.7) rotate(-9deg)}16%{opacity:1;filter:blur(0);transform:translateY(0) scale(1.16) rotate(0)}32%{transform:scale(1.28)}48%{transform:scale(1.12)}100%{opacity:.55;filter:blur(0);transform:scale(1)}}
 .matchintro .countwrap.final .countring .ringfg{stroke:#FF5B5B;stroke-width:3.5;filter:drop-shadow(0 0 14px rgba(255,70,70,.95))}
 .matchintro .countwrap.final .countring .ringbg{stroke:rgba(255,91,91,.16)}
 .matchintro .countwrap.final .countring .ringdash{stroke:rgba(255,91,91,.5);animation-duration:5s}
@@ -2467,8 +2472,33 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
     if(!pool.length) pool = nums;
     return pool[Math.floor(Math.random()*pool.length)];
   }
+  // 캐시(localStorage)에 있으면 즉시 스킨번호 반환, 없으면 null(백그라운드 로드 대상).
+  function cachedSkinNums(champ){
+    // 1순위: 전체 스킨 목록(skins.json, 페이지 로드 시 프리로드됨) 즉시 조회 → 처음부터 스킨
+    var g = P.champSkinNums ? P.champSkinNums(champ) : null;
+    if(g && g.length) return g;
+    // 폴백: 개별 캐시(skins.json 미배포/로드전 대비)
+    var key=P.champKey(champ);
+    if(_skinNumsCache[key]) return _skinNumsCache[key];
+    try{ var c=JSON.parse(localStorage.getItem(_skinLsKey(key))||'null'); if(c&&c.length){ _skinNumsCache[key]=c; return c; } }catch(_){}
+    return null;
+  }
+  // 원화를 다른 스킨으로 부드럽게 교체(프리로드 후 오버레이 페이드). 프리로드 실패 시 기존 원화 유지.
+  function swapArt(artEl, url){
+    if(!artEl) return;
+    var pre=new Image();
+    pre.onload=function(){
+      var ov=document.createElement('img');
+      ov.src=url;
+      ov.style.cssText='position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;object-position:center 30%;opacity:0;transition:opacity .5s ease;will-change:opacity';
+      artEl.appendChild(ov); void ov.offsetWidth; ov.style.opacity='1';
+      setTimeout(function(){ var base=artEl.querySelector('img[data-fb]'); if(base){base.src=url;} artEl.classList.remove('sq'); try{ov.remove();}catch(_){} },520);
+    };
+    pre.onerror=function(){};
+    pre.src=url;
+  }
 
-  async function playIntro(rep, won){
+  function playIntro(rep, won){
     try{
       if(_introShown) return; _introShown=true;
       var host=document.getElementById('stagehost'); if(!host) return;
@@ -2492,27 +2522,22 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
       if(!uploaders.length) return;   // 업로더 정보 없으면 인트로 생략
       var n=uploaders.length, many=n>=3;
 
-      // 스킨 데이터를 먼저 로드해서 처음부터 랜덤 스킨 원화로 등장시킨다(기본 원화 깜빡임 제거).
-      //  캐시돼 있으면 즉시, 없으면 최대 1.2초 기다린 뒤 진행(로드 안 된 챔프는 기본 원화로).
-      var _sd={};
-      try{
-        await Promise.race([
-          Promise.all(uploaders.map(function(u){ return loadSkinNums(u.champion).then(function(nums){ _sd[u.champion]=nums; }).catch(function(){}); })),
-          new Promise(function(res){ setTimeout(res,1200); })
-        ]);
-      }catch(_){}
-      uploaders.forEach(function(u){ var nums=_sd[u.champion]; u.skinNum=(nums&&nums.length>1)?pickSkin(nums,0):0; });
+      // 캐시된 스킨은 즉시 처음부터 반영(재방문이면 대부분 여기). 미캐시(null)는 인트로 뜬 뒤 로드해 교체.
+      uploaders.forEach(function(u){
+        var nums=cachedSkinNums(u.champion);
+        u.skinNum = nums ? ((nums.length>1)?pickSkin(nums,0):0) : null;
+      });
 
-      // 각 업로더 카드: 처음부터 랜덤 스킨 원화(splash). 스킨 없으면 _0(기본). 폴백: centered → portrait → 아이콘.
-      function upCard(u){
+      // 각 업로더 카드: 캐시된 스킨이 있으면 그 스킨으로 시작, 없으면 centered(기본)로 시작(뒤에서 교체). 폴백: centered → portrait → 아이콘.
+      function upCard(u, idx){
         var nm=(u.name||'').split('#')[0]||'-';
         var pos=P.posKo(u.position)||'';
         var team=u.team===200?'red':(u.team===100?'blue':'');
-        var skinUrl=splashOf(u.champion, u.skinNum||0);
         var centered='https://cdn.communitydragon.org/latest/champion/'+P.champKey(u.champion)+'/splash-art/centered';
         var portrait=P.champPortrait(u.champion), icon=P.champIcon(ver,u.champion);
-        return '<div class="upc '+team+'">'
-          + '<div class="upc-art"><img src="'+skinUrl+'" alt="" loading="eager" data-fb="0" onerror="var s=this;var st=+s.getAttribute(\'data-fb\')||0;s.setAttribute(\'data-fb\',st+1);if(st===0){s.src=\''+centered+'\';}else if(st===1){s.src=\''+portrait+'\';}else if(st===2){s.src=\''+icon+'\';s.parentNode.classList.add(\'sq\');}else{s.onerror=null;}"></div>'
+        var first=(u.skinNum!=null)?splashOf(u.champion, u.skinNum):centered;
+        return '<div class="upc '+team+'" data-uc="'+idx+'">'
+          + '<div class="upc-art"><img src="'+first+'" alt="" loading="eager" data-fb="0" onerror="var s=this;var st=+s.getAttribute(\'data-fb\')||0;s.setAttribute(\'data-fb\',st+1);if(st===0){s.src=\''+centered+'\';}else if(st===1){s.src=\''+portrait+'\';}else if(st===2){s.src=\''+icon+'\';s.parentNode.classList.add(\'sq\');}else{s.onerror=null;}"></div>'
           + '<div class="upc-veil"></div>'
           + '<div class="upc-info">'
           +   '<div class="upc-nm">'+esc(nm)+'</div>'
@@ -2524,13 +2549,14 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
       var el=document.createElement('div');
       el.className='matchintro up-'+(many?'many':String(n));   // up-1 / up-2 / up-many
       // upstage(원화) + 등장효과(플래시/스윕) + 카운트다운(문구+숫자+링)
-      el.innerHTML='<div class="upstage">'+uploaders.map(upCard).join('')+'</div>'
+      el.innerHTML='<div class="upstage">'+uploaders.map(function(u,i){return upCard(u,i);}).join('')+'</div>'
         +'<div class="fxshimmer"></div>'
         +'<div class="fxparticles">'+Array(14).fill(0).map(function(_,i){return '<span class="pt pt'+(i%7)+'"></span>';}).join('')+'</div>'
         +'<div class="fxflash"></div>'
         +'<div class="fxsweep"></div>'
         +'<div class="countwrap">'
         +  '<div class="countnum">'
+        +    '<div class="countrays"></div>'
         +    '<div class="countglow"></div>'
         +    '<div class="countripple"></div>'
         +    '<svg class="countring" viewBox="0 0 100 100">'
@@ -2543,6 +2569,20 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
         +'</div>'
         +'<div class="fxfinal"><div class="fxburst"></div><div class="fxshock"></div><div class="fxshock fxshock2"></div></div>';
       host.appendChild(el);
+      // 미캐시(목록 로드 전) 챔프: 목록(skins.json) 로드 완료되면 반영, 없으면 개별 로드로 폴백
+      uploaders.forEach(function(u, i){
+        if(u.skinNum!=null) return;   // 이미 목록 캐시로 처음부터 스킨 표시됨
+        function apply(nums){
+          if(!nums || nums.length<=1) return;
+          var card=el.querySelector('.upc[data-uc="'+i+'"]');
+          if(card) swapArt(card.querySelector('.upc-art'), splashOf(u.champion, pickSkin(nums,0)));
+        }
+        P.skinsAll().then(function(){
+          var nums=P.champSkinNums(u.champion);
+          if(nums) apply(nums);
+          else loadSkinNums(u.champion).then(apply).catch(function(){});
+        }).catch(function(){ loadSkinNums(u.champion).then(apply).catch(function(){}); });
+      });
       var done=false;
       function dismiss(){
         if(done) return; done=true;
@@ -2554,7 +2594,7 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
       // 카운트다운: 원화 등장 후 ~1.8초 뒤부터 5→1 (매 1초). 끝나면 영상으로 전환.
       var numEl=el.querySelector('.countn'), wrap=el.querySelector('.countwrap');
       var ringEl=el.querySelector('.countring .ringfg');
-      var glowEl=el.querySelector('.countglow'), rippleEl=el.querySelector('.countripple');
+      var glowEl=el.querySelector('.countglow'), rippleEl=el.querySelector('.countripple'), raysEl=el.querySelector('.countrays');
       var cnt=5;
       var _countTimer=null;
       setTimeout(function(){
@@ -2569,11 +2609,13 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
           if(ringEl) ringEl.classList.remove('go');
           if(glowEl) glowEl.classList.remove('pulse');
           if(rippleEl) rippleEl.classList.remove('go');
+          if(raysEl) raysEl.classList.remove('go');
           void numEl.offsetWidth;                       // 강제 리플로우: 모든 애니메이션이 동시에 처음부터
           numEl.classList.add('pulse');
           if(ringEl) ringEl.classList.add('go');
           if(glowEl) glowEl.classList.add('pulse');
           if(rippleEl) rippleEl.classList.add('go');
+          if(raysEl) raysEl.classList.add('go');
           wrap.classList.toggle('final', cnt<=3);
           el.classList.toggle('lastone', cnt===1);   // 마지막 1: 화면 진동 + 강한 플래시
           cnt--;

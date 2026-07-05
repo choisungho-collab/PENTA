@@ -112,6 +112,27 @@
   function champLoading(name) { return 'https://ddragon.leagueoflegends.com/cdn/img/champion/loading/' + champKey(name) + '_0.jpg'; }
   // CommunityDragon 세로 초상화(이름 기반). 세로 카드 비율에 잘 맞고 고화질.
   function champPortrait(name) { return 'https://cdn.communitydragon.org/latest/champion/' + champKey(name) + '/portrait'; }
+  // 전체 스킨 목록(web/skins.json, 배포 시 생성). 한 번 받아 localStorage 캐시 → 인트로에서 즉시 조회.
+  var _skinsAll = null, _skinsFetch = null;
+  function _skinsCached() {
+    if (_skinsAll) return _skinsAll;
+    try { var c = JSON.parse(_lsGet('penta_skins_all') || 'null'); if (c && c.champions && c.t && (Date.now() - c.t < 86400000)) { _skinsAll = c.champions; return _skinsAll; } } catch (_) {}
+    return null;
+  }
+  function skinsAll() {
+    if (_skinsAll) return Promise.resolve(_skinsAll);
+    var cached = _skinsCached(); if (cached) return Promise.resolve(cached);
+    if (_skinsFetch) return _skinsFetch;
+    _skinsFetch = fetch('skins.json').then(function (r) { return r.json(); }).then(function (j) {
+      _skinsAll = (j && j.champions) || {};
+      try { _lsSet('penta_skins_all', JSON.stringify({ champions: _skinsAll, version: (j && j.version) || '', t: Date.now() })); } catch (_) {}
+      return _skinsAll;
+    }).catch(function () { _skinsAll = _skinsAll || {}; return _skinsAll; });
+    return _skinsFetch;
+  }
+  // 동기 조회: 로드/캐시됐으면 그 챔피언 스킨번호 배열, 아니면 null(미로드).
+  function champSkinNums(name) { var m = _skinsAll || _skinsCached(); return m ? (m[champKey(name)] || null) : null; }
+  try { skinsAll(); } catch (_) {}   // 페이지 로드 즉시 백그라운드 프리로드
   function itemIcon(ver, id) { return id ? (ddBase(ver) + '/img/item/' + id + '.png') : null; }
 
   // 소환사 주문 id → DDragon 파일명
@@ -329,6 +350,7 @@
     sbSelect: sbSelect, sbInsert: sbInsert, sbRpc: sbRpc,
     ddVersion: ddVersion, ddChampMap: ddChampMap, champKey: champKey, champIcon: champIcon,
     champSplash: champSplash, champLoading: champLoading, champPortrait: champPortrait,
+    skinsAll: skinsAll, champSkinNums: champSkinNums,
     itemIcon: itemIcon, spellIcon: spellIcon,
     posKo: posKo, posRank: posRank,
     queueName: queueName, mmss: mmss, kdaRatio: kdaRatio, compact: compact, ago: ago,
