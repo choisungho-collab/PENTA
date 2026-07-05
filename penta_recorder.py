@@ -837,10 +837,30 @@ GUI_Q = _queue.Queue(maxsize=4000)
 REC_STATE = {"recording": False, "encoder": "", "ready": False}
 LAST_ERR = {"msg": "", "t": 0.0}
 _LOGFILE = {"p": None}
+RECORDER_LOG = os.path.join(DATA_DIR, "recorder.log")
+_log_lock = threading.Lock()
+_log_n = [0]
+def _log_to_file(line):
+    """모든 로그를 파일에 남긴다 — 창이 꺼져도(증발) 마지막까지의 흐름을 볼 수 있게. 2MB 넘으면 뒤 절반만 유지."""
+    try:
+        with _log_lock:
+            _log_n[0] += 1
+            if _log_n[0] % 200 == 1:
+                try:
+                    if os.path.isfile(RECORDER_LOG) and os.path.getsize(RECORDER_LOG) > 2097152:
+                        _old = open(RECORDER_LOG, encoding="utf-8", errors="replace").read()
+                        open(RECORDER_LOG, "w", encoding="utf-8").write(_old[-1048576:])
+                except Exception: pass
+            with open(RECORDER_LOG, "a", encoding="utf-8", errors="replace") as f:
+                f.write(line + "\n")
+    except Exception:
+        pass
+
 def log(m):
     line = f"[{datetime.datetime.now():%H:%M:%S}] {m}"
     try: print(line, flush=True)
     except Exception: pass
+    _log_to_file(line)
     s = str(m)
     if any(k in s for k in ("error", "Error", "failed", "Failed", "exception", "Traceback")) and ("restarting" not in s):
         LAST_ERR["msg"] = s[:240]; LAST_ERR["t"] = time.time()
