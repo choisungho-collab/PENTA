@@ -701,14 +701,14 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
 /* 인트로가 원형으로 확 걷히며(조리개) 게임 화면이 바깥부터 드러난다 */
 @keyframes irisOut{0%,42%{clip-path:circle(150% at 50% 50%)}100%{clip-path:circle(0% at 50% 50%)}}
 /* 양쪽으로 열림: 인트로 복제 두 조각이 좌/우로 밀려나며 게임 화면이 가운데서 드러난다 */
-.matchintro.door-l{clip-path:inset(0 50% 0 0);z-index:40;will-change:transform;animation:doorOpenL .85s cubic-bezier(.62,0,.2,1) forwards}
-.matchintro.door-r{clip-path:inset(0 0 0 50%);z-index:40;will-change:transform;animation:doorOpenR .85s cubic-bezier(.62,0,.2,1) forwards}
-@keyframes doorOpenL{0%{transform:translateX(0)}18%{transform:translateX(2%)}100%{transform:translateX(-101%)}}
-@keyframes doorOpenR{0%{transform:translateX(0)}18%{transform:translateX(-2%)}100%{transform:translateX(101%)}}
+.matchintro.door-l{clip-path:inset(0 50% 0 0);z-index:40;will-change:transform;animation:doorOpenL .8s cubic-bezier(.5,0,.25,1) forwards}
+.matchintro.door-r{clip-path:inset(0 0 0 50%);z-index:40;will-change:transform;animation:doorOpenR .8s cubic-bezier(.5,0,.25,1) forwards}
+@keyframes doorOpenL{0%{transform:translateX(0)}100%{transform:translateX(-101%)}}
+@keyframes doorOpenR{0%{transform:translateX(0)}100%{transform:translateX(101%)}}
 /* ── 카운트다운: 5→1 (골드 숫자, 펄스, 원형 링) ── */
 .matchintro .countwrap{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:7;display:flex;flex-direction:column;align-items:center;gap:clamp(10px,2vh,20px);opacity:0;pointer-events:none;transition:opacity .4s ease}
 .matchintro.counting .countwrap{opacity:1}
-.matchintro .countnum{position:relative;width:clamp(120px,17vw,180px);height:clamp(120px,17vw,180px);display:grid;place-items:center}
+.matchintro .countnum{position:relative;width:clamp(150px,21vw,224px);height:clamp(150px,21vw,224px);display:grid;place-items:center}
 .matchintro .countnum.punch{animation:numPunch .55s cubic-bezier(.2,.8,.3,1.25) both}
 @keyframes numPunch{0%{transform:scale(1.16)}42%{transform:scale(.96)}70%{transform:scale(1.03)}100%{transform:scale(1)}}
 /* 숫자 뒤 발광 오라 (색은 골드→빨강으로 변함) */
@@ -759,10 +759,10 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
 @keyframes lastFlash{0%{opacity:.85}100%{opacity:0}}
 /* ── 최종 버스트: 마지막 1 → 영상 전환 순간, 화면 플래시 + 골드 충격파 링 2겹 ── */
 .matchintro .fxfinal{position:absolute;inset:0;z-index:8;pointer-events:none;overflow:hidden}
-.matchintro .fxburst{position:absolute;inset:0;opacity:0;background:radial-gradient(circle at center,rgba(255,255,255,.98),rgba(255,238,200,.66) 36%,rgba(255,214,150,.22) 60%,transparent 76%)}
+.matchintro .fxburst{position:absolute;inset:0;opacity:0;background:radial-gradient(circle at center,rgba(255,255,255,.6),rgba(255,238,200,.3) 42%,transparent 70%)}
 .matchintro.finalburst .fxburst{animation:finalBurst .72s ease-out both}
 .matchintro .fxshock{position:absolute;top:50%;left:50%;width:64px;height:64px;margin:-32px 0 0 -32px;border-radius:50%;opacity:0;border:3px solid rgba(255,240,205,.92);box-shadow:0 0 26px rgba(255,225,170,.85),inset 0 0 20px rgba(255,225,170,.5)}
-.matchintro.finalburst .fxshock{animation:finalShock .82s cubic-bezier(.2,.75,.3,1) both}
+.matchintro.finalburst .fxshock{animation:none}
 .matchintro .fxshock2{border-width:2px;border-color:rgba(222,199,156,.72)}
 .matchintro.finalburst .fxshock2{animation:finalShock .82s cubic-bezier(.2,.75,.3,1) .08s both}
 @keyframes finalBurst{0%{opacity:0}10%{opacity:1}100%{opacity:0}}
