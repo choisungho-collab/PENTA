@@ -604,6 +604,19 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
 .mvbar .mvseek::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:var(--gold);border:none;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.5)}
 .mvbar .mvtime{flex:0 0 auto;font-family:var(--fm);font-size:11.5px;color:var(--dim);font-variant-numeric:tabular-nums;white-space:nowrap}
 .mvbar .mvrate{width:auto;min-width:42px;padding:0 8px;font-family:var(--fm);font-size:11px;font-variant-numeric:tabular-nums}
+/* 모바일: 탐색바를 윗줄 전체로, 컨트롤 버튼은 아랫줄로 → 한 줄에 안 담겨 삐져나오던 문제 해결 */
+@media(max-width:560px){
+  .mvbar{flex-wrap:wrap;gap:9px 5px;padding:9px 10px}
+  .mvbar .mvseek{order:1;flex:1 1 100%}
+  .mvbar .mvplay{order:2}
+  .mvbar .mvtime{order:3;margin-right:auto;font-size:11px}
+  .mvbar .mvfb{order:4}
+  .mvbar .mvff{order:5}
+  .mvbar .mvrate{order:6;min-width:34px;padding:0 5px}
+  .mvbar .mvmute{order:7}
+  .mvbar .mvfs{order:8}
+  .mvbar .mvbtn{width:30px;height:30px}
+}
 #stagehost{position:relative}
 /* ── 감독판 시점 라벨: 전환 시 '누구 시점인지' 좌상단에 잠깐 표시 ── */
 .dirlabel{position:absolute;top:14px;left:14px;z-index:16;display:flex;align-items:center;gap:9px;padding:8px 14px 8px 11px;border-radius:11px;background:rgba(8,11,16,.82);border:1px solid var(--line2);box-shadow:0 6px 20px rgba(0,0,0,.5);backdrop-filter:blur(8px);opacity:0;transform:translateY(-8px);transition:opacity .35s ease,transform .35s ease;pointer-events:none;max-width:calc(100% - 28px)}
@@ -625,7 +638,7 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
 .matchintro.up-many .upc:nth-child(3){animation-delay:.16s}
 .matchintro.up-many .upc:nth-child(4){animation-delay:.24s}
 .matchintro.up-many .upc:nth-child(5){animation-delay:.32s}
-@keyframes upcIn{0%{opacity:0;filter:blur(10px);transform:scale(1.2)}50%{opacity:1;filter:blur(0)}100%{opacity:1;transform:scale(1)}}
+@keyframes upcIn{0%{opacity:0;filter:blur(14px) brightness(1.5);transform:scale(1.3) rotate(1.2deg)}45%{opacity:1;filter:blur(0) brightness(1.15)}72%{transform:scale(.99) rotate(0)}100%{opacity:1;filter:blur(0) brightness(1);transform:scale(1)}}
 /* 카드 사이 얇은 구분선(2명 이상) */
 .matchintro.up-2 .upc+.upc,.matchintro.up-many .upc+.upc{border-left:1px solid rgba(222,199,156,.22)}
 /* full 원화 배경 (centered) — 천천히 줌인 */
@@ -681,6 +694,11 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
 @keyframes upOutInfo{to{opacity:0;transform:translateY(-14px);filter:blur(2px)}}
 /* 인트로가 원형으로 확 걷히며(조리개) 게임 화면이 바깥부터 드러난다 */
 @keyframes irisOut{0%,42%{clip-path:circle(150% at 50% 50%)}100%{clip-path:circle(0% at 50% 50%)}}
+/* 양쪽으로 열림: 인트로 복제 두 조각이 좌/우로 밀려나며 게임 화면이 가운데서 드러난다 */
+.matchintro.door-l{clip-path:inset(0 50% 0 0);z-index:40;will-change:transform;animation:doorOpenL .85s cubic-bezier(.62,0,.2,1) forwards}
+.matchintro.door-r{clip-path:inset(0 0 0 50%);z-index:40;will-change:transform;animation:doorOpenR .85s cubic-bezier(.62,0,.2,1) forwards}
+@keyframes doorOpenL{0%{transform:translateX(0)}18%{transform:translateX(2%)}100%{transform:translateX(-101%)}}
+@keyframes doorOpenR{0%{transform:translateX(0)}18%{transform:translateX(-2%)}100%{transform:translateX(101%)}}
 /* ── 카운트다운: 5→1 (골드 숫자, 펄스, 원형 링) ── */
 .matchintro .countwrap{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:7;display:flex;flex-direction:column;align-items:center;gap:clamp(10px,2vh,20px);opacity:0;pointer-events:none;transition:opacity .4s ease}
 .matchintro.counting .countwrap{opacity:1}
@@ -688,7 +706,7 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
 .matchintro .countnum.punch{animation:numPunch .55s cubic-bezier(.2,.8,.3,1.25) both}
 @keyframes numPunch{0%{transform:scale(1.16)}42%{transform:scale(.96)}70%{transform:scale(1.03)}100%{transform:scale(1)}}
 /* 숫자 뒤 발광 오라 (색은 골드→빨강으로 변함) */
-.matchintro .countglow{position:absolute;width:90%;height:90%;border-radius:50%;background:radial-gradient(circle,rgba(222,199,156,.42),rgba(222,199,156,.1) 55%,transparent 72%);filter:blur(7px)}
+.matchintro .countglow{position:absolute;width:100%;height:100%;border-radius:50%;background:radial-gradient(circle,rgba(255,240,205,.5),rgba(222,199,156,.14) 55%,transparent 72%);filter:blur(8px)}
 .matchintro .countglow.pulse{animation:glowPulse 1s ease both}
 @keyframes glowPulse{0%{opacity:0;transform:scale(.6)}30%{opacity:1;transform:scale(1.05)}100%{opacity:.5;transform:scale(.9)}}
 /* 매 초 퍼지는 원형 파동 */
@@ -705,7 +723,7 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
 .matchintro .countring .ringdash{fill:none;stroke:rgba(222,199,156,.4);stroke-width:1.5;stroke-dasharray:3 7;transform-origin:center;animation:dashSpin 8s linear infinite}
 @keyframes dashSpin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
 /* 숫자: 위에서 쾅 떨어지며 등장 + 회전 잔상 */
-.matchintro .countn{position:relative;z-index:1;font-family:var(--fs);font-weight:400;font-size:clamp(74px,13vw,144px);line-height:1;color:var(--gold);text-shadow:0 4px 30px rgba(0,0,0,.85),0 0 26px rgba(222,199,156,.7),0 0 60px rgba(222,199,156,.45);font-variant-numeric:tabular-nums}
+.matchintro .countn{position:relative;z-index:1;font-family:var(--fs);font-weight:400;font-size:clamp(74px,13vw,144px);line-height:1;color:var(--gold);text-shadow:0 4px 30px rgba(0,0,0,.9),0 0 18px rgba(255,244,214,.9),0 0 42px rgba(222,199,156,.8),0 0 84px rgba(222,199,156,.5);font-variant-numeric:tabular-nums}
 /* 방사형 빛살: 숫자가 바뀔 때마다 뒤에서 빛줄기가 확 퍼진다 */
 .matchintro .countrays{position:absolute;left:50%;top:50%;width:clamp(240px,36vw,360px);height:clamp(240px,36vw,360px);transform:translate(-50%,-50%);pointer-events:none;opacity:0;background:repeating-conic-gradient(from 0deg,rgba(255,240,205,0) 0deg,rgba(255,240,205,.17) 1.5deg,rgba(255,240,205,0) 4.5deg);-webkit-mask:radial-gradient(circle,transparent 25%,#000 40%,#000 60%,transparent 76%);mask:radial-gradient(circle,transparent 25%,#000 40%,#000 60%,transparent 76%)}
 .matchintro .countrays.go{animation:raysGo 1s ease-out both}
@@ -1533,7 +1551,7 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
     var live = liveSet();
     var vids = live.map(function(i){
       var r=ROWS[i], on=(i===curPov);
-      return '<video data-pv="'+i+'" class="pvid'+(on?' on':'')+'" '+(on?'controls':'muted')+' playsinline webkit-playsinline disablepictureinpicture controlslist="nodownload noremoteplayback" preload="auto" poster="'+(r.thumb||'')+'" src="'+r.video+'"></video>';
+      return '<video data-pv="'+i+'" class="pvid'+(on?' on':'')+'" '+(on?'controls':'muted')+' playsinline webkit-playsinline disablepictureinpicture controlslist="nodownload noremoteplayback nofullscreen" preload="auto" poster="'+(r.thumb||'')+'" src="'+r.video+'"></video>';
     }).join('');
     var noCur = !(ROWS[curPov] && ROWS[curPov].video);
     return '<div class="stage pool" id="vpool"><div class="vspin"></div>'+vids
@@ -1552,7 +1570,7 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
   }
 
   function cellTag(r){ return '<span class="tag"><i style="background:'+(r._team===100?'var(--blue)':'var(--red)')+'"></i>'+esc(r.saver||'시점')+'</span>'; }
-  function cellVideo(idx,ctrl){ var r=ROWS[idx]||{}; return '<video data-idx="'+idx+'" '+(ctrl?'controls':'muted')+' playsinline webkit-playsinline disablepictureinpicture controlslist="nodownload noremoteplayback" preload="auto" poster="'+(r.thumb||'')+'" src="'+(r.video||'')+'"></video>'; }
+  function cellVideo(idx,ctrl){ var r=ROWS[idx]||{}; return '<video data-idx="'+idx+'" '+(ctrl?'controls':'muted')+' playsinline webkit-playsinline disablepictureinpicture controlslist="nodownload noremoteplayback nofullscreen" preload="auto" poster="'+(r.thumb||'')+'" src="'+(r.video||'')+'"></video>'; }
   function stageSplit(){
     var cells = selected.map(function(idx){
       var r = ROWS[idx];
@@ -2591,7 +2609,18 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
         if(done) return; done=true;
         if(_countTimer){ clearInterval(_countTimer); _countTimer=null; }
         el.classList.add('finalburst');                          // 최종 플래시 + 골드 충격파
-        setTimeout(function(){ el.classList.add('out'); }, 150);  // 플래시 절정에서 원화 페이드아웃 시작
+        setTimeout(function(){
+          // 양쪽으로 열림: 인트로를 두 조각으로 복제해 좌/우로 밀어낸다 → 게임 화면이 가운데서 드러남
+          try{
+            var host=el.parentNode;
+            var lo=el.cloneNode(true), ro=el.cloneNode(true);
+            lo.className='matchintro door-l'; ro.className='matchintro door-r';
+            lo.removeAttribute('id'); ro.removeAttribute('id');
+            host.appendChild(lo); host.appendChild(ro);
+            el.style.visibility='hidden';
+            setTimeout(function(){ try{lo.remove();}catch(_){} try{ro.remove();}catch(_){} }, 950);
+          }catch(_){ el.classList.add('out'); }   // 복제 실패 시 기존 페이드로 폴백
+        }, 150);
         setTimeout(function(){ try{ el.remove(); }catch(_){} }, 1100);
       }
       // 카운트다운: 원화 등장 후 ~1.8초 뒤부터 5→1 (매 1초). 끝나면 영상으로 전환.
