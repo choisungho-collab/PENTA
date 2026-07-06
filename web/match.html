@@ -633,12 +633,14 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
 .matchintro{position:absolute;inset:0;z-index:20;overflow:hidden;background:#05080b}
 /* 업로더 스테이지: 카드들을 가로로 배치(1명이면 꽉 채움) */
 .matchintro .upstage{position:absolute;inset:0;display:flex;z-index:1}
-.matchintro .upc{position:relative;flex:1 1 0;min-width:0;overflow:hidden;animation:upcIn .45s cubic-bezier(.16,.9,.3,1) both}
+.matchintro .upc{position:relative;flex:1 1 0;min-width:0;overflow:hidden;animation:upcFly .72s cubic-bezier(.2,.85,.25,1) both}
+.matchintro .upc.fly-l{--fx:-118%;--sk:-9deg}
+.matchintro .upc.fly-r{--fx:118%;--sk:9deg}
 .matchintro.up-2 .upc:nth-child(2),.matchintro.up-many .upc:nth-child(2){animation-delay:.08s}
 .matchintro.up-many .upc:nth-child(3){animation-delay:.16s}
 .matchintro.up-many .upc:nth-child(4){animation-delay:.24s}
 .matchintro.up-many .upc:nth-child(5){animation-delay:.32s}
-@keyframes upcIn{0%{opacity:0;filter:blur(14px) brightness(1.5);transform:scale(1.3) rotate(1.2deg)}45%{opacity:1;filter:blur(0) brightness(1.15)}72%{transform:scale(.99) rotate(0)}100%{opacity:1;filter:blur(0) brightness(1);transform:scale(1)}}
+@keyframes upcFly{0%{opacity:0;transform:translateX(var(--fx,-118%)) scale(1.06) skewX(var(--sk,-9deg));filter:blur(16px) brightness(1.5)}18%{opacity:1}55%{filter:blur(0) brightness(1.22)}75%{transform:translateX(0) scale(1) skewX(0deg);filter:brightness(1.12)}86%{transform:translateX(calc(var(--fx,-118%) * -0.035)) skewX(0deg)}100%{opacity:1;transform:translateX(0) scale(1) skewX(0deg);filter:blur(0) brightness(1)}}
 /* 카드 사이 얇은 구분선(2명 이상) */
 .matchintro.up-2 .upc+.upc,.matchintro.up-many .upc+.upc{border-left:1px solid rgba(222,199,156,.22)}
 /* full 원화 배경 (centered) — 천천히 줌인 */
@@ -729,6 +731,12 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
 .matchintro .countrays.go{animation:raysGo 1s ease-out both}
 @keyframes raysGo{0%{opacity:0;transform:translate(-50%,-50%) scale(.5) rotate(-18deg)}22%{opacity:.9}100%{opacity:0;transform:translate(-50%,-50%) scale(1.6) rotate(14deg)}}
 .matchintro .countwrap.final .countrays{background:repeating-conic-gradient(from 0deg,rgba(255,120,120,0) 0deg,rgba(255,120,120,.2) 1.5deg,rgba(255,120,120,0) 4.5deg)}
+/* 스파크 폭발: 숫자가 바뀔 때마다 빛 조각이 사방으로 튀어나간다 */
+.matchintro .countspark{position:absolute;left:50%;top:50%;width:10px;height:10px;pointer-events:none;transform:translate(-50%,-50%);z-index:2}
+.matchintro .countspark i{position:absolute;left:50%;top:50%;width:5px;height:5px;margin:-2.5px 0 0 -2.5px;border-radius:50%;background:radial-gradient(circle,#FFF8E8,rgba(222,199,156,.6) 60%,transparent);box-shadow:0 0 8px rgba(255,240,205,.95);opacity:0}
+.matchintro .countspark.go i{animation:sparkFly .72s cubic-bezier(.2,.7,.35,1) both}
+@keyframes sparkFly{0%{opacity:0;transform:rotate(var(--a)) translateY(0) scale(1.3)}12%{opacity:1}100%{opacity:0;transform:rotate(var(--a)) translateY(-155px) scale(.2)}}
+.matchintro .countwrap.final .countspark i{background:radial-gradient(circle,#FFEAEA,rgba(255,120,120,.6) 60%,transparent);box-shadow:0 0 8px rgba(255,140,140,.95)}
 .matchintro .countn.pulse{animation:countPulse 1s cubic-bezier(.16,.9,.3,1.1) both}
 @keyframes countPulse{0%{opacity:0;filter:blur(16px);transform:perspective(680px) translateZ(-380px) rotateX(38deg)}16%{opacity:1;filter:blur(0);transform:perspective(680px) translateZ(42px) rotateX(-4deg)}28%{transform:perspective(680px) translateZ(0) rotateX(0)}70%{opacity:1;filter:blur(0);transform:perspective(680px) translateZ(0)}100%{opacity:0;filter:blur(7px);transform:perspective(680px) translateZ(-150px)}}
 /* ── 마지막 3-2-1: 빨강 강조 + 더 강렬 ── */
@@ -2557,7 +2565,7 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
         var centered='https://cdn.communitydragon.org/latest/champion/'+P.champKey(u.champion)+'/splash-art/centered';
         var portrait=P.champPortrait(u.champion), icon=P.champIcon(ver,u.champion);
         var first=(u.skinNum!=null)?splashOf(u.champion, u.skinNum):centered;
-        return '<div class="upc '+team+'" data-uc="'+idx+'">'
+        return '<div class="upc '+team+' '+((idx%2===0)?'fly-l':'fly-r')+'" data-uc="'+idx+'">'
           + '<div class="upc-art"><img src="'+first+'" alt="" loading="eager" data-fb="0" onerror="var s=this;var st=+s.getAttribute(\'data-fb\')||0;s.setAttribute(\'data-fb\',st+1);if(st===0){s.src=\''+centered+'\';}else if(st===1){s.src=\''+portrait+'\';}else if(st===2){s.src=\''+icon+'\';s.parentNode.classList.add(\'sq\');}else{s.onerror=null;}"></div>'
           + '<div class="upc-veil"></div>'
           + '<div class="upc-info">'
@@ -2578,6 +2586,7 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
         +'<div class="countwrap">'
         +  '<div class="countnum">'
         +    '<div class="countrays"></div>'
+        +    '<div class="countspark"><i style="--a:0deg"></i><i style="--a:30deg"></i><i style="--a:60deg"></i><i style="--a:90deg"></i><i style="--a:120deg"></i><i style="--a:150deg"></i><i style="--a:180deg"></i><i style="--a:210deg"></i><i style="--a:240deg"></i><i style="--a:270deg"></i><i style="--a:300deg"></i><i style="--a:330deg"></i></div>'
         +    '<div class="countglow"></div>'
         +    '<div class="countripple"></div>'
         +    '<svg class="countring" viewBox="0 0 100 100">'
@@ -2626,7 +2635,7 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
       // 카운트다운: 원화 등장 후 ~1.8초 뒤부터 5→1 (매 1초). 끝나면 영상으로 전환.
       var numEl=el.querySelector('.countn'), wrap=el.querySelector('.countwrap');
       var ringEl=el.querySelector('.countring .ringfg');
-      var glowEl=el.querySelector('.countglow'), rippleEl=el.querySelector('.countripple'), raysEl=el.querySelector('.countrays'), numBox=el.querySelector('.countnum');
+      var glowEl=el.querySelector('.countglow'), rippleEl=el.querySelector('.countripple'), raysEl=el.querySelector('.countrays'), numBox=el.querySelector('.countnum'), sparkEl=el.querySelector('.countspark');
       var cnt=5;
       var _countTimer=null;
       setTimeout(function(){
@@ -2642,6 +2651,7 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
           if(glowEl) glowEl.classList.remove('pulse');
           if(rippleEl) rippleEl.classList.remove('go');
           if(raysEl) raysEl.classList.remove('go');
+          if(sparkEl) sparkEl.classList.remove('go');
           if(numBox) numBox.classList.remove('punch');
           void numEl.offsetWidth;                       // 강제 리플로우: 모든 애니메이션이 동시에 처음부터
           numEl.classList.add('pulse');
@@ -2649,6 +2659,7 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
           if(glowEl) glowEl.classList.add('pulse');
           if(rippleEl) rippleEl.classList.add('go');
           if(raysEl) raysEl.classList.add('go');
+          if(sparkEl) sparkEl.classList.add('go');
           if(numBox) numBox.classList.add('punch');
           wrap.classList.toggle('final', cnt<=3);
           el.classList.toggle('lastone', cnt===1);   // 마지막 1: 화면 진동 + 강한 플래시
