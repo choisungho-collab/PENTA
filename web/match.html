@@ -533,6 +533,22 @@ span.rico{display:inline-block}
 .cfocus{display:flex;flex-direction:column;gap:5px;background:linear-gradient(180deg,var(--gold-soft),var(--surface));border:1px solid var(--gold-line);border-left:3px solid var(--gold);border-radius:var(--r2);padding:14px 18px;margin-bottom:12px}
 .cfocus .cfl{font-family:var(--fm);font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--gold-ink)}
 .cfocus .cft{font-family:var(--fd);font-size:14px;color:var(--ink2);line-height:1.55}
+.grade .radar{flex:0 0 auto;width:152px;height:147px;margin:-6px 0 -6px -6px}
+.dmapsec{background:linear-gradient(180deg,var(--surface2),var(--surface));border:1px solid var(--line);border-radius:var(--r2);padding:14px 16px 16px;margin-bottom:12px}
+.dmaphead{display:flex;align-items:center;flex-wrap:wrap;gap:9px;font-family:var(--fd);font-weight:600;font-size:13px;color:var(--ink);margin-bottom:11px}
+.dmaphead .dmh-s{font-weight:500;font-size:11.5px;color:var(--dim)}
+.dmlegend{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--dim);font-family:var(--fm)}
+.dmlegend i{width:9px;height:9px;border-radius:50%;display:inline-block}
+.dmlegend .lg-d{background:#DE7480}
+.dmlegend .lg-k{background:var(--gold);margin-left:6px}
+.dmapbox{position:relative;width:min(330px,100%);aspect-ratio:1/1;margin:0 auto}
+.dmapbox svg{position:absolute;inset:0;width:100%;height:100%;border-radius:8px}
+.dmapbox .dmdot{position:absolute;transform:translate(-50%,-50%);width:21px;height:21px;border-radius:50%;padding:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;line-height:1}
+.dmapbox .dmdot.dth{background:rgba(222,116,128,.92);border-color:rgba(255,179,188,.9);color:#22090d;box-shadow:0 0 10px rgba(222,116,128,.5)}
+.dmapbox .dmdot.dth:hover{background:#FF9AA5;color:#1a0d10;border-color:#FFC7CD}
+.dmapbox .dmdot.kil{width:13px;height:13px;background:rgba(222,199,156,.9);border-color:rgba(244,227,194,.9);box-shadow:0 0 8px rgba(222,199,156,.4)}
+.dmapbox .dmdot.kil:hover{background:#F4E3C2}
+@media(max-width:560px){.grade .radar{width:126px;height:122px}}
 .cfocus .cft b{color:var(--ink);font-weight:700}
 .dflow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 14px}
 .dflow .dfl{font-family:var(--fm);font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--dim)}
@@ -1124,6 +1140,46 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
     return bad[0];
   }
 
+  // ===== 펜타곤 레이더 (5축 능력치 — 파밍/초반/교전/시야/생존) =====
+  function radarSVG(axes){
+    var cx=96, cy=92, R=62, n=axes.length;
+    function pt(i,r){ var a=-Math.PI/2 + i*2*Math.PI/n; return [(cx+Math.cos(a)*r).toFixed(1), (cy+Math.sin(a)*r).toFixed(1)]; }
+    function ring(f){ var p=[]; for(var i=0;i<n;i++){ p.push(pt(i,R*f).join(',')); } return '<polygon points="'+p.join(' ')+'" fill="none" stroke="rgba(222,199,156,.13)" stroke-width="1"/>'; }
+    var grid=ring(1)+ring(.66)+ring(.33), spokes='';
+    for(var i=0;i<n;i++){ var e=pt(i,R); spokes+='<line x1="'+cx+'" y1="'+cy+'" x2="'+e[0]+'" y2="'+e[1]+'" stroke="rgba(222,199,156,.09)"/>'; }
+    var poly=[], dots='';
+    for(var j=0;j<n;j++){ var v=axes[j][1]; v=(v==null)?45:Math.max(7,Math.min(100,v)); var p2=pt(j,R*v/100); poly.push(p2.join(',')); dots+='<circle cx="'+p2[0]+'" cy="'+p2[1]+'" r="2.5" fill="#F4E3C2"/>'; }
+    var shape='<polygon points="'+poly.join(' ')+'" fill="rgba(222,199,156,.20)" stroke="#DEC79C" stroke-width="2" stroke-linejoin="round"/>';
+    var labels='';
+    for(var k2=0;k2<n;k2++){ var L=pt(k2,R+14); var anc=Math.abs(L[0]-cx)<9?'middle':(L[0]>cx?'start':'end'); labels+='<text x="'+L[0]+'" y="'+(parseFloat(L[1])+3.5)+'" text-anchor="'+anc+'" font-size="10.5" fill="#98A1B3">'+esc(axes[k2][0])+'</text>'; }
+    return '<svg class="radar" viewBox="0 0 192 186" aria-hidden="true">'+grid+spokes+shape+dots+labels+'</svg>';
+  }
+
+  // ===== 데스 맵 (미니맵 위 죽은/잡은 위치 — 점 클릭 시 그 장면으로 점프) =====
+  function deathMapHTML(pid, myTeam){
+    var kills=(ANALYSIS.kills)||[]; if(!kills.length) return '';
+    var d=[], k=[];
+    kills.forEach(function(e){ var p=e.pos; if(!p||p.x==null||p.y==null) return; if(e.victim===pid) d.push(e); else if(e.killer===pid) k.push(e); });
+    if(!d.length && !k.length) return '';
+    d.sort(function(a,b){return a.t-b.t;});
+    function dot(e, cls, label){
+      var lx=(e.pos.x/15000*100).toFixed(1), ty=((1-e.pos.y/15000)*100).toFixed(1), s=Math.max(0,Math.round(e.t));
+      return '<button class="jbtn dmdot '+cls+'" data-jump="'+s+'" style="left:'+lx+'%;top:'+ty+'%" title="'+fmtT(s)+'">'+label+'</button>';
+    }
+    var dots=''; k.forEach(function(e){ dots+=dot(e,'kil',''); }); d.forEach(function(e,i){ dots+=dot(e,'dth',String(i+1)); });
+    var bg='<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">'
+      +'<rect x="0" y="0" width="100" height="100" rx="3" fill="#0A1018"/>'
+      +'<path d="M8 92 L8 8 L92 8" fill="none" stroke="rgba(255,255,255,.045)" stroke-width="7" stroke-linecap="round"/>'
+      +'<path d="M8 92 L92 92 L92 8" fill="none" stroke="rgba(255,255,255,.045)" stroke-width="7" stroke-linecap="round"/>'
+      +'<line x1="10" y1="90" x2="90" y2="10" stroke="rgba(255,255,255,.05)" stroke-width="7" stroke-linecap="round"/>'
+      +'<path d="M-5 5 L5 -5 L105 95 L95 105 Z" fill="rgba(78,168,205,.10)"/>'
+      +'<circle cx="7" cy="93" r="11" fill="rgba(78,168,205,.16)"/>'
+      +'<circle cx="93" cy="7" r="11" fill="rgba(222,116,128,.14)"/>'
+      +'</svg>';
+    var leg='<span class="dmlegend"><i class="lg-d"></i>데스 '+d.length+(k.length?'<i class="lg-k"></i>킬 '+k.length:'')+'</span>';
+    return '<div class="dmapsec"><div class="dmaphead">데스 맵<span class="dmh-s">점을 누르면 그 장면으로 이동합니다</span>'+leg+'</div><div class="dmapbox">'+bg+dots+'</div></div>';
+  }
+
   // ===== NEW coachCard =====
   function coachCard(rep){
     var saver=(ROWS[curPov]||{}).saver;
@@ -1207,11 +1263,24 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
     if(me.kp!=null) gp.push([(isJg||isSup)?3:(pos==='TOP'?1:2),p3(me.kp,kpB-0.1,kpB+0.1)]);
     if(vspm!=null) gp.push([isSup?3:(isJg?2:1),p3(vspm,visFloor,visGood)]);
     var gws=0,gss=0; gp.forEach(function(x){ if(x[1]!=null){ gws+=x[0]*2; gss+=x[0]*x[1]; } });
+    // 5축 능력치 (레이더): 파밍(서폿은 효율)/초반/교전/시야/생존 — 각 0~100
+    function axv(v,lo,hi){ if(v==null) return null; return Math.max(6,Math.min(100,Math.round((v-lo)/(hi-lo)*100))); }
+    var isCarryR=pos==='BOTTOM'||pos==='MIDDLE';
+    var d10=(durMin>0&&me.deaths!=null)?me.deaths/(durMin/10):null;
+    var axSurv=d10!=null?axv(-d10,-5.5,-1):(me.kda!=null?axv(me.kda,1,4):null);
+    var axFight=me.kp!=null?axv(me.kp,kpB-0.25,kpB+0.2):null;
+    var _td=0; players.forEach(function(p){ if(p.team===me.team)_td+=(p.dmg||0); });
+    var _sh=(_td&&me.dmg!=null)?me.dmg/_td*100:null;
+    if(isCarryR&&_sh!=null&&axFight!=null) axFight=Math.round((axFight+axv(_sh,15,32))/2);
+    var axVis=vspm!=null?axv(vspm,Math.max(0,visFloor-0.3),visGood+0.4):null;
+    var axFarm=!isSup?(me.cs_per_min!=null?axv(me.cs_per_min,csFloor-2,csGood+1.5):null):(me.dpg!=null?axv(me.dpg,0.8,2.4):null);
+    var axEarly=lane.gold15!=null?axv(lane.gold15,-1500,1500):(lane.cs10!=null?axv(lane.cs10,-20,20):(lane.gold10!=null?axv(lane.gold10,-1000,1000):null));
+    var radarAxes=[[isSup?'효율':'파밍',axFarm],['초반',axEarly],['교전',axFight],['시야',axVis],['생존',axSurv]];
     var gradeHTML='';
     if(gws>0){
       var gscore=Math.round(gss/gws*100);
       var gl=gscore>=85?'S':(gscore>=70?'A':(gscore>=55?'B':(gscore>=40?'C':'D')));
-      gradeHTML='<div class="grade g-'+gl.toLowerCase()+'"><div class="gv">'+gl+'</div><div class="gx"><div class="gs">'+gscore+'<span class="gsl"> / 100</span></div><div class="gd">측정 지표 종합 등급입니다. 의사결정·시야·웨이브 관리는 아래 항목으로 직접 확인하세요.</div></div></div>';
+      gradeHTML='<div class="grade g-'+gl.toLowerCase()+'">'+radarSVG(radarAxes)+'<div class="gv">'+gl+'</div><div class="gx"><div class="gs">'+gscore+'<span class="gsl"> / 100</span></div><div class="gd">측정 지표 종합 등급입니다. 의사결정·시야·웨이브 관리는 아래 항목으로 직접 확인하세요.</div></div></div>';
     }
     var focusHTML = focus ? '<div class="cfocus"><div class="cfl">이번 게임, 딱 하나만 고친다면</div><div class="cft"><b>'+esc(focus[0])+'</b> · '+esc(focus[1])+'</div></div>' : '';
     var checksHTML='',drillHTML='';
@@ -1229,6 +1298,7 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
       +(ANALYSIS.source==='live'?'<div class="srcnote">Live 분석 — KDA·CS·시야·오브젝트는 정확하지만, 딜량·골드 추이는 기록되지 않습니다.</div>':'')
       +gradeHTML+focusHTML
       +(DI.flow||'')
+      +deathMapHTML(pid, me.team)
       +(sg?'<div class="subgrid">'+sg+'</div>':'')
       +'<div class="evalcols">'+evcol('잘한 점',good,'good')+evcol('개선할 점',bad,'bad')+'</div>'
       +checksHTML+drillHTML;
@@ -2245,6 +2315,16 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
     var O=(ANALYSIS.objs||[]).filter(function(e){return e&&typeof e.t==='number';});
     var dur=ANALYSIS.duration||0;
     if(!K.length && !O.length) return [];
+    var players=ANALYSIS.players||[];
+    var myTeam=(myPid>0&&players[myPid-1])?players[myPid-1].team:null;
+    function teamOf(p){ var x=players[p-1]; return x?x.team:null; }
+    // 연속킬 추적: 각 킬 시점에 피해자가 몇 연킬 중이었는지(_vs) 기록 → 셧다운(연속킬 저지) 감지
+    var _stk={};
+    K.forEach(function(k){
+      k._vs=_stk[k.victim]||0;
+      if(k.victim!=null) _stk[k.victim]=0;
+      if(k.killer!=null) _stk[k.killer]=(_stk[k.killer]||0)+1;
+    });
     function objIn(t0,t1,kind,sub){ for(var i=0;i<O.length;i++){var o=O[i]; if(o.t>=t0&&o.t<=t1&&o.kind===kind&&(sub==null||(o.sub||'')===sub)) return o;} return null; }
     var GAP=12, clusters=[], cur=null;
     K.forEach(function(k){
@@ -2253,20 +2333,46 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
     });
     var cand=[];
     clusters.forEach(function(c){
-      var n=c.kills.length; if(n<2) return;   // 1킬은 한타가 아님(킬 줄에 이미 있음)
-      var myK=0, mine=false;
-      c.kills.forEach(function(k){ if(myPid>0){ if(k.killer===myPid){myK++;mine=true;} if(k.victim===myPid)mine=true; if((k.assists||[]).indexOf(myPid)>=0)mine=true; } });
+      var n=c.kills.length;
+      if(n<2){
+        var k1=c.kills[0];
+        // 단독 장면: 연속킬 저지(3연킬+ 차단) / 내 솔로킬
+        if(k1._vs>=3){
+          if(k1.victim===myPid) cand.push({disp:k1.t, lead:5, label:'연속킬 끊김', score:2.2});
+          else if(myTeam==null || teamOf(k1.killer)===myTeam) cand.push({disp:k1.t, lead:5, label:'연속킬 저지 ('+k1._vs+'연킬)', score:2.4+k1._vs*0.2});
+        } else if(myPid>0 && k1.killer===myPid && (!k1.assists||k1.assists.length===0)){
+          cand.push({disp:k1.t, lead:4, label:'솔로킬', score:2.3+(k1.t<840?0.4:0)});
+        }
+        return;
+      }
+      var myK=0, mine=false, ourK=0, lostK=0, vset={100:{},200:{}};
+      c.kills.forEach(function(k){
+        if(myPid>0){ if(k.killer===myPid){myK++;mine=true;} if(k.victim===myPid)mine=true; if((k.assists||[]).indexOf(myPid)>=0)mine=true; }
+        var vt=teamOf(k.victim);
+        if(vt===100||vt===200) vset[vt][k.victim]=1;
+        if(myTeam!=null&&vt!=null){ if(vt===myTeam) lostK++; else ourK++; }
+      });
+      var aceUs=(myTeam!=null)&&Object.keys(vset[myTeam===100?200:100]).length>=5;
+      var aceThem=(myTeam!=null)&&Object.keys(vset[myTeam]).length>=5;
       var baron=objIn(c.start-16,c.end+16,'BARON_NASHOR',null);
       var elder=objIn(c.start-16,c.end+16,'DRAGON','ELDER_DRAGON');
       var dragon=objIn(c.start-16,c.end+16,'DRAGON',null);
-      var score=n, label;
-      if(baron){ score+=5; label='바론 한타'; }
-      else if(elder){ score+=4; label='장로 한타'; }
-      else if(n>=4){ score+=2; label='대규모 한타 '+n+'킬'; }
-      else if(dragon){ score+=1.5; label='용 교전 '+n+'킬'; }
-      else label='한타 '+n+'킬';
-      if(myK>=2){ label=({2:'더블킬',3:'트리플킬',4:'쿼드라킬',5:'펜타킬'}[Math.min(5,myK)])+(baron?' · 바론':(elder?' · 장로':'')); score+=myK*2.5; }
+      var herald=objIn(c.start-16,c.end+16,'RIFTHERALD',null);
+      var score=n, kindLbl;
+      if(baron){ score+=5; kindLbl='바론 한타'; }
+      else if(elder){ score+=4; kindLbl='장로 한타'; }
+      else if(n>=4){ score+=2; kindLbl='대규모 한타'; }
+      else if(dragon){ score+=1.5; kindLbl='용 교전'; }
+      else if(herald){ score+=1.2; kindLbl='전령 교전'; }
+      else kindLbl='한타';
+      // 팀 관점 결과: 승/패 + 스코어 (시점 주인 팀 기준). 팀을 모르면 기존처럼 N킬.
+      var outc=(myTeam!=null&&(ourK+lostK)>0&&ourK!==lostK)?(' '+(ourK>lostK?'승':'패')+' '+ourK+':'+lostK):(' '+n+'킬');
+      var label=kindLbl+outc;
+      if(aceUs){ score+=3.5; label='에이스'+(baron?' · 바론':(elder?' · 장로':'')); }
+      else if(aceThem){ score+=3; label='상대 에이스'; }
+      if(myK>=2){ label=({2:'더블킬',3:'트리플킬',4:'쿼드라킬',5:'펜타킬'}[Math.min(5,myK)])+(baron?' · 바론':(elder?' · 장로':(aceUs?' · 에이스':''))); score+=myK*2.5; }
       if(mine) score+=2;
+      if(c.kills.some(function(k){return k._vs>=3;})) score+=0.5;   // 한타 중 셧다운 포함 시 가중
       if(dur && c.end>=dur-80) score+=3;   // 후반 결정적 교전 가중
       cand.push({disp:c.start, lead:5, label:label, score:score});
     });

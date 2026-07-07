@@ -1813,10 +1813,10 @@ def make_preview(src, dst, dur=0):
     if "h264_nvenc" in enc:
         # p6(고품질 프리셋) + VBR 기반 CQ. maxrate 로 최대 비트레이트만 막아 용량 폭주 방지.
         venc = ["-c:v", "h264_nvenc", "-preset", "p6", "-rc", "vbr", "-cq", cq,
-                "-b:v", "0", "-maxrate", "16M", "-bufsize", "32M", "-pix_fmt", "yuv420p"]
+                "-b:v", "0", "-maxrate", "20M", "-bufsize", "40M", "-pix_fmt", "yuv420p"]
     elif "h264_amf" in enc:
         venc = ["-c:v", "h264_amf", "-quality", "quality", "-rc", "vbr_peak",
-                "-b:v", "10M", "-maxrate", "16M", "-pix_fmt", "yuv420p"]
+                "-b:v", "10M", "-maxrate", "20M", "-pix_fmt", "yuv420p"]
     elif "h264_qsv" in enc:
         venc = ["-c:v", "h264_qsv", "-global_quality", crf, "-pix_fmt", "nv12"]
     else:
