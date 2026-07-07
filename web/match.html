@@ -533,7 +533,7 @@ span.rico{display:inline-block}
 .cfocus{display:flex;flex-direction:column;gap:5px;background:linear-gradient(180deg,var(--gold-soft),var(--surface));border:1px solid var(--gold-line);border-left:3px solid var(--gold);border-radius:var(--r2);padding:14px 18px;margin-bottom:12px}
 .cfocus .cfl{font-family:var(--fm);font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--gold-ink)}
 .cfocus .cft{font-family:var(--fd);font-size:14px;color:var(--ink2);line-height:1.55}
-.grade .radar{flex:0 0 auto;width:152px;height:147px;margin:-6px 0 -6px -6px}
+.grade .radar{flex:0 0 auto;width:186px;height:151px;margin:-6px 0 -6px -8px}
 .dmapsec{background:linear-gradient(180deg,var(--surface2),var(--surface));border:1px solid var(--line);border-radius:var(--r2);padding:14px 16px 16px;margin-bottom:12px}
 .dmaphead{display:flex;align-items:center;flex-wrap:wrap;gap:9px;font-family:var(--fd);font-weight:600;font-size:13px;color:var(--ink);margin-bottom:11px}
 .dmaphead .dmh-s{font-weight:500;font-size:11.5px;color:var(--dim)}
@@ -548,7 +548,7 @@ span.rico{display:inline-block}
 .dmapbox .dmdot.dth:hover{background:#FF9AA5;color:#1a0d10;border-color:#FFC7CD}
 .dmapbox .dmdot.kil{width:13px;height:13px;background:rgba(222,199,156,.9);border-color:rgba(244,227,194,.9);box-shadow:0 0 8px rgba(222,199,156,.4)}
 .dmapbox .dmdot.kil:hover{background:#F4E3C2}
-@media(max-width:560px){.grade .radar{width:126px;height:122px}}
+@media(max-width:560px){.grade .radar{width:152px;height:124px}}
 .cfocus .cft b{color:var(--ink);font-weight:700}
 .dflow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 14px}
 .dflow .dfl{font-family:var(--fm);font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--dim)}
@@ -1151,8 +1151,8 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
     for(var j=0;j<n;j++){ var v=axes[j][1]; v=(v==null)?45:Math.max(7,Math.min(100,v)); var p2=pt(j,R*v/100); poly.push(p2.join(',')); dots+='<circle cx="'+p2[0]+'" cy="'+p2[1]+'" r="2.5" fill="#F4E3C2"/>'; }
     var shape='<polygon points="'+poly.join(' ')+'" fill="rgba(222,199,156,.20)" stroke="#DEC79C" stroke-width="2" stroke-linejoin="round"/>';
     var labels='';
-    for(var k2=0;k2<n;k2++){ var L=pt(k2,R+14); var anc=Math.abs(L[0]-cx)<9?'middle':(L[0]>cx?'start':'end'); labels+='<text x="'+L[0]+'" y="'+(parseFloat(L[1])+3.5)+'" text-anchor="'+anc+'" font-size="10.5" fill="#98A1B3">'+esc(axes[k2][0])+'</text>'; }
-    return '<svg class="radar" viewBox="0 0 192 186" aria-hidden="true">'+grid+spokes+shape+dots+labels+'</svg>';
+    for(var k2=0;k2<n;k2++){ var L=pt(k2,R+16); var anc=Math.abs(L[0]-cx)<9?'middle':(L[0]>cx?'start':'end'); labels+='<text x="'+L[0]+'" y="'+(parseFloat(L[1])+4.5)+'" text-anchor="'+anc+'" font-size="14" font-weight="600" fill="#C6CEDC">'+esc(axes[k2][0])+'</text>'; }
+    return '<svg class="radar" viewBox="-22 -2 236 192" aria-hidden="true">'+grid+spokes+shape+dots+labels+'</svg>';
   }
 
   // ===== 데스 맵 (미니맵 위 죽은/잡은 위치 — 점 클릭 시 그 장면으로 점프) =====
@@ -1245,13 +1245,7 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
       var head='<div class="eh"><span class="dot"></span>'+title+'</div>';
       if(!arr.length) return '<div class="evalcol '+kind+'">'+head+'<div class="crow '+(kind==='good'?'g':'b')+'"><div class="ct"><div class="a" style="color:var(--faint)">'+(kind==='good'?'두드러진 강점이 기록되지 않았습니다.':'큰 약점이 없습니다. 좋은 흐름이에요.')+'</div></div></div></div>';
       var rows=arr.map(function(x){
-        var jump='';
-        if(x[2] && x[2].length){
-          var seen={},btns='';
-          x[2].forEach(function(t){ var s=Math.max(0,Math.round(t)); if(seen[s])return; seen[s]=1; btns+='<button class="jbtn" data-jump="'+s+'">▶ '+fmtT(s)+'</button>'; });
-          if(btns) jump='<div class="cjumps">'+btns+'</div>';
-        }
-        return '<div class="crow '+(kind==='good'?'g':'b')+'"><div class="ico">'+(kind==='good'?'✓':'!')+'</div><div class="ct"><div class="t">'+esc(x[0])+'</div><div class="a">'+esc(x[1])+'</div>'+jump+'</div></div>';
+        return '<div class="crow '+(kind==='good'?'g':'b')+'"><div class="ico">'+(kind==='good'?'✓':'!')+'</div><div class="ct"><div class="t">'+esc(x[0])+'</div><div class="a">'+esc(x[1])+'</div></div></div>';
       }).join('');
       return '<div class="evalcol '+kind+'">'+head+'<div class="ceval">'+rows+'</div></div>';
     }
