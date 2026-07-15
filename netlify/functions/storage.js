@@ -94,6 +94,56 @@ exports.handler = async (event) => {
 
   // ── 매치 삭제: 로그인 토큰으로 소유 확인 후 파일(Storage API)+행 제거 ──
   //    storage.objects 직접 DELETE 가 정책상 막혀 SQL RPC 는 401 → 서버(service_role)가 Storage API 로 지운다.
+  if (action === 'backfill-win') {
+    // 승패 '미확인' 백필: 결과 화면 전에 클라이언트가 꺼져 GameEnd 를 못 받은 경기를,
+    // 서버가 직접 Riot Match API 에서 결과를 받아 DB 에 채운다(클라이언트 값은 신뢰하지 않음 → 조작 불가).
+    const matchId = String(body.match_id || '');
+    if (!/^[A-Za-z0-9]+_[0-9]+$/.test(matchId)) return reply(400, { error: 'not a riot match id' });
+    try {
+      const rRes = await fetch(SB_URL + '/rest/v1/matches?select=id,owner_puuid,saver,won,winner,analysis&match_id=eq.' + encodeURIComponent(matchId), { headers: sbHeaders() });
+      const rows = await rRes.json().catch(() => []);
+      if (!Array.isArray(rows) || !rows.length) return reply(404, { error: 'no rows' });
+      const wtKnown = rows.map(r => r.winner != null ? r.winner : (r.analysis && r.analysis.win_team)).find(v => v != null);
+      const allKnown = rows.every(r => r.won != null || r.winner != null || (r.analysis && r.analysis.win_team != null));
+      if (allKnown) return reply(200, { ok: true, win_team: wtKnown != null ? wtKnown : null, skipped: true });
+      const KEY = process.env.RIOT_API_KEY || '';
+      if (!KEY) return reply(500, { error: 'riot key missing' });
+      const plat = matchId.split('_')[0].toLowerCase();
+      const REG = { kr: 'asia', jp1: 'asia', tw2: 'asia', sg2: 'asia', th2: 'asia', vn2: 'asia', ph2: 'asia', na1: 'americas', br1: 'americas', la1: 'americas', la2: 'americas', oc1: 'americas' };
+      const regional = REG[plat] || 'europe';
+      const mRes = await fetch('https://' + regional + '.api.riotgames.com/lol/match/v5/matches/' + encodeURIComponent(matchId), { headers: { 'X-Riot-Token': KEY } });
+      if (!mRes.ok) return reply(502, { error: 'riot ' + mRes.status });
+      const m = await mRes.json().catch(() => null);
+      const parts = (m && m.info && m.info.participants) || [];
+      const wp = parts.find(p => p.win);
+      const winTeam = wp ? wp.teamId : null;
+      if (winTeam == null) return reply(200, { ok: false });
+      const byPuuid = {}, byName = {};
+      for (const p of parts) {
+        if (p.puuid) byPuuid[p.puuid] = p;
+        const n = String(p.riotIdGameName || p.summonerName || '').trim();
+        if (n) byName[n] = p;
+      }
+      for (const r of rows) {
+        const a = r.analysis || {};
+        if (a.win_team == null) a.win_team = winTeam;
+        for (const pl of (a.players || [])) {
+          const rp = (pl.puuid && byPuuid[pl.puuid]) || byName[String(pl.name || '').trim()];
+          if (rp && pl.win == null) pl.win = !!rp.win;
+        }
+        const me = (r.owner_puuid && byPuuid[r.owner_puuid]) || byName[String(r.saver || '').trim()];
+        const patch = { winner: winTeam, analysis: a };
+        if (me) patch.won = !!me.win;
+        await fetch(SB_URL + '/rest/v1/matches?id=eq.' + encodeURIComponent(r.id), {
+          method: 'PATCH',
+          headers: { ...sbHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+          body: JSON.stringify(patch)
+        });
+      }
+      return reply(200, { ok: true, win_team: winTeam });
+    } catch (e) { return reply(500, { error: String((e && e.message) || e) }); }
+  }
+
   if (action === 'delete-match') {
     const token = body.token, matchId = body.match_id;
     if (!token || !matchId) return reply(400, { error: 'missing token/match_id' });

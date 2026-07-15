@@ -619,6 +619,17 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
 .mvbar .mvseek::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:15px;height:15px;border-radius:50%;background:var(--gold);border:2px solid var(--bg);cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.5)}
 .mvbar .mvseek::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:var(--gold);border:none;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.5)}
 .mvbar .mvtime{flex:0 0 auto;font-family:var(--fm);font-size:11.5px;color:var(--dim);font-variant-numeric:tabular-nums;white-space:nowrap}
+.mvbar .mvsync.on{color:var(--gold);border-color:var(--gold-line)}
+.mvsyncrow{display:none;flex-direction:column;gap:6px;margin-top:6px;padding:9px 13px;background:var(--surface);border:1px solid var(--line);border-radius:11px}
+.mvsyncrow.on{display:flex}
+.mvsyncrow .srow{display:flex;align-items:center;gap:10px;min-height:26px}
+.mvsyncrow .sname{flex:0 0 auto;min-width:96px;max-width:150px;font-size:12px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mvsyncrow .shint{font-size:11px;color:var(--dim)}
+.mvsyncrow .sbtns{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.mvsyncrow .sbtns button{height:24px;padding:0 8px;background:var(--well);border:1px solid var(--line2);border-radius:6px;color:var(--ink2);font-size:11px;cursor:pointer}
+.mvsyncrow .sbtns button:hover{color:var(--ink);border-color:var(--gold-line)}
+.mvsyncrow .sbtns .rst{color:var(--dim)}
+.mvsyncrow .sadj{min-width:44px;text-align:center;font-family:var(--fm);font-size:11.5px;color:var(--gold-ink)}
 .mvbar .mvrate{width:auto;min-width:42px;padding:0 8px;font-family:var(--fm);font-size:11px;font-variant-numeric:tabular-nums}
 /* 모바일: 탐색바를 윗줄 전체로, 컨트롤 버튼은 아랫줄로 → 한 줄에 안 담겨 삐져나오던 문제 해결 */
 @media(max-width:560px){
@@ -1672,9 +1683,11 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
       + '<button class="mvbtn mvfb" id="mvfb" aria-label="한 프레임 뒤로" title="한 프레임 뒤로 (,)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h2.4v14H6zM18.5 5v14L9.5 12z"/></svg></button>'
       + '<button class="mvbtn mvff" id="mvff" aria-label="한 프레임 앞으로" title="한 프레임 앞으로 (.)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.6 5H18v14h-2.4zM5.5 5v14l9-7z"/></svg></button>'
       + '<button class="mvbtn mvrate" id="mvrate" aria-label="재생 속도" title="재생 속도">1×</button>'
+      + '<button class="mvbtn mvsync" id="mvsync" aria-label="싱크 조정" title="시점 싱크 조정"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 2.5"/></svg></button>'
       + '<button class="mvbtn mvmute" id="mvmute" aria-label="음소거"></button>'
       + '<button class="mvbtn mvfs" id="mvfs" aria-label="전체화면"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>'
-      + '</div>';
+      + '</div>'
+      + '<div class="mvsyncrow" id="mvsyncrow"></div>';
   }
   function wireMvBar(){
     var master = stageVideos()[0]; if(!master) return;
@@ -1715,11 +1728,60 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
     if(fb) fb.addEventListener('click', function(){ frameStep(-1); });
     if(ff) ff.addEventListener('click', function(){ frameStep(1); });
     if(rateBtn) rateBtn.addEventListener('click', function(){ cycleRate(1); });
+    // ── 시점 싱크 조정: 기준(첫 화면)에 맞춰 나머지 시점을 ±0.5s/±2s 로 미세 조정. 이 브라우저에 저장.
+    var syncBtn=document.getElementById('mvsync'), syncRow=document.getElementById('mvsyncrow');
+    function fmtAdj(v){ return (v>0?'+':'')+(Math.round(v*10)/10)+'s'; }
+    function buildSyncRow(){
+      if(!syncRow) return;
+      syncRow.innerHTML = stageVideos().map(function(v,ix){
+        var pi=v.getAttribute('data-pv'); if(pi===null) pi=v.getAttribute('data-idx');
+        var r=ROWS[+pi]||{};
+        return '<div class="srow" data-rid="'+esc(r.id||'')+'">'
+          + '<span class="sname">'+esc(r.saver||('시점 '+((+pi||0)+1)))+(ix===0?' (기준)':'')+'</span>'
+          + (ix===0 ? '<span class="shint">다른 시점을 이 화면에 맞추세요</span>'
+            : ('<span class="sbtns">'
+              + '<button data-adj="-2">-2s</button><button data-adj="-0.5">-0.5</button>'
+              + '<span class="sadj">'+fmtAdj(g0Adj(r.id))+'</span>'
+              + '<button data-adj="0.5">+0.5</button><button data-adj="2">+2s</button>'
+              + '<button data-adj="reset" class="rst">리셋</button></span>'))
+          + '</div>';
+      }).join('');
+    }
+    if(syncBtn&&syncRow){
+      syncBtn.addEventListener('click', function(){
+        var on=syncRow.classList.toggle('on');
+        syncBtn.classList.toggle('on', on);
+        if(on) buildSyncRow();
+      });
+      syncRow.addEventListener('click', function(e){
+        var b=e.target.closest?e.target.closest('button[data-adj]'):null; if(!b) return;
+        var row=b.closest('.srow'); var rid=row&&row.getAttribute('data-rid'); if(!rid) return;
+        var d=b.getAttribute('data-adj');
+        var nv=(d==='reset')?0:(g0Adj(rid)+parseFloat(d));
+        nv=Math.max(-60,Math.min(60,Math.round(nv*10)/10));
+        setG0Adj(rid,nv);
+        var lb=row.querySelector('.sadj'); if(lb) lb.textContent=fmtAdj(nv);
+        var m=stageVideos()[0]; if(m) seekAllTo(m.currentTime||0, 700);   // 조정 즉시 재정렬
+      });
+    }
     paintTime(); paintPlay(); paintMute(); applyRate(RATE);
   }
   function stageVideos(){ var h=document.getElementById('stagehost'); return h?Array.prototype.slice.call(h.querySelectorAll('video')):[]; }
   function activeVideo(){ return split ? (stageVideos()[0]||null) : (POOL?(POOL.querySelector('.pvid.on:not(.leaving)')||POOL.querySelector('.pvid.on')):null); }
-  function rowG0(i){ var r=ROWS[i]; var g=r&&r.analysis&&r.analysis.g0; return (typeof g==='number'&&isFinite(g))?g:0; }
+  // 시점별 수동 싱크 보정(초) — 이 브라우저에만 저장(localStorage), 멀티뷰 싱크 버튼으로 조정.
+  function g0Adj(id){ try{ var v=parseFloat(localStorage.getItem('penta_sync_'+id)); return isFinite(v)?v:0; }catch(_){ return 0; } }
+  function setG0Adj(id,v){ try{ if(v){ localStorage.setItem('penta_sync_'+id,String(v)); } else { localStorage.removeItem('penta_sync_'+id); } }catch(_){ } }
+  function rowG0(i){
+    var r=ROWS[i]||{}; var adj=g0Adj(r.id);
+    var g=r.analysis&&r.analysis.g0;
+    if(typeof g==='number'&&isFinite(g)) return g+adj;
+    // g0 없는 업로드(구버전 exe·분석 실패): 영상 '끝'을 앵커로 추정한다.
+    // 모든 녹화는 게임 종료 + 결과 화면 ~7초 근처에서 끝나므로, 앞이 얼마나 잘렸든
+    // g0 ≈ (게임길이+7) - 영상길이. 수십 초 어긋남을 수 초 이내로 줄여준다.
+    var gl=(ANALYSIS&&(ANALYSIS.dur||ANALYSIS.duration))||0, ls=r.length_sec||0;
+    if(gl>60&&ls>60){ var est=(gl+7)-ls; if(est>-150&&est<60) return est+adj; }
+    return adj;
+  }
   function vG0(v){ if(!v) return 0; var i=v.getAttribute('data-pv'); if(i===null) i=v.getAttribute('data-idx'); return rowG0(+i); }
   function playLive(){ stageVideos().forEach(function(v){ if(!v._err){ try{ v.playbackRate=RATE; }catch(_){} var p=v.play(); if(p&&p.catch)p.catch(function(){}); } }); }
 
@@ -2808,6 +2870,52 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
     return null;                                            // 진짜 알 수 없을 때만 미확인
   }
 
+  // ── 승패 '미확인' 자동 백필: 결과 화면 전에 클라이언트가 꺼져 GameEnd 를 못 받은 경기 →
+  //    서버(storage 함수)가 직접 Riot 에서 결과를 받아 DB 에 채운다. 이후엔 목록 카드도 정상 표시.
+  var _bfDone=false;
+  function winBackfill(waitMs){
+    if(_bfDone) return Promise.resolve();
+    var rep=P.pickPrimary(ROWS)||ROWS[0];
+    if(!rep || saverWon(rep)!=null) return Promise.resolve();        // 이미 알면 불필요
+    if(!/^[A-Za-z0-9]+_[0-9]+$/.test(MID)) return Promise.resolve(); // Riot 매치ID 형식만 가능
+    _bfDone=true;
+    var p=fetch('/.netlify/functions/storage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'backfill-win',match_id:MID})})
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        if(!j || j.win_team==null) return;
+        var wt=j.win_team;
+        ROWS.forEach(function(r){ var a=r.analysis=r.analysis||{}; if(a.win_team==null) a.win_team=wt; if(r.winner==null) r.winner=wt; });
+        if(ANALYSIS && ANALYSIS.win_team==null) ANALYSIS.win_team=wt;
+        paintWinLight();   // 렌더 후 늦게 도착해도 화면 즉시 갱신
+      }).catch(function(){});
+    // 첫 렌더를 오래 막지 않게 최대 waitMs 만 기다림(늦으면 위 then 이 화면을 나중에 고침)
+    return (waitMs>0) ? Promise.race([p, new Promise(function(res){ setTimeout(res, waitMs); })]) : p;
+  }
+  // 전체 재렌더 없이 승패 표시만 살짝 갱신(재생 중인 영상을 건드리지 않음)
+  function paintWinLight(){
+    try{
+      var rep=P.pickPrimary(ROWS)||ROWS[0]; var won=saverWon(rep);
+      if(won!==true && won!==false) return;
+      var wl=won?'w':'l', verdict=won?'승리':'패배';
+      var hero=document.querySelector('.hero');
+      if(hero){
+        hero.classList.remove('u'); hero.classList.add(wl);
+        if(!hero.querySelector('.wlbadge')){
+          var hs=hero.querySelector('.hside');
+          if(hs){ var b=document.createElement('div'); b.className='wlbadge '+wl; b.textContent=verdict; hs.insertBefore(b, hs.firstChild); }
+        }
+      }
+      if(ANALYSIS && ANALYSIS.win_team!=null){
+        var wls=document.querySelectorAll('.sb2 .wl');   // teamBlock(100), teamBlock(200) 순서
+        [100,200].forEach(function(t,i){
+          var el=wls[i]; if(!el) return;
+          var w=(ANALYSIS.win_team===t);
+          el.className='wl '+(w?'w':'l'); el.textContent=w?'승리':'패배';
+        });
+      }
+    }catch(_){ }
+  }
+
   async function load(){
     MID = qs('id') || '';
     if(!MID){ main.innerHTML='<div class="state"><h3>매치를 찾을 수 없습니다</h3><p><a href="index.html">목록으로 돌아가기</a></p></div>'; return; }
@@ -2829,6 +2937,8 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
     ANALYSIS = rep.analysis || {};
     // 각 행에 _team(녹화자 팀) 부착(분할 태그 색)
     ROWS.forEach(function(r){ var c=P.saverCard(r); r._team = c?c.team:100; });
+    // 승패 미확인이면 Riot 권위 백필(서버가 조회·저장). 제때 오면 첫 렌더부터 반영, 늦으면 도착 시 갱신.
+    try{ await winBackfill(2400); }catch(_){ }
     // 시작 시점: URL ?pov={rowId} 있으면 그 시점부터, 없으면 대표
     var _pov = qs('pov');
     var _pi = _pov ? ROWS.findIndex(function(x){ return String(x.id)===String(_pov); }) : -1;
