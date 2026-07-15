@@ -1044,6 +1044,10 @@ def load_or_make_config():
             "keep_games": 20,    # 원본 자동 정리: 최근 N판만 보관 (0 = 무제한)
             "keep_gb": 30,       # 원본 총 용량 상한(GB). 초과분은 오래된 판부터 정리 (0 = 무제한)
             "audio_device": "",  # 녹음할 출력장치 이름(부분일치). 빈 값 = 기본 출력장치. 특정 장치를 고르면 그 장치 소리만 녹음.
+            "preview_cq": 26,        # 갤러리 업로드본 화질(NVENC, 0~51, 낮을수록 고화질·용량↑). 26=리뷰용 충분·용량↓
+            "preview_crf": 26,       # 갤러리 업로드본 화질(x264/QSV). preview_cq 와 동일 취지
+            "preview_maxrate": "12M",  # 업로드본 최대 비트레이트(한타 스파이크 상한). 낮출수록 용량↓ (예: 10M / 16M)
+            "preview_bufsize": "24M",  # VBV 버퍼(보통 maxrate 의 2배)
         }
         _atomic_write_json(CONFIG_PATH, cfg)
         log(f"설정 파일 생성 → {CONFIG_PATH}")
@@ -1805,19 +1809,22 @@ def _ffmpeg_progress(args, dur, timeout):
 
 def make_preview(src, dst, dur=0):
     """원본을 갤러리용으로 재인코딩 — 최대 1080p(초과분만 다운스케일, 업스케일 안 함) + '또렷한' 화질.
-    화질 노브: config.json 의 preview_cq(NVENC, 낮을수록 고화질, 기본 24) / preview_crf(x264, 기본 24).
-    값을 더 낮추면(예: cq18/crf19) 더 선명·용량↑. 성공 시 dst, 실패 시 None(원본 업로드로 폴백)."""
+    화질 노브: config.json 의 preview_cq(NVENC, 낮을수록 고화질, 기본 26) / preview_crf(x264, 기본 26)
+    / preview_maxrate(최대 비트레이트, 기본 12M). 더 선명하게=cq/crf 낮추거나 maxrate 올림(용량↑).
+    성공 시 dst, 실패 시 None(원본 업로드로 폴백)."""
     if not (FFMPEG and src and os.path.isfile(src)): return None
     enc = _encoder_args() or []
-    cq  = str(CFG.get("preview_cq", 24))    # NVENC 품질(0~51, 낮을수록 고화질). 기본 24 = 한타 등 복잡한 장면도 또렷(용량↑ ~60%)
-    crf = str(CFG.get("preview_crf", 24))   # x264/QSV 품질(0~51, 낮을수록 고화질). 기본 24
+    cq  = str(CFG.get("preview_cq", 26))    # NVENC 품질(0~51, 낮을수록 고화질). 26 = 리뷰용 충분히 또렷 + 용량 절감
+    crf = str(CFG.get("preview_crf", 26))   # x264/QSV 품질(0~51, 낮을수록 고화질). 26
+    mx  = str(CFG.get("preview_maxrate", "12M"))   # 최대 비트레이트: 한타 스파이크 상한. 용량 대부분이 여기서 결정됨
+    bfs = str(CFG.get("preview_bufsize", "24M"))   # VBV 버퍼(보통 maxrate 2배)
     if "h264_nvenc" in enc:
-        # p6(고품질 프리셋) + VBR 기반 CQ. maxrate 로 최대 비트레이트만 막아 용량 폭주 방지.
+        # p6(고품질 프리셋) + VBR 기반 CQ. maxrate 로 한타 등 비트레이트 스파이크만 막아 용량 폭주 방지.
         venc = ["-c:v", "h264_nvenc", "-preset", "p6", "-rc", "vbr", "-cq", cq,
-                "-b:v", "0", "-maxrate", "20M", "-bufsize", "40M", "-pix_fmt", "yuv420p"]
+                "-b:v", "0", "-maxrate", mx, "-bufsize", bfs, "-pix_fmt", "yuv420p"]
     elif "h264_amf" in enc:
         venc = ["-c:v", "h264_amf", "-quality", "quality", "-rc", "vbr_peak",
-                "-b:v", "10M", "-maxrate", "20M", "-pix_fmt", "yuv420p"]
+                "-b:v", "8M", "-maxrate", mx, "-pix_fmt", "yuv420p"]
     elif "h264_qsv" in enc:
         venc = ["-c:v", "h264_qsv", "-global_quality", crf, "-pix_fmt", "nv12"]
     else:
@@ -2564,7 +2571,7 @@ def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr", 
     if not video_path or not os.path.isfile(video_path) or os.path.getsize(video_path) < 10000:
         log("영상이 비어 있어 등록을 건너뜁니다."); return
     if not riot_id:
-        return _discard(video_path, "내 Riot ID 확인 실패 (게임이 아닐 수 있음)")
+        return _discard(video_path, "Couldn't verify your Riot ID (may not be a game)")
 
     # --- Riot 매치 연결 시도 (실패해도 영상은 올린다; 분석만 비움) ---
     REC_STATE["preparing"] = True   # 업로드 준비중: 분석·트림·썸네일·인코딩 (업로드 직전까지)
@@ -2604,7 +2611,7 @@ def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr", 
     if not dur:
         dur = _video_dur(video_path)
     if dur and dur < CFG.get("min_game_sec", 300):
-        return _discard(video_path, f"게임이 너무 짧음 ({int(dur)}초)")
+        return _discard(video_path, f"Game too short ({int(dur)}s)")
 
     # --- ID: 매치ID가 있으면 그걸, 없으면(Live 자체분석) 같은 게임 녹화자끼리 묶이도록 참가자 기반 ID, 그도 없으면 임시 ID ---
     if mid:
@@ -2845,11 +2852,11 @@ def recorder_loop(cfg):
                 if start_ts and (time.time()-last_hb)>=300:    # 녹화 중 5분마다 진행 로그(타임라인에 살아있음)
                     last_hb=time.time(); log("녹화 중\u2026 %d:%02d 경과." % divmod(int(time.time()-start_ts),60))
             elif run:
-                REC_STATE.update(rec=False, text="게임 감지")
+                REC_STATE.update(rec=False, text="Game detected")
             elif in_cs:
-                REC_STATE.update(rec=False, text="챔피언 선택 (게임 시작 시 녹화)")
+                REC_STATE.update(rec=False, text="Champion select (recording starts at game)")
             else:
-                REC_STATE.update(rec=False, text="대기 \u2014 게임이 시작되면 자동 녹화")
+                REC_STATE.update(rec=False, text="Idle \u2014 auto-records when a game starts")
             time.sleep(poll)
         except KeyboardInterrupt:
             log("종료합니다."); rec.stop(); break
@@ -3018,6 +3025,7 @@ def run_gui(cfg, url):
     SG_S=_pick("Sora SemiBold","Sora","Segoe UI Semibold","Segoe UI")
     PLEX=_pick("IBM Plex Mono","Consolas","Segoe UI")
     UI=SG; SEMI=SG_S; MON=PLEX
+    KO=_pick("Malgun Gothic","Segoe UI")   # 한글 로그 표시용(Sora엔 한글 글리프가 없어 폴백 방지)
     BASE_H, SET_H, LOG_H = 160, 222, 210
     root.geometry(f"{W}x{BASE_H}"); root.resizable(False, True)
     st={"log":False,"settings":False}
@@ -3046,7 +3054,7 @@ def run_gui(cfg, url):
     _LY=30
     halo=cv.create_oval(15,_LY-7,29,_LY+7,fill="#3a2f18",outline="")   # 점 뒤 은은한 글로우(상태색에 맞춰 변함)
     did=cv.create_oval(18,_LY-4,26,_LY+4,fill=GOLD,outline="")
-    status_lbl=cv.create_text(33,_LY,anchor="w",text="시작하는 중\u2026",fill=INK,font=(SG_S,12))
+    status_lbl=cv.create_text(33,_LY,anchor="w",text="Starting\u2026",fill=INK,font=(SG_S,12))
     sub_lbl=cv.create_text(120,_LY+1,anchor="w",text="",fill=SUB,font=(SG_M,9))
     _cs=cloud_state()
     def _chip(txt,fg,line,fillc,icon):
@@ -3070,9 +3078,9 @@ def run_gui(cfg, url):
     if _cs=="cloud":
         cloud_lbl=_chip("Cloud","#8FE3CD","#3E8E7C","#0E211B","cloud")
     elif _cs=="readonly":
-        cloud_lbl=_chip("키 필요","#E9C87E","#8A6D35","#241D0E","dot")
+        cloud_lbl=_chip("Key needed","#E9C87E","#8A6D35","#241D0E","dot")
     else:
-        cloud_lbl=_chip("로컬 저장",INK2,"#3A3F4A","#14161B","dot")
+        cloud_lbl=_chip("Local",INK2,"#3A3F4A","#14161B","dot")
     opt_lbl=cv.create_text(SCENE_W-92,_LY,anchor="e",text="",fill=GOLD2,font=(SG_M,9))
     cv.tag_bind(opt_lbl,"<Button-1>",lambda e: toggle_settings())
     cv.tag_bind(opt_lbl,"<Enter>",lambda e:(cv.itemconfig(opt_lbl,fill="#FFFFFF"),cv.config(cursor="hand2")))
@@ -3080,8 +3088,8 @@ def run_gui(cfg, url):
 
     # === Log area (hidden until needed) ===
     logwrap=tk.Frame(root,bg=BG)
-    errbar=tk.Label(logwrap,text="",bg="#3A1E18",fg="#FFB4A6",font=(UI,9),anchor="w",padx=11,pady=6,justify="left",wraplength=W-44)
-    logtxt=tk.Text(logwrap,bg="#0C0D10",fg=DIM,font=(UI,9),bd=0,padx=11,pady=8,height=8,wrap="word",state="disabled")
+    errbar=tk.Label(logwrap,text="",bg="#3A1E18",fg="#FFB4A6",font=(KO,9),anchor="w",padx=11,pady=6,justify="left",wraplength=W-44)
+    logtxt=tk.Text(logwrap,bg="#0C0D10",fg=DIM,font=(KO,10),bd=0,padx=11,pady=8,height=8,wrap="word",state="disabled")
 
     # === Update banner (새 버전 발견 시 하단에 표시, 클릭 → 다운로드 페이지) ===
     UPD_H=34
@@ -3112,9 +3120,9 @@ def run_gui(cfg, url):
         try:   # 녹화/업로드 중 실수로 닫아 판을 날리는 것 방지
             if REC_STATE.get("recording") or REC_STATE.get("uploading") or REC_STATE.get("preparing"):
                 from tkinter import messagebox
-                _what = "녹화" if REC_STATE.get("recording") else "업로드"
+                _what = "Recording" if REC_STATE.get("recording") else "Upload"
                 if not messagebox.askyesno("myPENTA",
-                        _what + " 진행 중입니다.\n그래도 종료할까요? 현재 판 영상이 사라질 수 있습니다.",
+                        _what + " is in progress.\nQuit anyway? The current game may be lost.",
                         parent=root):
                     return
         except Exception:
@@ -3129,9 +3137,9 @@ def run_gui(cfg, url):
     # === Settings panel (collapsible) ===
     PANEL="#0B0C0F"
     optwrap=tk.Frame(root,bg=PANEL,highlightbackground=LINE,highlightthickness=1)
-    tk.Label(optwrap,text="녹화 설정",bg=PANEL,fg=INK2,font=(SEMI,8,"bold")).pack(anchor="w",padx=15,pady=(12,6))
-    SCALE_OPTS=[("자동 (권장)","auto"),("원본 해상도","source"),("1080p","1080"),("720p","720"),("480p","480")]
-    ENC_OPTS=[("자동 (GPU 우선)","auto"),("GPU \u00b7 NVIDIA NVENC","nvenc"),("GPU \u00b7 AMD AMF","amf"),("GPU \u00b7 Intel QSV","qsv"),("CPU \u00b7 x264","x264")]
+    tk.Label(optwrap,text="RECORDING SETTINGS",bg=PANEL,fg=INK2,font=(SEMI,8,"bold")).pack(anchor="w",padx=15,pady=(12,6))
+    SCALE_OPTS=[("Auto (best)","auto"),("Source","source"),("1080p","1080"),("720p","720"),("480p","480")]
+    ENC_OPTS=[("Auto (GPU first)","auto"),("GPU \u00b7 NVIDIA NVENC","nvenc"),("GPU \u00b7 AMD AMF","amf"),("GPU \u00b7 Intel QSV","qsv"),("CPU \u00b7 x264","x264")]
     def opt_row(label, opts, key):
         row=tk.Frame(optwrap,bg=PANEL); row.pack(fill="x",padx=15,pady=3)
         tk.Label(row,text=label,bg=PANEL,fg=DIM,font=(UI,9),width=8,anchor="w").pack(side="left")
@@ -3145,13 +3153,13 @@ def run_gui(cfg, url):
         try: om["menu"].config(bg=SURF,fg=INK,activebackground=GOLD,activeforeground="#080A0E",font=(UI,9),bd=0,activeborderwidth=0)
         except Exception: pass
         om.pack(side="left",fill="x",expand=True)
-    opt_row("화질",SCALE_OPTS,"scale")
-    opt_row("인코더",ENC_OPTS,"encoder")
-    KEEP_OPTS=[("최근 20게임","20"),("최근 10게임","10"),("최근 50게임","50"),("모두 보관 (정리 안 함)","0")]
-    opt_row("보관",KEEP_OPTS,"keep_games")
+    opt_row("Quality",SCALE_OPTS,"scale")
+    opt_row("Encoder",ENC_OPTS,"encoder")
+    KEEP_OPTS=[("Last 20 games","20"),("Last 10 games","10"),("Last 50 games","50"),("Keep all (no cleanup)","0")]
+    opt_row("Keep",KEEP_OPTS,"keep_games")
     # 오디오 소스: 기본은 '기본 출력장치' 루프백(스피커로 나오는 전부). 특정 장치를 고르면 그 장치 소리만 녹음.
     # 활용: 윈도우 '앱별 사운드 출력'에서 Discord 등을 다른 장치로 보내면 게임 소리만 남는다.
-    AUD_OPTS=[("자동 (기본 출력장치)","")]
+    AUD_OPTS=[("Auto (default output)","")]
     try:
         import pyaudiowpatch as _pa
         _pp=_pa.PyAudio()
@@ -3166,14 +3174,14 @@ def run_gui(cfg, url):
             except Exception: pass
     except Exception:
         pass
-    opt_row("오디오",AUD_OPTS,"audio_device")
-    tk.Label(optwrap,text="자동 = 최적 화질. GPU 가속이라 게임은 계속 부드럽습니다",bg=PANEL,fg=FAINT,font=(UI,8),wraplength=W-50,justify="left").pack(anchor="w",padx=15,pady=(6,4))
+    opt_row("Audio",AUD_OPTS,"audio_device")
+    tk.Label(optwrap,text="Auto = best quality, GPU-accelerated so your game stays smooth",bg=PANEL,fg=FAINT,font=(UI,8),wraplength=W-50,justify="left").pack(anchor="w",padx=15,pady=(6,4))
     _cleanrow=tk.Frame(optwrap,bg=PANEL); _cleanrow.pack(fill="x",padx=15,pady=(0,12))
     def _do_clean():
         threading.Thread(target=cleanup_recordings,kwargs={"manual":True},daemon=True).start()
-    tk.Button(_cleanrow,text="원본 지금 정리",command=_do_clean,bg="#181B21",fg=INK,font=(UI,9),relief="flat",bd=0,highlightthickness=1,highlightbackground=LINE2,activebackground="#23272F",activeforeground=INK,cursor="hand2",padx=11,pady=4).pack(side="left")
+    tk.Button(_cleanrow,text="Clean up originals now",command=_do_clean,bg="#181B21",fg=INK,font=(UI,9),relief="flat",bd=0,highlightthickness=1,highlightbackground=LINE2,activebackground="#23272F",activeforeground=INK,cursor="hand2",padx=11,pady=4).pack(side="left")
     _fr=disk_free_gb()
-    tk.Label(_cleanrow,text=("남은 공간: %.0f GB" % _fr) if _fr is not None else "",bg=PANEL,fg=FAINT,font=(UI,8)).pack(side="left",padx=10)
+    tk.Label(_cleanrow,text=("Disk free: %.0f GB" % _fr) if _fr is not None else "",bg=PANEL,fg=FAINT,font=(UI,8)).pack(side="left",padx=10)
 
     # === Panel toggle + resize ===
     def _resize():
@@ -3270,9 +3278,9 @@ def run_gui(cfg, url):
         return (t,r)
     _bx=16
     _bx=_cbtn("Archive",_bx,open_gallery,gold=True,icon=_ic_archive)+8
-    _cbtn("폴더 열기",_bx,open_folder,icon=_ic_folder)
-    _ICONS["log"]=_cicon("\u25A4",SCENE_W-16,toggle_log,"log","로그")
-    _ICONS["set"]=_cicon("\u2699",SCENE_W-52,toggle_settings,"settings","설정")
+    _cbtn("Open folder",_bx,open_folder,icon=_ic_folder)
+    _ICONS["log"]=_cicon("\u25A4",SCENE_W-16,toggle_log,"log","Log")
+    _ICONS["set"]=_cicon("\u2699",SCENE_W-52,toggle_settings,"settings","Settings")
     root.protocol("WM_DELETE_WINDOW", do_quit)   # ✕ → 종료. 최소화(_)는 일반 작업표시줄.
 
     def _prep_and_run():
@@ -3292,7 +3300,7 @@ def run_gui(cfg, url):
         root.after(500, poll)   # 다음 갱신을 먼저 예약 → 본문에서 예외가 나도 GUI 루프가 멈추지 않음
         if UPDATE_INFO.get("tag") and not st.get("upd"):
             st["upd"]=True
-            updbar.config(text="새 버전 "+UPDATE_INFO["tag"]+" 이(가) 나왔습니다 - 클릭해서 다운로드")
+            updbar.config(text="New version "+UPDATE_INFO["tag"]+" is available - click here to download")
             updbar.pack(fill="x",side="bottom")
             _resize()
         appended=False
@@ -3328,38 +3336,38 @@ def run_gui(cfg, url):
             _rec["blink"]=not _rec["blink"]
             cv.itemconfig(did,fill=(REC if _rec["blink"] else "#3a2230")); cv.itemconfig(halo,fill="#2e1622")
             _el=int(_now-_rec["since"]); _mm,_ss=divmod(_el,60)
-            cv.itemconfig(status_lbl,text="녹화 중",fill=REC); cv.itemconfig(sub_lbl,text="%d:%02d"%(_mm,_ss),fill=INK)
+            cv.itemconfig(status_lbl,text="Recording",fill=REC); cv.itemconfig(sub_lbl,text="%d:%02d"%(_mm,_ss),fill=INK)
         elif REC_STATE.get("uploading"):   # 업로드 중 — 진행률(파란 점멸)
             _rec["since"]=None
             if _rec["psince"] is None: _rec["psince"]=_now
             _rec["blink"]=not _rec["blink"]
             cv.itemconfig(did,fill=(BLUE if _rec["blink"] else "#22344f")); cv.itemconfig(halo,fill="#162640")
             _pct=REC_STATE.get("upload_pct") or 0
-            cv.itemconfig(status_lbl,text=("업로드 %d%%"%_pct) if _pct>0 else "업로드 중",fill=BLUE)
-            cv.itemconfig(sub_lbl,text="클라우드로",fill=SUB)
+            cv.itemconfig(status_lbl,text=("Uploading %d%%"%_pct) if _pct>0 else "Uploading",fill=BLUE)
+            cv.itemconfig(sub_lbl,text="to cloud",fill=SUB)
         elif _preparing:   # 업로드 준비중 — 분석·트림·인코딩(파란 점멸, 진행률 없음)
             _rec["since"]=None
             if _rec["psince"] is None: _rec["psince"]=_now
             _rec["blink"]=not _rec["blink"]
             cv.itemconfig(did,fill=(BLUE if _rec["blink"] else "#22344f")); cv.itemconfig(halo,fill="#162640")
             _pp=REC_STATE.get("prep_pct") or 0
-            cv.itemconfig(status_lbl,text=("처리 %d%%"%_pp) if _pp>0 else "처리 중\u2026",fill=BLUE)
-            cv.itemconfig(sub_lbl,text="압축하는 중",fill=SUB)
+            cv.itemconfig(status_lbl,text=("Processing %d%%"%_pp) if _pp>0 else "Processing\u2026",fill=BLUE)
+            cv.itemconfig(sub_lbl,text="compressing",fill=SUB)
         elif REC_STATE.get("skipped_at") and (_now-REC_STATE.get("skipped_at",0) < 6):   # 저장 안 함 알림(6초)
             _rec["since"]=None; _rec["blink"]=False; _rec["psince"]=None
-            _why=REC_STATE.get("skipped_why") or "저장하지 않음"
+            _why=REC_STATE.get("skipped_why") or "not saved"
             cv.itemconfig(did,fill="#C8A86A"); cv.itemconfig(halo,fill="#3a2f18")
-            cv.itemconfig(status_lbl,text="저장 안 함",fill="#DEC79C"); cv.itemconfig(sub_lbl,text=_why[:44],fill=SUB)
+            cv.itemconfig(status_lbl,text="Not saved",fill="#DEC79C"); cv.itemconfig(sub_lbl,text=_why[:44],fill=SUB)
         elif _up and (_now-_up < 5):   # 업로드 완료 토스트(5초)
             _rec["since"]=None; _rec["blink"]=False; _rec["psince"]=None
-            cv.itemconfig(did,fill=TEAL); cv.itemconfig(halo,fill="#163029"); cv.itemconfig(status_lbl,text="업로드 완료 \u2713",fill=TEAL); cv.itemconfig(sub_lbl,text="보관함에 추가됨",fill=SUB)
+            cv.itemconfig(did,fill=TEAL); cv.itemconfig(halo,fill="#163029"); cv.itemconfig(status_lbl,text="Uploaded \u2713",fill=TEAL); cv.itemconfig(sub_lbl,text="added to your archive",fill=SUB)
         else:
             _rec["since"]=None; _rec["blink"]=False; _rec["psince"]=None
             cv.itemconfig(did,fill=GOLD); cv.itemconfig(halo,fill="#3a2f18")
             if REC_STATE.get("ready"):
-                cv.itemconfig(status_lbl,text="대기 중",fill=INK); cv.itemconfig(sub_lbl,text="게임 시작 시 자동 녹화",fill=SUB)
+                cv.itemconfig(status_lbl,text="Ready",fill=INK); cv.itemconfig(sub_lbl,text="auto-records",fill=SUB)
             else:
-                cv.itemconfig(status_lbl,text="준비하는 중\u2026",fill=INK); cv.itemconfig(sub_lbl,text="도구 준비 중",fill=SUB)
+                cv.itemconfig(status_lbl,text="Preparing\u2026",fill=INK); cv.itemconfig(sub_lbl,text="setting up tools",fill=SUB)
         try:
             _st=cv.itemcget(status_lbl,"text")          # 글자가 바뀔 때만 재배치 → 매 프레임 1px 흔들림(왔다갔다) 방지
             if _st!=_rec.get("txt"):
