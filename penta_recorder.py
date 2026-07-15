@@ -862,17 +862,18 @@ def log(m):
     except Exception: pass
     _log_to_file(line)
     s = str(m)
-    if any(k in s for k in ("error", "Error", "failed", "Failed", "exception", "Traceback")) and ("restarting" not in s):
+    if any(k in s for k in ("error", "Error", "failed", "Failed", "exception", "Traceback", "오류", "실패")) and ("restarting" not in s) and ("다시 시작" not in s):
         LAST_ERR["msg"] = s[:240]; LAST_ERR["t"] = time.time()
-    if "Recording started" in s:
+    if ("Recording started" in s) or ("\u25cf 녹화 시작" in s):
         REC_STATE["recording"] = True
         if "WGC" in s: REC_STATE["capture"] = "WGC"
         elif "gdigrab" in s: REC_STATE["capture"] = "GDI"
-        elif "Monitor" in s: REC_STATE["capture"] = "DXGI"
-    elif ("Recording stopped" in s) or ("Idle" in s) or ("Game ended" in s): REC_STATE["recording"] = False
-    if "Ready." in s: REC_STATE["ready"] = True
+        elif ("Monitor" in s) or ("모니터" in s): REC_STATE["capture"] = "DXGI"
+    elif ("Recording stopped" in s) or ("\u25a0 녹화 중지" in s) or ("Idle" in s) or ("대기." in s) or ("Game ended" in s) or ("게임 종료" in s): REC_STATE["recording"] = False
+    if ("Ready." in s) or ("준비 완료. 롤" in s): REC_STATE["ready"] = True
     if s.startswith("Encoder:"): REC_STATE["encoder"] = s.split("Encoder:", 1)[1].strip()
-    if "Upload complete" in s: REC_STATE["uploaded_at"] = time.time()
+    elif s.startswith("인코더:"): REC_STATE["encoder"] = s.split("인코더:", 1)[1].strip()
+    if ("Upload complete" in s) or ("업로드 완료" in s): REC_STATE["uploaded_at"] = time.time()
     try: GUI_Q.put_nowait(line)
     except Exception: pass
     try:
@@ -911,7 +912,7 @@ def _write_crash(exc_type, exc, tb, where="main"):
     except Exception:
         pass
     try:
-        log("CRASH (%s): %s - details saved to crash.log" % (where, getattr(exc_type, "__name__", "?")))
+        log("치명적 오류 (%s): %s - 자세한 내용은 crash.log 에 저장됨" % (where, getattr(exc_type, "__name__", "?")))
     except Exception:
         pass
 
@@ -1014,7 +1015,7 @@ def load_or_make_config():
             except Exception:
                 try: os.remove(CONFIG_PATH)
                 except Exception: pass
-            log(f"config.json was corrupt — recreating with defaults (old file backed up as config.json.broken): {e}")
+            log(f"config.json 손상 — 기본값으로 재생성(기존 파일은 config.json.broken 백업): {e}")
             cfg = None
     if cfg is None:
         cfg = {
@@ -1045,7 +1046,7 @@ def load_or_make_config():
             "audio_device": "",  # 녹음할 출력장치 이름(부분일치). 빈 값 = 기본 출력장치. 특정 장치를 고르면 그 장치 소리만 녹음.
         }
         _atomic_write_json(CONFIG_PATH, cfg)
-        log(f"Config created → {CONFIG_PATH}")
+        log(f"설정 파일 생성 → {CONFIG_PATH}")
     # service_key 영구보관: 한 번 넣으면 data 폴더에 저장 → 이후 zip 통째로 덮어써도 유지
     try:
         _sk = ((cfg.get("supabase") or {}).get("service_key") or "").strip()
@@ -1067,13 +1068,13 @@ def ensure_audio():
     except Exception:
         pass
     try:
-        log("Setting up audio engine (pyaudiowpatch, first run)…")
+        log("오디오 엔진 설치 중 (pyaudiowpatch, 최초 1회)…")
         _run([sys.executable, "-m", "pip", "install", "-q", "pyaudiowpatch", "--break-system-packages"], timeout=300)
         import pyaudiowpatch  # noqa
-        log("Audio engine ready.")
+        log("오디오 엔진 준비 완료.")
         return True
     except Exception as e:
-        log(f"  (audio) pyaudiowpatch install failed → recording without sound. Manual: pip install pyaudiowpatch ({e})")
+        log(f"  (오디오) pyaudiowpatch 설치 실패 → 무음으로 녹화. 수동 설치: pip install pyaudiowpatch ({e})")
         return False
 
 def _bin_dir():
@@ -1105,13 +1106,13 @@ def ensure_ffmpeg():
             shutil.copy2(legacy, local)
             lp = os.path.join(HERE, "ffprobe.exe")
             if os.path.isfile(lp): shutil.copy2(lp, os.path.join(bindir, "ffprobe.exe"))
-            log("Reusing existing ffmpeg (moved to shared folder - no re-download on future updates).")
+            log("기존 ffmpeg 재사용 (공용 폴더 보관 - 업데이트 때 다시 받지 않음).")
             return local
         except Exception:
             return legacy
     found = shutil.which("ffmpeg")
     if found: return found
-    log("Downloading ffmpeg\u2026 (~80MB, first run only, 1\u20133 min) \u2014 kept in a shared folder, so updates won't re-download.")
+    log("ffmpeg 내려받는 중\u2026 (~80MB, 최초 1회, 1\u20133분) \u2014 공용 폴더에 보관되어 업데이트 때 다시 받지 않습니다.")
     sources = [
         ("gyan-essentials", "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"),
         ("BtbN", "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip"),
@@ -1135,7 +1136,7 @@ def ensure_ffmpeg():
             except Exception as e:
                 last = e
                 if _i < tries - 1:
-                    log(f"    Retrying {_i+1}/{tries-1} ({type(e).__name__})\u2026"); time.sleep(2.0 * (_i + 1))
+                    log(f"    재시도 {_i+1}/{tries-1} ({type(e).__name__})\u2026"); time.sleep(2.0 * (_i + 1))
         raise last
     # BtbN 최신 릴리스에서 win64-gpl 자산을 동적으로 찾아 추가 (파일명이 또 바뀌어도 대응)
     try:
@@ -1162,15 +1163,15 @@ def ensure_ffmpeg():
                         shutil.copyfileobj(src, dst)
             except Exception:
                 pass
-            log(f"ffmpeg ready. (source: {label})")
+            log(f"ffmpeg 준비 완료. (출처: {label})")
             return local
         except Exception as e:
-            log(f"    {label} failed: {e} \u2192 trying next source")
-    log("[!] ffmpeg auto-download failed on all sources. Please download manually:")
-    log("    1) Download https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip")
-    log("    2) Unzip and find  bin\\ffmpeg.exe  inside")
-    log(f"    3) Copy it to this folder:  {HERE}")
-    log("    4) Run penta_recorder.exe again")
+            log(f"    {label} 실패: {e} \u2192 다음 소스로 시도")
+    log("[!] ffmpeg 자동 다운로드가 모든 소스에서 실패했습니다. 직접 내려받아 주세요:")
+    log("    1) 내려받기: https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip")
+    log("    2) 압축 풀고 안의  bin\\ffmpeg.exe  찾기")
+    log(f"    3) 이 폴더에 복사:  {HERE}")
+    log("    4) penta_recorder.exe 다시 실행")
     return None
 
 
@@ -1252,7 +1253,7 @@ def sb_upload(local, path, ctype, on_progress=None, ident=None):
         try:
             return _upload_signed(local, path, ctype, ident, on_progress)
         except Exception as e:
-            log("Signed upload unavailable (%s) - falling back to direct upload." % e)
+            log("서명 업로드 불가 (%s) - 직접 업로드로 대체합니다." % e)
     return _upload_direct(local, path, ctype, on_progress)
 
 def _upload_signed(local, path, ctype, ident, on_progress=None):
@@ -1265,7 +1266,7 @@ def _upload_signed(local, path, ctype, ident, on_progress=None):
     for attempt in range(3):
         if attempt:
             wait = 3 if attempt == 1 else 8
-            log("Upload retry %d/2 in %ds... (%s)" % (attempt, wait, last))
+            log("업로드 재시도 %d/2, %d초 후... (%s)" % (attempt, wait, last))
             time.sleep(wait)
         try:
             r = requests.post(org + "/api/storage",
@@ -1312,7 +1313,7 @@ def _upload_direct(local, path, ctype, on_progress=None):
     for attempt in range(3):                      # 즉시 1회 + 백오프(3s, 8s) 2회
         if attempt:
             wait = 3 if attempt == 1 else 8
-            log("Upload retry %d/2 in %ds... (%s)" % (attempt, wait, last_err))
+            log("업로드 재시도 %d/2, %d초 후... (%s)" % (attempt, wait, last_err))
             time.sleep(wait)
         try:
             with open(local, "rb") as f:          # 재시도마다 파일을 처음부터 다시 읽음
@@ -1336,26 +1337,26 @@ def cloud_selftest():
     try:
         r = requests.post(_gallery_origin() + "/api/storage", json={"action": "ping"}, timeout=10)
         if r.status_code in (200, 400, 401, 405) and "error" in (r.text or ""):
-            log("Cloud upload self-test: OK \u2713  (signed route /api/storage is live - game uploads ready)")
+            log("클라우드 업로드 자가 진단: 정상 \u2713  (서명 경로 /api/storage 동작 - 게임 업로드 준비됨)")
             return
         # 404 HTML 등 -> 함수 미배포로 간주하고 폴백 진단으로
-        log("Signed route check: unexpected response %s - trying legacy direct upload..." % r.status_code)
+        log("서명 경로 점검: 예상치 못한 응답 %s - 레거시 직접 업로드로 시도..." % r.status_code)
     except Exception as e:
-        log("Signed route check: unreachable (%s) - trying legacy direct upload..." % e.__class__.__name__)
+        log("서명 경로 점검: 연결 불가 (%s) - 레거시 직접 업로드로 시도..." % e.__class__.__name__)
     # 2) 폴백: 레거시 직접 업로드 (보안 패스 이전 배포에서만 성공)
     p = os.path.join(tempfile.gettempdir(), "penta_selftest.txt")
     try:
         with open(p, "w", encoding="utf-8") as _f: _f.write("penta")
         _upload_direct(p, "_selftest/ping.txt", "text/plain")   # x-upsert 라 매번 같은 파일 덮어씀(누적 없음)
-        log("Cloud upload self-test: OK \u2713  (legacy direct upload)")
+        log("클라우드 업로드 자가 진단: 정상 \u2713  (레거시 직접 업로드)")
     except Exception as e:
         _em = str(e)
         if ("row-level security" in _em) or (" 403" in _em) or ("403" in _em) or ("Unauthorized" in _em):
             # 직접 업로드 차단 + 서명 프록시도 없음 -> 진짜 문제 (functions 미배포)
-            log("Cloud upload self-test failed: direct upload is blocked by policy AND the signed route is not deployed.")
-            log("\u2192 Fix: push netlify/functions/storage.js + netlify.toml, and set SUPABASE_SERVICE_KEY in Netlify env.")
+            log("클라우드 업로드 자가 진단 실패: 직접 업로드는 정책으로 막혀 있고, 서명 경로도 배포되지 않았습니다.")
+            log("\u2192 해결: netlify/functions/storage.js + netlify.toml 푸시 후 Netlify 환경변수 SUPABASE_SERVICE_KEY 설정.")
         else:
-            log(f"Cloud upload self-test failed: {e}")
+            log(f"클라우드 업로드 자가 진단 실패: {e}")
     finally:
         try: os.remove(p)
         except Exception: pass
@@ -1400,7 +1401,7 @@ def check_update():
         if new and new > cur:
             UPDATE_INFO["tag"] = tag
             UPDATE_INFO["url"] = (CFG.get("gallery_url") or "https://mypenta.netlify.app").rstrip("/") + "/download.html"
-            log("Update available: %s (you have %s). Get it from the download page." % (tag, APP_VERSION))
+            log("새 버전 %s 발견 (현재 %s). 다운로드 페이지에서 받아 주세요." % (tag, APP_VERSION))
     except Exception:
         pass
 
@@ -1420,7 +1421,7 @@ def enqueue_failed_upload(entry):
     q = [e for e in _rq_load() if e.get("id") != entry.get("id")]
     entry["attempts"] = 0; entry["queued_at"] = time.time()
     q.append(entry); _rq_save(q)
-    log("Upload saved to retry queue - will retry on next launch. (pending: %d)" % len(q))
+    log("업로드를 재시도 대기열에 저장했습니다 - 다음 실행 때 다시 시도합니다. (대기: %d)" % len(q))
 
 def process_retry_queue():
     """시작 시 실패 큐 처리: 재업로드 성공 → 제거 / 파일 없음·6회째 실패 → 포기."""
@@ -1428,16 +1429,16 @@ def process_retry_queue():
     if not q:
         return
     if not sb_writable():
-        log("Retry queue: %d pending, but cloud is not configured - keeping for later." % len(q)); return
-    log("Retry queue: %d pending upload(s). Retrying now..." % len(q))
+        log("재시도 대기열: %d건 대기 중이지만 클라우드 미설정 - 나중을 위해 보관합니다." % len(q)); return
+    log("재시도 대기열: %d건 대기 중. 지금 다시 시도합니다..." % len(q))
     rest = []
     for e in q:
         vid = e.get("video_file"); row = e.get("row") or {}; eid = e.get("id") or "?"
         e["attempts"] = int(e.get("attempts") or 0) + 1
         if not (vid and os.path.isfile(vid)):
-            log("Retry dropped (file missing): %s" % eid); continue
+            log("재시도 제외 (파일 없음): %s" % eid); continue
         if e["attempts"] > 5:
-            log("Retry dropped (too many attempts): %s" % eid); continue
+            log("재시도 제외 (시도 횟수 초과): %s" % eid); continue
         try:
             safe = e.get("safe") or ""
             safe = "".join(ch if (ch.isascii() and (ch.isalnum() or ch in "._-")) else "_" for ch in safe)   # 구버전 큐의 한글/특수문자 파일명 → ASCII (InvalidKey 재실패 방지)
@@ -1462,9 +1463,9 @@ def process_retry_queue():
                     pass
             if not done:
                 sb_insert_match(row)
-            log("Retry upload OK: %s" % eid)
+            log("재시도 업로드 성공: %s" % eid)
         except Exception as ex:
-            log("Retry upload failed (%s): %s" % (eid, ex))
+            log("재시도 업로드 실패 (%s): %s" % (eid, ex))
             rest.append(e)
     _rq_save(rest)
 
@@ -1472,12 +1473,12 @@ def cleanup_recordings(manual=False):
     """원본 보관 정책: 최근 keep_games판 + 총 keep_gb GB 상한 초과분을 오래된 순으로 삭제.
     안전장치: 녹화/업로드 중이면 건너뜀 / 30분 내 파일 보존 / 재시도 큐가 참조하는 파일 보존."""
     if _busy_now():
-        if manual: log("Cleanup skipped: recording or upload in progress. Try again later.")
+        if manual: log("정리 생략: 녹화/업로드 진행 중입니다. 잠시 후 다시 시도하세요.")
         return
     keep_n = int(CFG.get("keep_games", 20) or 0)
     keep_gb = float(CFG.get("keep_gb", 30) or 0)
     if keep_n <= 0 and keep_gb <= 0:
-        if manual: log("Cleanup skipped: auto-clean is off (keep_games=0, keep_gb=0).")
+        if manual: log("정리 생략: 자동 정리 꺼짐 (keep_games=0, keep_gb=0).")
         return
     protected = set()   # 재시도 큐가 참조하는 파일·폴더는 절대 삭제 금지
     for e in _rq_load():
@@ -1542,9 +1543,9 @@ def cleanup_recordings(manual=False):
         for _m, p in (subs[keep_n:] if keep_n > 0 else []):
             _rm(p)
     except Exception as e:
-        log("Cleanup error: %s" % e); return
+        log("정리 오류: %s" % e); return
     if removed or manual:
-        log("Cleanup done: %d item(s) removed, %.2f GB freed. (keep: %s games / %s GB cap)"
+        log("정리 완료: %d개 삭제, %.2f GB 확보. (보관: %s게임 / 상한 %s GB)"
             % (removed, freed / 1073741824,
                (str(keep_n) if keep_n > 0 else "all"),
                (("%g" % keep_gb) if keep_gb > 0 else "no")))
@@ -1554,7 +1555,7 @@ def sb_insert_match(row):
     try:
         return sb_rpc("upload_match_anon", {"p_row": row})
     except Exception as e:
-        log("Anon RPC insert unavailable (%s) - trying legacy direct insert." % str(e)[:120])
+        log("익명 RPC 등록 불가 (%s) - 레거시 직접 등록으로 시도." % str(e)[:120])
     return _insert_match_direct(row)
 
 def _insert_match_direct(row):
@@ -1647,13 +1648,13 @@ def _trim_front(video_path, cut_sec):
                  capture_output=True)
         if r.returncode == 0 and os.path.isfile(tmp) and os.path.getsize(tmp) > 1024:
             os.replace(tmp, video_path)
-            log("Trimmed the loading intro (no analysis) so it starts near the countdown")
+            log("로딩 구간을 잘라 카운트다운 근처에서 시작합니다 (분석 없음)")
             return float(cut_sec)
         else:
             try: os.remove(tmp)
             except OSError: pass
     except Exception as e:
-        log(f"Skipped front-trim (keeping original): {e}")
+        log(f"앞부분 컷 생략 (원본 유지): {e}")
     return 0.0
 
 
@@ -1669,13 +1670,13 @@ def _trim_lead(video_path, game_len_sec, lead=6.0):
                  capture_output=True)
         if r.returncode == 0 and os.path.isfile(tmp) and os.path.getsize(tmp) > 1024:
             os.replace(tmp, video_path)
-            log("Trimmed the lobby/loading intro so it starts at the countdown")
+            log("로비/로딩 구간을 잘라 카운트다운부터 시작합니다")
             return max(0.0, orig - keep) if orig else 0.0
         else:
             try: os.remove(tmp)
             except OSError: pass
     except Exception as e:
-        log(f"Skipped trimming (keeping original): {e}")
+        log(f"트리밍 생략 (원본 유지): {e}")
     return 0.0
 
 
@@ -1714,11 +1715,11 @@ def _hw_ok(disp, args):
                  capture_output=True, text=True, timeout=30)
         if r.returncode != 0:
             errs = [l for l in (r.stderr or "").splitlines() if l.strip()]
-            if errs: log("  %s error: %s" % (disp, "  /  ".join(errs[-2:])))
+            if errs: log("  %s 오류: %s" % (disp, "  /  ".join(errs[-2:])))
             return False
         return True
     except Exception as e:
-        log("  %s test exception: %s" % (disp, e))
+        log("  %s 테스트 예외: %s" % (disp, e))
         return False
 
 def _encoder_args():
@@ -1744,7 +1745,7 @@ def _encoder_args():
                 continue
             if _hw_ok(disp, args):
                 chosen = (list(args), disp); break
-            log("  %s is listed but failed the encode test - trying next encoder." % disp)
+            log("  %s 는 감지됐지만 인코딩 테스트 실패 - 다음 인코더로 시도." % disp)
     if chosen:
         _ENC_IS_SW = False
         _ENC_CACHE, name = chosen
@@ -1753,7 +1754,7 @@ def _encoder_args():
         preset = (CFG.get("preset") or "auto").lower()
         if preset in ("auto", ""): preset = "superfast"   # 소프트웨어는 게임 끊김 방지 위해 가벼운 프리셋
         _ENC_CACHE = ["-c:v", "libx264", "-preset", preset, "-crf", "21", "-pix_fmt", "yuv420p"]; name = f"x264 ({preset})"
-    log(f"Encoder: {name}")
+    log(f"인코더: {name}")
     return _ENC_CACHE
 
 def _probe_height(src):
@@ -1825,7 +1826,7 @@ def make_preview(src, dst, dur=0):
     vf = [] if (sh and sh <= 1080) else ["-vf", "scale=-2:'min(1080,ih)':flags=lanczos"]
     hws = ([["-hwaccel", "cuda"], []] if "h264_nvenc" in enc else [[]])   # NVENC: GPU decode first, CPU fallback
     try:
-        log("Compressing for gallery (1080p, sharper)\u2026")
+        log("갤러리용 압축 중 (1080p, 또렷하게)\u2026")
         REC_STATE["prep_pct"] = 0
         rc = 1
         for _hw in hws:
@@ -1836,10 +1837,10 @@ def make_preview(src, dst, dur=0):
                      dur, 5400)
             if rc == 0 and os.path.isfile(dst) and os.path.getsize(dst) > 0:
                 return dst
-            if _hw: log("GPU-decode attempt failed (code %s) - retrying with CPU decode." % rc)
-        log("Gallery re-encode returned code %s \u2014 uploading original instead." % rc)
+            if _hw: log("GPU 디코드 실패 (code %s) - CPU 디코드로 재시도." % rc)
+        log("갤러리 재인코딩 코드 %s \u2014 원본을 업로드합니다." % rc)
     except Exception as e:
-        log("Gallery re-encode failed (%s) \u2014 uploading original instead." % e)
+        log("갤러리 재인코딩 실패 (%s) \u2014 원본을 업로드합니다." % e)
     return None
 
 
@@ -1932,7 +1933,7 @@ class Recorder:
                 try:
                     _capture_process_audio(box["pid"], box); return   # 게임 소리만 캡처 성공 → 끝까지 녹음
                 except Exception as e:
-                    log(f"  (audio) game-only capture failed \u2192 using system sound ({e})")
+                    log(f"  (오디오) 게임 소리만 캡처 실패 \u2192 시스템 소리 사용 ({e})")
                     box["ok"] = False; box["t0"] = None
                     try:
                         if os.path.isfile(box["path"]): os.remove(box["path"])
@@ -1941,7 +1942,7 @@ class Recorder:
             try:
                 import pyaudiowpatch as pa, wave
             except Exception as e:
-                log(f"  (audio) pyaudiowpatch not installed \u2192 recording without sound. Install: pip install pyaudiowpatch ({e})"); return
+                log(f"  (오디오) pyaudiowpatch 미설치 \u2192 무음으로 녹화. 설치: pip install pyaudiowpatch ({e})"); return
             p = stream = wf = None
             try:
                 p = pa.PyAudio()
@@ -1952,7 +1953,7 @@ class Recorder:
                         for lb in p.get_loopback_device_info_generator():
                             if _want.lower() in str(lb.get("name","")).lower(): dev = lb; break
                     except Exception: dev = None
-                    if dev is None: log("  (audio) chosen device not found - falling back to default output")
+                    if dev is None: log("  (오디오) 선택한 장치를 찾지 못해 기본 출력으로 대체합니다")
                 if dev is None:
                     try:
                         dev = p.get_default_wasapi_loopback()           # 기본 출력장치의 루프백
@@ -1968,12 +1969,12 @@ class Recorder:
                 stream = p.open(format=pa.paInt16, channels=ch, rate=rate, input=True,
                                 input_device_index=dev["index"], frames_per_buffer=2048)
                 box["t0"] = time.time(); box["ok"] = True
-                log(f"  ♪ Audio recording started ({str(dev.get('name','?'))[:26]} · {rate}Hz {ch}ch)")
+                log(f"  ♪ 오디오 녹음 시작 ({str(dev.get('name','?'))[:26]} · {rate}Hz {ch}ch)")
                 while not box["stop"].is_set():
                     try: wf.writeframes(stream.read(2048, exception_on_overflow=False))
                     except Exception: break
             except Exception as e:
-                log(f"  (audio) capture failed → recording without sound: {e}")
+                log(f"  (오디오) 캡처 실패 → 무음으로 녹화: {e}")
             finally:
                 for fn in (lambda: stream and stream.stop_stream(), lambda: stream and stream.close(),
                            lambda: wf and wf.close(), lambda: p and p.terminate()):
@@ -2027,14 +2028,14 @@ class Recorder:
                 for f in (vid, wav):
                     try: os.remove(f)
                     except OSError: pass
-                self.path = out; log("■ Audio merged"); return out
-            log("  (audio) merge result empty → using video only")
+                self.path = out; log("■ 오디오 합침"); return out
+            log("  (오디오) 합친 결과가 비어 있어 영상만 사용합니다")
             try:
                 if os.path.isfile(out): os.remove(out)
             except OSError: pass
             return vid
         except Exception as e:
-            log(f"  (audio) merge failed → video only: {e}"); return vid
+            log(f"  (오디오) 합치기 실패 → 영상만 저장: {e}"); return vid
 
     def _start_wgc(self, verify=True):
         """WGC(OBS식)로 프레임을 받아 ffmpeg로 인코딩. 정지화면이어도 직전 프레임을 고정 fps로 계속 먹임(전체화면 게임도 잡힘)."""
@@ -2050,15 +2051,15 @@ class Recorder:
             from windows_capture import WindowsCapture
         except ImportError:
             try:
-                log("Installing WGC engine (windows-capture)…")
+                log("WGC 엔진 설치 중 (windows-capture)…")
                 _run([sys.executable, "-m", "pip", "install", "-q", "windows-capture", "--break-system-packages"], timeout=240)
                 from windows_capture import WindowsCapture
             except Exception as e:
-                log("  WGC engine not installed here \u2014 using GPU desktop capture (ddagrab) instead."); return False
+                log("  WGC 엔진이 없어 GPU 데스크톱 캡처(ddagrab)로 대체합니다."); return False
         try:
             import numpy as _np
         except Exception as e:
-            log(f"  WGC unavailable (numpy missing: {e})"); return False
+            log(f"  WGC 사용 불가 (numpy 없음: {e})"); return False
         self.path = os.path.join(REC_DIR, f"clip_{datetime.datetime.now():%Y%m%d_%H%M%S}.mp4")
         enc = _encoder_args(); pathx = self.path; fps = self.fps
         shared = {"buf": None, "wh": None, "n": 0, "err": None}
@@ -2122,7 +2123,7 @@ class Recorder:
             cmd = [FFMPEG, "-y", "-loglevel", "error",
                    "-f", "rawvideo", "-pixel_format", "bgra", "-video_size", f"{w}x{h}", "-framerate", str(fps),
                    "-i", "pipe:", *vf, *enc, "-movflags", "+faststart", pathx]
-            if vf: log(f"  Lowering CPU load: capturing {h}p → encoding at {_target_height(h)}p")
+            if vf: log(f"  CPU 부하 완화: {h}p 캡처 → {_target_height(h)}p 인코딩")
             errlog = os.path.join(REC_DIR, "wgc_ffmpeg.log")
             try: _ef = open(errlog, "w", encoding="utf-8", errors="replace")
             except Exception: _ef = subprocess.DEVNULL
@@ -2166,7 +2167,7 @@ class Recorder:
         try:
             if _wtitle:
                 cap, control = _build_and_start(False, _wtitle)   # 게임 창만 캡처
-                log("  WGC target: game window (\"%s\") - Alt+Tab won't be recorded." % _wtitle[:40])
+                log("  WGC 대상: 게임 창(\"%s\") - Alt+Tab 화면은 녹화되지 않습니다." % _wtitle[:40])
             else:
                 cap, control = _build_and_start(False)            # 모니터 전체(폴백)
         except Exception:
@@ -2174,22 +2175,22 @@ class Recorder:
             try:
                 if _wtitle:
                     cap, control = _build_and_start(False)
-                    log("  WGC: window capture failed - fell back to full monitor.")
+                    log("  WGC: 창 캡처 실패 - 전체 모니터 캡처로 대체했습니다.")
                 else:
                     raise RuntimeError("monitor capture also failed")
             except Exception:
                 try:
                     cap, control = _build_and_start(None)     # WGC 기본(가벼움) — 빌드에 따라 노란 테두리가 남을 수 있음
-                    log("  WGC: this build keeps the default capture border (kept WGC for low overhead).")
+                    log("  WGC: 이 빌드는 기본 캡처 테두리를 유지합니다 (낮은 부하를 위해 WGC 유지).")
                 except Exception:
-                    log("  WGC not usable here \u2014 using GPU desktop capture (ddagrab) instead.")
+                    log("  여기선 WGC를 쓸 수 없어 GPU 데스크톱 캡처(ddagrab)로 대체합니다.")
                     return False
         ft = threading.Thread(target=feeder, daemon=True); ft.start()
         self._wgc_control = control
         self._wgc_state = {"stop": stop_ev, "feeder": ft, "proc_box": proc_box}
         self.backend = "wgc"
         if not verify:
-            log(f"● Recording started (WGC · Monitor {midx})"); return True
+            log(f"● 녹화 시작 (WGC · 모니터 {midx})"); return True
         # --- WGC 검증 ---
         # WGC는 프레임 카운터로 '화면 잡힘'을 직접 확인할 수 있다. 파일 크기는 ffmpeg가 쓰는 중인지 확인용.
         # (NVENC는 첫 키프레임을 측정 전에 쓰고 정적 화면에선 이후 증가가 작아, '델타 40KB' 방식은 오판함 → 절대 크기로 판단)
@@ -2210,18 +2211,18 @@ class Recorder:
         ferr = _fflog()
         ok = (n1 >= 15) and alive and (not ferr)   # 프레임 들어옴 + ffmpeg 정상 동작
         if ok and _sz() >= 8000:
-            log(f"● Recording started (WGC · Monitor {midx} — capture verified)"); return True
+            log(f"● 녹화 시작 (WGC · 모니터 {midx} — 캡처 확인됨)"); return True
         if ok:                                       # 파일이 아직 작으면(정적 화면) 잠깐 더 대기 후 재확인
             time.sleep(2.5)
             if _sz() >= 8000:
-                log(f"● Recording started (WGC · Monitor {midx} — capture verified)"); return True
+                log(f"● 녹화 시작 (WGC · 모니터 {midx} — 캡처 확인됨)"); return True
         stop_ev.set()
         try: control.stop()
         except Exception: pass
         try: ft.join(timeout=5)
         except Exception: pass
         self.backend = "ffmpeg"; self._wgc_control = None; self._wgc_state = None
-        log("  WGC produced no frames (frames:{}, ffmpeg:{}, file:{}B, err:{}) → trying another method".format(
+        log("  WGC 프레임 없음 (frames:{}, ffmpeg:{}, file:{}B, err:{}) → 다른 캡처 방식으로 시도".format(
             n1, "alive" if alive else "dead", _sz(), ferr or "none"))
         return False
 
@@ -2238,7 +2239,7 @@ class Recorder:
                 else:
                     self._spawn(self.mode, self.output_idx); time.sleep(1.0)
                     if self._alive():
-                        log(f"● Recording started ({'Monitor '+str(self.output_idx) if self.mode=='ddagrab' else 'gdigrab'})"); return True
+                        log(f"● 녹화 시작 ({'모니터 '+str(self.output_idx) if self.mode=='ddagrab' else 'gdigrab'})"); return True
             except Exception: pass
             self.verified = False
         # 1순위: WGC (auto/wgc) — 전체화면도 잡히는 OBS식 엔진
@@ -2247,9 +2248,9 @@ class Recorder:
                 if self._start_wgc(verify=True):
                     self.verified = True; self.verified_backend = "wgc"; return True
             except Exception:
-                log("  WGC not usable here \u2014 using GPU desktop capture (ddagrab) instead.")
+                log("  여기선 WGC를 쓸 수 없어 GPU 데스크톱 캡처(ddagrab)로 대체합니다.")
             if capmode == "wgc":
-                log("  WGC unavailable \u2014 falling back to ddagrab/gdigrab.")
+                log("  WGC 사용 불가 \u2014 ddagrab/gdigrab 으로 대체합니다.")
         # 2순위: ddagrab(모니터 0/1/2) → gdigrab
         ci = CFG.get("output_idx", "auto")
         if isinstance(ci, int) or (isinstance(ci, str) and ci.isdigit()):
@@ -2264,16 +2265,16 @@ class Recorder:
                 if self._capturing():
                     self.mode = mode; self.output_idx = idx; self.backend = "ffmpeg"
                     self.verified = True; self.verified_backend = "ffmpeg"; self.warned_black = False
-                    log(f"● Recording started ({'Monitor '+str(idx) if mode=='ddagrab' else 'gdigrab'}) — capture verified")
+                    log(f"● 녹화 시작 ({'모니터 '+str(idx) if mode=='ddagrab' else 'gdigrab'}) — 캡처 확인됨")
                     return True
                 self._kill()
             except Exception as e:
-                log(f"Recording start error ({mode} #{idx}): {e}"); self._kill()
+                log(f"녹화 시작 오류 ({mode} #{idx}): {e}"); self._kill()
         if not self.warned_black:
             self.warned_black = True
-            log("[!] Couldn't verify capture (the screen may be black). Recording continues anyway.")
-            log("    • Play a game first and check the recording (it may be a false alarm from the loading screen)")
-            log("    • Set \"capture\" to \"wgc\" in config.json, or run League in 'windowed (fullscreen)' mode")
+            log("[!] 캡처 확인 실패(화면이 검게 나올 수 있음). 녹화는 계속합니다.")
+            log("    • 먼저 게임을 한 판 해서 녹화를 확인해 보세요 (로딩 화면 오탐일 수 있음)")
+            log("    • config.json 의 \"capture\" 를 \"wgc\" 로 바꾸거나, 롤을 '전체 창 모드'로 실행해 보세요")
         try:
             self._spawn("ddagrab", 0); time.sleep(1.0); self.mode = "ddagrab"; self.output_idx = 0; self.backend = "ffmpeg"
             return self._alive()
@@ -2294,7 +2295,7 @@ class Recorder:
                 try: ft.join(timeout=20)   # 피더가 ffmpeg stdin 닫고 마무리
                 except Exception: pass
             self.backend = "ffmpeg"; self._wgc_control = None; self._wgc_state = None
-            log("■ Recording stopped")
+            log("■ 녹화 중지")
             return self._finalize()
         if not self.proc: return None
         p = self.proc; self.proc = None
@@ -2305,7 +2306,7 @@ class Recorder:
                 try: p.wait(timeout=12)
                 except subprocess.TimeoutExpired: p.terminate()
         except Exception: pass
-        log("■ Recording stopped")
+        log("■ 녹화 중지")
         return self._finalize()
 
 def _lol_game_pid():
@@ -2443,7 +2444,7 @@ def _capture_process_audio(pid, box):
 
         wf = wave.open(box["path"], "wb"); wf.setnchannels(2); wf.setsampwidth(2); wf.setframerate(SPS)
         box["t0"] = _t.time(); box["ok"] = True
-        log("  \u266a Audio (game only) started \u2014 League of Legends \u00b7 48000Hz 2ch")
+        log("  \u266a 오디오(게임 소리만) 시작 \u2014 League of Legends \u00b7 48000Hz 2ch")
         BPF = 4
         try:
             while not box["stop"].is_set():
@@ -2539,7 +2540,7 @@ def _discard(video_path, reason):
     REC_STATE["preparing"] = False
     REC_STATE["skipped_at"] = time.time()   # GUI 상태바에 몇 초간 '저장 안 함' 알림
     REC_STATE["skipped_why"] = reason
-    log(f"  Discarding (not saving) - {reason}")
+    log(f"  저장하지 않음 - {reason}")
     try:
         if video_path and os.path.isfile(video_path): os.remove(video_path)
     except OSError: pass
@@ -2561,9 +2562,9 @@ def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr", 
     # 화면 녹화 + (게임 종료 후) Riot 매치를 연결해 분석·업로드한다.
     # Riot 매치 연결이 안 되더라도(개발키 만료/레이트리밋/타이밍 등) 영상은 업로드하고 아카이브에 올린다.
     if not video_path or not os.path.isfile(video_path) or os.path.getsize(video_path) < 10000:
-        log("Video is empty → skipping registration."); return
+        log("영상이 비어 있어 등록을 건너뜁니다."); return
     if not riot_id:
-        return _discard(video_path, "Couldn't verify your Riot ID (may not be a game)")
+        return _discard(video_path, "내 Riot ID 확인 실패 (게임이 아닐 수 있음)")
 
     # --- Riot 매치 연결 시도 (실패해도 영상은 올린다; 분석만 비움) ---
     REC_STATE["preparing"] = True   # 업로드 준비중: 분석·트림·썸네일·인코딩 (업로드 직전까지)
@@ -2572,18 +2573,18 @@ def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr", 
         try:
             match, puuid = penta_lol.resolve_match(proxy_url, riot_id, start_ts, end_ts, platform)
         except Exception as e:
-            log(f"  Match lookup failed ({e}) — uploading the video without analysis.")
+            log(f"  매치 조회 실패 ({e}) — 분석 없이 영상만 업로드합니다.")
         if match:
             mid = (match.get("metadata") or {}).get("matchId") or str((match.get("info") or {}).get("gameId") or "")
             try:
                 timeline = penta_lol.proxy_get(proxy_url, "timeline", matchId=mid, platform=platform)
                 analysis = penta_lol.analyze_match(match, timeline) or {}
             except Exception as e:
-                log(f"  Analysis failed ({e}) — uploading the video without analysis."); analysis = {}
+                log(f"  분석 실패 ({e}) — 분석 없이 영상만 업로드합니다."); analysis = {}
         else:
-            log("  No Riot match linked (API key/timing) — uploading the video without analysis.")
+            log("  Riot 매치 연결 안 됨 (API 키/타이밍) — 분석 없이 영상만 업로드합니다.")
     else:
-        log("  proxy_url not set — Riot analysis skipped.")
+        log("  proxy_url 미설정 — Riot 분석 생략.")
 
     # Riot 분석이 비었으면(키 만료/레이트리밋/타이밍) Live Client 스냅샷으로 자체 분석 — 키 없이 동작
     if not analysis.get("players") and live_data and live_data.get("snaps"):
@@ -2592,9 +2593,9 @@ def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr", 
             _la = penta_lol.analyze_live(live_data.get("snaps"), live_data.get("events"), _mn) or {}
             if _la.get("players"):
                 analysis = _la
-                log(f"  Self-analysis from Live Client ({len(_la['players'])} players, no Riot key needed).")
+                log(f"  Live Client 자체 분석 완료 ({len(_la['players'])}명, Riot 키 불필요).")
         except Exception as e:
-            log(f"  Live self-analysis failed ({e}).")
+            log(f"  Live 자체 분석 실패 ({e}).")
 
     # --- 게임 길이: 분석값이 있으면 그걸, 없으면 영상 실제 길이로 ---
     analysis = analysis or {}   # 분석 실패(None)여도 dict 보장 → g0(멀티뷰 정렬 앵커)는 항상 저장된다
@@ -2603,7 +2604,7 @@ def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr", 
     if not dur:
         dur = _video_dur(video_path)
     if dur and dur < CFG.get("min_game_sec", 300):
-        return _discard(video_path, f"Game too short ({int(dur)}s)")
+        return _discard(video_path, f"게임이 너무 짧음 ({int(dur)}초)")
 
     # --- ID: 매치ID가 있으면 그걸, 없으면(Live 자체분석) 같은 게임 녹화자끼리 묶이도록 참가자 기반 ID, 그도 없으면 임시 ID ---
     if mid:
@@ -2648,14 +2649,14 @@ def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr", 
     except Exception: pass
     if not sb_writable():
         REC_STATE["preparing"] = False
-        log("Cloud (Supabase) not configured → keeping locally only."); return
+        log("클라우드(Supabase) 미설정 → 로컬에만 보관합니다."); return
     tmp_thumb = os.path.join(base, "thumb.jpg"); has_thumb = make_thumb(video_path, tmp_thumb)
     # 갤러리용 프리뷰(최대 1080p, 또렷한 화질)만 업로드. 원본(고화질)은 PC에 그대로 보관(다운로드 없음).
     preview = os.path.join(base, "preview.mp4")
     up_src = make_preview(video_path, preview, dur) or video_path
     up_size = os.path.getsize(up_src)
     if up_src != video_path:
-        log("Gallery video ready (1080p) \u2014 %d MB. Full-quality original kept on your PC." % (up_size // 1048576))
+        log("갤러리 영상 준비 완료 (1080p) \u2014 %d MB. 고화질 원본은 PC에 보관됩니다." % (up_size // 1048576))
     REC_STATE["preparing"] = False; REC_STATE["uploading"] = True; REC_STATE["upload_pct"] = 0
     def _up_cb(done, total):
         p = int(done * 100 / total) if total else 0
@@ -2684,7 +2685,7 @@ def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr", 
             "np": len(players), "players": players, "won": won,
             "analysis": analysis,
         }
-        log("Uploading video to cloud\u2026 (%s)" % (("%.1f GB" % (up_size / 1073741824)) if up_size >= 1073741824 else ("%d MB" % (up_size // 1048576))))
+        log("클라우드로 영상 업로드 중\u2026 (%s)" % (("%.1f GB" % (up_size / 1073741824)) if up_size >= 1073741824 else ("%d MB" % (up_size // 1048576))))
         _idp = None   # 서명 업로드용 신원 (로그인 필요 없음 — 기기 비밀키로 증명)
         try:
             _ik = riot_key(riot_id)
@@ -2707,21 +2708,21 @@ def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr", 
                 device_set(riot_id=riot_id)
                 sb_rpc("upload_match", {"p_puuid": _ident, "p_secret": _sec, "p_row": _row})
             except Exception as _e:
-                log(f"  Owner upload failed ({_e}) \u2014 falling back to anonymous upload."); sb_insert_match(_row)
+                log(f"  소유자 업로드 실패 ({_e}) \u2014 익명 업로드로 대체합니다."); sb_insert_match(_row)
         else:
             sb_insert_match(_row)
-        log(f"Upload complete \u2713 \u2014 now in your gallery. ({('matchId ' + gid) if mid else 'video only, no analysis'})")
+        log(f"업로드 완료 \u2713 \u2014 갤러리에 등록되었습니다. ({('matchId ' + gid) if mid else '영상만, 분석 없음'})")
     except Exception as e:
         _em = str(e)
-        log(f"Upload failed: {e}")          # ← 원본 Supabase 응답을 항상 표시(진단용; 더 이상 가리지 않음)
+        log(f"업로드 실패: {e}")          # ← 원본 Supabase 응답을 항상 표시(진단용; 더 이상 가리지 않음)
         if ("row-level security" in _em) or ("Unauthorized" in _em) or (" 403" in _em) or ("403:" in _em):
-            log("\u2192 Upload blocked by storage policy. Check: Netlify env SUPABASE_SERVICE_KEY + storage.js deployed (signed route /api/storage). Video is kept locally and queued for retry.")
+            log("\u2192 저장소 정책으로 업로드가 막혔습니다. 확인: Netlify 환경변수 SUPABASE_SERVICE_KEY + storage.js 배포(서명 경로).")
         try:   # 실패분은 큐에 저장 → 다음 실행 때 자동 재업로드 (파일은 정리 대상에서 보호됨)
             enqueue_failed_upload({"id": row_id, "safe": safe, "riot_id": riot_id or "",
                                    "video_file": up_src, "thumb_file": (tmp_thumb if has_thumb else None),
                                    "row": _row})
         except Exception as _qe:
-            log("Retry-queue save failed: %s" % _qe)
+            log("재시도 대기열 저장 실패: %s" % _qe)
     finally:
         REC_STATE["uploading"] = False; REC_STATE["preparing"] = False; REC_STATE["upload_pct"] = 0
         try: cleanup_recordings()   # 업로드 사이클이 끝날 때마다 보관 정책 적용
@@ -2736,17 +2737,17 @@ def recorder_loop(cfg):
     try: ensure_audio()
     except Exception: pass
     if not proxy:
-        log("Note: proxy_url in config.json is empty. Set your Netlify proxy URL to connect analysis.")
+        log("참고: config.json 의 proxy_url 이 비어 있습니다. Netlify 주소를 넣으면 경기 분석이 연결됩니다.")
     def _startup_maintenance():   # 준비를 막지 않도록 백그라운드에서: 버전 확인 → 실패 큐 재업로드 → 보관 정책 정리
-        if _parse_ver(APP_VERSION): log("Version: %s" % APP_VERSION)
+        if _parse_ver(APP_VERSION): log("버전: %s" % APP_VERSION)
         try: check_update()
         except Exception: pass
         try: process_retry_queue()
-        except Exception as e: log("Retry queue error: %s" % e)
+        except Exception as e: log("재시도 대기열 오류: %s" % e)
         try: cleanup_recordings()
         except Exception: pass
     threading.Thread(target=_startup_maintenance, daemon=True).start()
-    log("Ready. Start a League of Legends game and it records automatically. (Keep this window open.)")
+    log("준비 완료. 롤 게임을 시작하면 자동으로 녹화됩니다. (이 창은 켜 두세요.)")
     while True:
         try:
             run = sc_running(proc)   # 게임 인스턴스(League of Legends.exe) = 인게임
@@ -2756,7 +2757,7 @@ def recorder_loop(cfg):
             # ── 녹화 시작: 게임(로딩 화면)부터. 밴픽(챔피언 선택)은 녹화하지 않음 ──
             if run and not active:
                 if run:
-                    log("Game detected. Checking your info\u2026")
+                    log("게임 감지. 내 정보 확인 중\u2026")
                     for _ in range(20):
                         if penta_lol.game_active():
                             riot_id = penta_lol.my_riot_id() or riot_id; break
@@ -2764,11 +2765,11 @@ def recorder_loop(cfg):
                     _bind_account(riot_id)
                     started_cs = False
                 else:
-                    log("Champion select detected \u2014 recording from draft.")
+                    log("챔피언 선택 감지 \u2014 밴픽부터 녹화합니다.")
                     started_cs = True
                 _free = disk_free_gb()
                 if _free is not None and _free < 3.0:
-                    log("WARNING: low disk space - %.1f GB free. Recording may fail. Cleaning old originals..." % _free)
+                    log("경고: 디스크 공간 부족 - 남은 공간 %.1f GB. 녹화가 실패할 수 있어 오래된 원본을 정리합니다..." % _free)
                     try: cleanup_recordings()
                     except Exception: pass
                 start_ts = time.time(); active = rec.start(); last_hb = time.time()
@@ -2779,7 +2780,7 @@ def recorder_loop(cfg):
             if active and run:
                 saw_game = True; cs_grace = 0.0
                 if not rec._recording():
-                    log("Recording stream dropped \u2192 restarting automatically.")
+                    log("녹화 스트림 끊김 \u2192 자동으로 다시 시작합니다.")
                     active = rec.start()
                 if not riot_id and penta_lol.game_active():
                     riot_id = penta_lol.my_riot_id(); _bind_account(riot_id)
@@ -2792,7 +2793,7 @@ def recorder_loop(cfg):
                     if _ev:
                         if len(_ev) >= len(live_evts): live_evts = _ev   # 누락 방지: 가장 긴(누적) 이벤트 목록 유지 → 타워/전령 등 오브젝트 안 놓침
                         if not ended_at and any((e.get("EventName") == "GameEnd") for e in _ev):
-                            ended_at = time.time(); log("Victory/Defeat screen detected - finishing recording.")
+                            ended_at = time.time(); log("승리/패배 화면 감지 - 녹화를 마무리합니다.")
                 except Exception: pass
 
             # 게임 종료: "계속" 클릭(프로세스 종료) 또는 GameEnd(승리/패배 화면) 후 잠깐 - 둘 중 먼저. 늘어짐 방지.
@@ -2812,14 +2813,14 @@ def recorder_loop(cfg):
                 # GameEnd로 결과 화면을 이미 담았으면 추가 tail 생략, 아니면(감지 실패) 기존처럼 잠깐 더.
                 _tail = (0.0 if ended_at else float(cfg.get("postgame_tail", 6)))
                 if _tail > 0:
-                    log("Game over \u2014 capturing post-game screen\u2026")   # (매직 문자열 없음 → 녹화 상태 유지)
+                    log("게임 끝 \u2014 결과 화면을 담는 중\u2026")   # (매직 문자열 없음 → 녹화 상태 유지)
                     time.sleep(_tail)
-                log("Game ended \u2014 recorded %d:%02d." % divmod(int(time.time()-(start_ts or time.time())),60))
+                log("게임 종료 \u2014 %d:%02d 녹화됨." % divmod(int(time.time()-(start_ts or time.time())),60))
                 _vt0 = rec._vt0; vid = rec.stop(); active = False; rec.verified = False; saw_game = False; cs_grace = 0.0; ended_at = 0.0
                 end_ts = time.time()
                 if vid and os.path.isfile(vid):
                     threading.Thread(target=ingest_lol, args=(vid, riot_id, start_ts, end_ts, proxy, platform), kwargs={"live_data": {"snaps": list(live_snaps), "events": list(live_evts)}, "started_cs": started_cs, "vt0": _vt0}, daemon=True).start()
-                riot_id = None; start_ts = None; started_cs = False; log("Idle.")
+                riot_id = None; start_ts = None; started_cs = False; log("대기.")
 
             elif active and not run and in_cs:
                 cs_grace = 0.0   # 아직 챔피언 선택 → 계속 녹화
@@ -2829,12 +2830,12 @@ def recorder_loop(cfg):
                 # 챔피언 선택은 끝났는데 게임 프로세스가 아직 없음 = 로딩 중 or 닷지/취소
                 cs_grace += poll
                 if cs_grace > 120:   # 2분간 게임이 안 뜨면 닷지로 보고 클립 폐기(ingest 안 함)
-                    log("Champion select ended without a game (dodge?) \u2014 discarding clip.")
+                    log("게임 없이 챔피언 선택이 끝났습니다(닷지?) \u2014 클립을 버립니다.")
                     _v = rec.stop(); active = False; saw_game = False; cs_grace = 0.0; started_cs = False
                     try:
                         if _v and os.path.isfile(_v): os.remove(_v)
                     except Exception: pass
-                    riot_id = None; start_ts = None; log("Idle.")
+                    riot_id = None; start_ts = None; log("대기.")
                 elif not rec._recording():
                     active = rec.start()
 
@@ -2842,18 +2843,18 @@ def recorder_loop(cfg):
             if active and rec._recording():
                 REC_STATE.update(rec=True, text=("Recording" if saw_game else "Recording (champ select)"))
                 if start_ts and (time.time()-last_hb)>=300:    # 녹화 중 5분마다 진행 로그(타임라인에 살아있음)
-                    last_hb=time.time(); log("Recording\u2026 %d:%02d elapsed." % divmod(int(time.time()-start_ts),60))
+                    last_hb=time.time(); log("녹화 중\u2026 %d:%02d 경과." % divmod(int(time.time()-start_ts),60))
             elif run:
-                REC_STATE.update(rec=False, text="Game detected")
+                REC_STATE.update(rec=False, text="게임 감지")
             elif in_cs:
-                REC_STATE.update(rec=False, text="Champion select (recording starts at game)")
+                REC_STATE.update(rec=False, text="챔피언 선택 (게임 시작 시 녹화)")
             else:
-                REC_STATE.update(rec=False, text="Idle \u2014 auto-records when a game starts")
+                REC_STATE.update(rec=False, text="대기 \u2014 게임이 시작되면 자동 녹화")
             time.sleep(poll)
         except KeyboardInterrupt:
-            log("Quitting."); rec.stop(); break
+            log("종료합니다."); rec.stop(); break
         except Exception:
-            log("Error:\n" + traceback.format_exc()); time.sleep(poll)
+            log("오류:\n" + traceback.format_exc()); time.sleep(poll)
 
 # ===================== main =====================
 
@@ -2887,14 +2888,14 @@ def set_autostart(enable):
             cmd = _autostart_cmd()
             if not cmd: winreg.CloseKey(key); return False
             winreg.SetValueEx(key, "PENTA", 0, winreg.REG_SZ, cmd)
-            log("Registered to run at Windows startup (set autostart to false in config.json to disable)")
+            log("Windows 시작 프로그램에 등록했습니다 (해제: config.json 의 autostart 를 false)")
         else:
             try: winreg.DeleteValue(key, "PENTA")
             except FileNotFoundError: pass
         winreg.CloseKey(key)
         return True
     except Exception as e:
-        log(f"Skipped autostart setup: {e}")
+        log(f"시작 프로그램 등록 생략: {e}")
         return False
 
 def is_autostart():
@@ -2915,7 +2916,7 @@ def _apply_autostart(cfg):
     try:
         if is_autostart():
             set_autostart(False)
-            log("Removed PENTA from Windows startup programs.")
+            log("Windows 시작 프로그램에서 제거했습니다.")
     except Exception:
         pass
 
@@ -2981,11 +2982,11 @@ def start_login_bridge(url):
         try:
             _srv = http.server.ThreadingHTTPServer(("127.0.0.1", _port), _H)
             threading.Thread(target=_srv.serve_forever, daemon=True).start()
-            log("Web login bridge ready on 127.0.0.1:%d" % _port)
+            log("웹 로그인 브리지 준비 완료 (127.0.0.1:%d)" % _port)
             return _srv
         except Exception:
             continue
-    log("Web login bridge could not start (ports busy) - Archive button still works")
+    log("웹 로그인 브리지를 시작하지 못했습니다 (포트 사용 중) - Archive 버튼은 정상 동작합니다")
     return None
 
 
@@ -3045,23 +3046,34 @@ def run_gui(cfg, url):
     _LY=30
     halo=cv.create_oval(15,_LY-7,29,_LY+7,fill="#3a2f18",outline="")   # 점 뒤 은은한 글로우(상태색에 맞춰 변함)
     did=cv.create_oval(18,_LY-4,26,_LY+4,fill=GOLD,outline="")
-    status_lbl=cv.create_text(33,_LY,anchor="w",text="Starting\u2026",fill=INK,font=(SG_S,12))
+    status_lbl=cv.create_text(33,_LY,anchor="w",text="시작하는 중\u2026",fill=INK,font=(SG_S,12))
     sub_lbl=cv.create_text(120,_LY+1,anchor="w",text="",fill=SUB,font=(SG_M,9))
     _cs=cloud_state()
-    _cmap={"cloud":(TEAL,"\u2601 Cloud"),"readonly":(GOLD,"\u26a0 Key needed"),"local":(INK2,"\u25cf Local")}
-    _cc,_ct=_cmap.get(_cs,_cmap["local"])
-    if _cs=="cloud":                                  # 연결됨 → 틸 배지: 작은 클라우드 아이콘 + Cloud(9px)
-        _ctxt=cv.create_text(SCENE_W-17,_LY,anchor="e",text="Cloud",fill="#7adcc6",font=(SG_M,9))
-        _ctb=cv.bbox(_ctxt)
-        _cico=cv.create_text(_ctb[0]-2,_LY,anchor="e",text="\u2601",fill="#7adcc6",font=(SG_M,7))   # 아이콘만 작게
-        _cib=cv.bbox(_cico)
-        x1,y1,x2,y2,rr=_cib[0]-6,_LY-8,_ctb[2]+6,_LY+8,8
-        _pill=cv.create_polygon([x1+rr,y1,x2-rr,y1,x2,y1,x2,y1+rr,x2,y2-rr,x2,y2,x2-rr,y2,x1+rr,y2,x1,y2,x1,y2-rr,x1,y1+rr,x1,y1],smooth=True,fill="#12231e",outline="#46a08f",width=1)
-        cv.tag_raise(_ctxt); cv.tag_raise(_cico)      # 텍스트/아이콘을 pill 위로
-        cloud_lbl=_pill                               # poll이 opt를 pill 기준으로 배치
+    def _chip(txt,fg,line,fillc,icon):
+        # 통일된 상태 배지: 이모지 글리프 대신 직접 그린 아이콘(이모지는 Windows에서 컬러로 튀어 촌스러움)
+        _t=cv.create_text(SCENE_W-17,_LY,anchor="e",text=txt,fill=fg,font=(SG_M,9))
+        _tb=cv.bbox(_t)
+        _rx=_tb[0]-5                                   # 아이콘 오른쪽 기준
+        if icon=="cloud":                              # 벡터 구름: 봉우리 3개 실루엣
+            _ics=(cv.create_oval(_rx-13,_LY-1,_rx-5,_LY+4,fill=fg,outline=""),
+                  cv.create_oval(_rx-11,_LY-5,_rx-3,_LY+2,fill=fg,outline=""),
+                  cv.create_oval(_rx-8,_LY-2,_rx,_LY+4,fill=fg,outline=""))
+            _ix=_rx-13
+        else:                                          # 상태 점
+            _ics=(cv.create_oval(_rx-9,_LY-3,_rx-3,_LY+3,fill=fg,outline=""),)
+            _ix=_rx-9
+        x1,y1,x2,y2,rr=_ix-7,_LY-9,_tb[2]+7,_LY+9,9
+        _p=cv.create_polygon([x1+rr,y1,x2-rr,y1,x2,y1,x2,y1+rr,x2,y2-rr,x2,y2,x2-rr,y2,x1+rr,y2,x1,y2,x1,y2-rr,x1,y1+rr,x1,y1],smooth=True,fill=fillc,outline=line,width=1)
+        cv.tag_raise(_t)
+        for _i in _ics: cv.tag_raise(_i)
+        return _p
+    if _cs=="cloud":
+        cloud_lbl=_chip("Cloud","#8FE3CD","#3E8E7C","#0E211B","cloud")
+    elif _cs=="readonly":
+        cloud_lbl=_chip("키 필요","#E9C87E","#8A6D35","#241D0E","dot")
     else:
-        cloud_lbl=cv.create_text(SCENE_W-17,_LY,anchor="e",text=_ct,fill=_cc,font=(SG_M,9))
-    opt_lbl=cv.create_text(SCENE_W-92,_LY,anchor="e",text="",fill=GOLD2,font=(PLEX,9))
+        cloud_lbl=_chip("로컬 저장",INK2,"#3A3F4A","#14161B","dot")
+    opt_lbl=cv.create_text(SCENE_W-92,_LY,anchor="e",text="",fill=GOLD2,font=(SG_M,9))
     cv.tag_bind(opt_lbl,"<Button-1>",lambda e: toggle_settings())
     cv.tag_bind(opt_lbl,"<Enter>",lambda e:(cv.itemconfig(opt_lbl,fill="#FFFFFF"),cv.config(cursor="hand2")))
     cv.tag_bind(opt_lbl,"<Leave>",lambda e:(cv.itemconfig(opt_lbl,fill=GOLD if st["settings"] else GOLD2),cv.config(cursor="")))
@@ -3069,7 +3081,7 @@ def run_gui(cfg, url):
     # === Log area (hidden until needed) ===
     logwrap=tk.Frame(root,bg=BG)
     errbar=tk.Label(logwrap,text="",bg="#3A1E18",fg="#FFB4A6",font=(UI,9),anchor="w",padx=11,pady=6,justify="left",wraplength=W-44)
-    logtxt=tk.Text(logwrap,bg="#0C0D10",fg=DIM,font=(MON,9),bd=0,padx=11,pady=8,height=8,wrap="word",state="disabled")
+    logtxt=tk.Text(logwrap,bg="#0C0D10",fg=DIM,font=(UI,9),bd=0,padx=11,pady=8,height=8,wrap="word",state="disabled")
 
     # === Update banner (새 버전 발견 시 하단에 표시, 클릭 → 다운로드 페이지) ===
     UPD_H=34
@@ -3086,9 +3098,9 @@ def run_gui(cfg, url):
                     sb_rpc("issue_login_code", {"p_puuid": _pu, "p_secret": _sec, "p_code": _code})
                     open_app(url + "/#code=" + _code); return
                 else:
-                    log("Login skipped: riot_id=" + ("set" if _pu else "MISSING (play one game first)") + ", cloud=" + cloud_state())
+                    log("로그인 생략: riot_id=" + ("set" if _pu else "MISSING (play one game first)") + ", cloud=" + cloud_state())
             except Exception as e:
-                log(f"Login code skipped (gallery still opens): {e}")
+                log(f"로그인 코드 생략 (갤러리는 열립니다): {e}")
             try: open_app(url)
             except Exception: pass
         threading.Thread(target=_go, daemon=True).start()
@@ -3100,9 +3112,9 @@ def run_gui(cfg, url):
         try:   # 녹화/업로드 중 실수로 닫아 판을 날리는 것 방지
             if REC_STATE.get("recording") or REC_STATE.get("uploading") or REC_STATE.get("preparing"):
                 from tkinter import messagebox
-                _what = "Recording" if REC_STATE.get("recording") else "Upload"
+                _what = "녹화" if REC_STATE.get("recording") else "업로드"
                 if not messagebox.askyesno("myPENTA",
-                        _what + " is in progress.\nQuit anyway? The current game may be lost.",
+                        _what + " 진행 중입니다.\n그래도 종료할까요? 현재 판 영상이 사라질 수 있습니다.",
                         parent=root):
                     return
         except Exception:
@@ -3112,14 +3124,14 @@ def run_gui(cfg, url):
         os._exit(0)
     def _save_cfg():
         try: _atomic_write_json(CONFIG_PATH, cfg)
-        except Exception as e: log(f"Failed to save settings: {e}")
+        except Exception as e: log(f"설정 저장 실패: {e}")
 
     # === Settings panel (collapsible) ===
     PANEL="#0B0C0F"
     optwrap=tk.Frame(root,bg=PANEL,highlightbackground=LINE,highlightthickness=1)
-    tk.Label(optwrap,text="RECORDING SETTINGS",bg=PANEL,fg=INK2,font=(SEMI,8,"bold")).pack(anchor="w",padx=15,pady=(12,6))
-    SCALE_OPTS=[("Auto (best)","auto"),("Source","source"),("1080p","1080"),("720p","720"),("480p","480")]
-    ENC_OPTS=[("Auto (GPU first)","auto"),("GPU \u00b7 NVIDIA NVENC","nvenc"),("GPU \u00b7 AMD AMF","amf"),("GPU \u00b7 Intel QSV","qsv"),("CPU \u00b7 x264","x264")]
+    tk.Label(optwrap,text="녹화 설정",bg=PANEL,fg=INK2,font=(SEMI,8,"bold")).pack(anchor="w",padx=15,pady=(12,6))
+    SCALE_OPTS=[("자동 (권장)","auto"),("원본 해상도","source"),("1080p","1080"),("720p","720"),("480p","480")]
+    ENC_OPTS=[("자동 (GPU 우선)","auto"),("GPU \u00b7 NVIDIA NVENC","nvenc"),("GPU \u00b7 AMD AMF","amf"),("GPU \u00b7 Intel QSV","qsv"),("CPU \u00b7 x264","x264")]
     def opt_row(label, opts, key):
         row=tk.Frame(optwrap,bg=PANEL); row.pack(fill="x",padx=15,pady=3)
         tk.Label(row,text=label,bg=PANEL,fg=DIM,font=(UI,9),width=8,anchor="w").pack(side="left")
@@ -3127,19 +3139,19 @@ def run_gui(cfg, url):
         curlbl=next((l for l,v in opts if v==cur), opts[0][0])
         var=tk.StringVar(value=curlbl)
         def on_sel(lbl,k=key,mp=m,lb=label):
-            cfg[k]=mp[lbl]; _save_cfg(); log(f"Setting: {lb} \u2192 {lbl} (applies to next recording)")
+            cfg[k]=mp[lbl]; _save_cfg(); log(f"설정: {lb} \u2192 {lbl} (다음 녹화부터 적용)")
         om=tk.OptionMenu(row,var,*[l for l,_ in opts],command=on_sel)
         om.config(bg="#181B21",fg=INK,font=(UI,9),activebackground="#23272F",activeforeground=INK,relief="flat",bd=0,highlightthickness=1,highlightbackground=LINE2,anchor="w",padx=11,pady=4,cursor="hand2")
         try: om["menu"].config(bg=SURF,fg=INK,activebackground=GOLD,activeforeground="#080A0E",font=(UI,9),bd=0,activeborderwidth=0)
         except Exception: pass
         om.pack(side="left",fill="x",expand=True)
-    opt_row("Quality",SCALE_OPTS,"scale")
-    opt_row("Encoder",ENC_OPTS,"encoder")
-    KEEP_OPTS=[("Last 20 games","20"),("Last 10 games","10"),("Last 50 games","50"),("Keep all (no cleanup)","0")]
-    opt_row("Keep",KEEP_OPTS,"keep_games")
+    opt_row("화질",SCALE_OPTS,"scale")
+    opt_row("인코더",ENC_OPTS,"encoder")
+    KEEP_OPTS=[("최근 20게임","20"),("최근 10게임","10"),("최근 50게임","50"),("모두 보관 (정리 안 함)","0")]
+    opt_row("보관",KEEP_OPTS,"keep_games")
     # 오디오 소스: 기본은 '기본 출력장치' 루프백(스피커로 나오는 전부). 특정 장치를 고르면 그 장치 소리만 녹음.
     # 활용: 윈도우 '앱별 사운드 출력'에서 Discord 등을 다른 장치로 보내면 게임 소리만 남는다.
-    AUD_OPTS=[("Auto (default output)","")]
+    AUD_OPTS=[("자동 (기본 출력장치)","")]
     try:
         import pyaudiowpatch as _pa
         _pp=_pa.PyAudio()
@@ -3154,14 +3166,14 @@ def run_gui(cfg, url):
             except Exception: pass
     except Exception:
         pass
-    opt_row("Audio",AUD_OPTS,"audio_device")
-    tk.Label(optwrap,text="Auto = best quality, GPU-accelerated so your game stays smooth",bg=PANEL,fg=FAINT,font=(UI,8),wraplength=W-50,justify="left").pack(anchor="w",padx=15,pady=(6,4))
+    opt_row("오디오",AUD_OPTS,"audio_device")
+    tk.Label(optwrap,text="자동 = 최적 화질. GPU 가속이라 게임은 계속 부드럽습니다",bg=PANEL,fg=FAINT,font=(UI,8),wraplength=W-50,justify="left").pack(anchor="w",padx=15,pady=(6,4))
     _cleanrow=tk.Frame(optwrap,bg=PANEL); _cleanrow.pack(fill="x",padx=15,pady=(0,12))
     def _do_clean():
         threading.Thread(target=cleanup_recordings,kwargs={"manual":True},daemon=True).start()
-    tk.Button(_cleanrow,text="Clean up originals now",command=_do_clean,bg="#181B21",fg=INK,font=(UI,9),relief="flat",bd=0,highlightthickness=1,highlightbackground=LINE2,activebackground="#23272F",activeforeground=INK,cursor="hand2",padx=11,pady=4).pack(side="left")
+    tk.Button(_cleanrow,text="원본 지금 정리",command=_do_clean,bg="#181B21",fg=INK,font=(UI,9),relief="flat",bd=0,highlightthickness=1,highlightbackground=LINE2,activebackground="#23272F",activeforeground=INK,cursor="hand2",padx=11,pady=4).pack(side="left")
     _fr=disk_free_gb()
-    tk.Label(_cleanrow,text=("Disk free: %.0f GB" % _fr) if _fr is not None else "",bg=PANEL,fg=FAINT,font=(UI,8)).pack(side="left",padx=10)
+    tk.Label(_cleanrow,text=("남은 공간: %.0f GB" % _fr) if _fr is not None else "",bg=PANEL,fg=FAINT,font=(UI,8)).pack(side="left",padx=10)
 
     # === Panel toggle + resize ===
     def _resize():
@@ -3258,9 +3270,9 @@ def run_gui(cfg, url):
         return (t,r)
     _bx=16
     _bx=_cbtn("Archive",_bx,open_gallery,gold=True,icon=_ic_archive)+8
-    _cbtn("Open folder",_bx,open_folder,icon=_ic_folder)
-    _ICONS["log"]=_cicon("\u25A4",SCENE_W-16,toggle_log,"log","Log")
-    _ICONS["set"]=_cicon("\u2699",SCENE_W-52,toggle_settings,"settings","Settings")
+    _cbtn("폴더 열기",_bx,open_folder,icon=_ic_folder)
+    _ICONS["log"]=_cicon("\u25A4",SCENE_W-16,toggle_log,"log","로그")
+    _ICONS["set"]=_cicon("\u2699",SCENE_W-52,toggle_settings,"settings","설정")
     root.protocol("WM_DELETE_WINDOW", do_quit)   # ✕ → 종료. 최소화(_)는 일반 작업표시줄.
 
     def _prep_and_run():
@@ -3268,9 +3280,9 @@ def run_gui(cfg, url):
         try:
             if not FFMPEG: FFMPEG=ensure_ffmpeg()
         except Exception as e:
-            log(f"Tool setup issue: {e}")
+            log(f"도구 설치 문제: {e}")
         if not FFMPEG:
-            log("\u26a0 ffmpeg setup failed \u2014 check your internet connection and restart."); return
+            log("\u26a0 ffmpeg 설치 실패 \u2014 인터넷 연결을 확인하고 다시 실행해 주세요."); return
         if cloud_state()=="cloud": cloud_selftest()    # 시작 시 업로드 권한 즉시 진단(게임 없이)
         recorder_loop(cfg)
     threading.Thread(target=_prep_and_run,daemon=True).start()
@@ -3280,7 +3292,7 @@ def run_gui(cfg, url):
         root.after(500, poll)   # 다음 갱신을 먼저 예약 → 본문에서 예외가 나도 GUI 루프가 멈추지 않음
         if UPDATE_INFO.get("tag") and not st.get("upd"):
             st["upd"]=True
-            updbar.config(text="New version "+UPDATE_INFO["tag"]+" is available - click here to download")
+            updbar.config(text="새 버전 "+UPDATE_INFO["tag"]+" 이(가) 나왔습니다 - 클릭해서 다운로드")
             updbar.pack(fill="x",side="bottom")
             _resize()
         appended=False
@@ -3316,38 +3328,38 @@ def run_gui(cfg, url):
             _rec["blink"]=not _rec["blink"]
             cv.itemconfig(did,fill=(REC if _rec["blink"] else "#3a2230")); cv.itemconfig(halo,fill="#2e1622")
             _el=int(_now-_rec["since"]); _mm,_ss=divmod(_el,60)
-            cv.itemconfig(status_lbl,text="Recording",fill=REC); cv.itemconfig(sub_lbl,text="%d:%02d"%(_mm,_ss),fill=INK)
+            cv.itemconfig(status_lbl,text="녹화 중",fill=REC); cv.itemconfig(sub_lbl,text="%d:%02d"%(_mm,_ss),fill=INK)
         elif REC_STATE.get("uploading"):   # 업로드 중 — 진행률(파란 점멸)
             _rec["since"]=None
             if _rec["psince"] is None: _rec["psince"]=_now
             _rec["blink"]=not _rec["blink"]
             cv.itemconfig(did,fill=(BLUE if _rec["blink"] else "#22344f")); cv.itemconfig(halo,fill="#162640")
             _pct=REC_STATE.get("upload_pct") or 0
-            cv.itemconfig(status_lbl,text=("Uploading %d%%"%_pct) if _pct>0 else "Uploading",fill=BLUE)
-            cv.itemconfig(sub_lbl,text="to cloud",fill=SUB)
+            cv.itemconfig(status_lbl,text=("업로드 %d%%"%_pct) if _pct>0 else "업로드 중",fill=BLUE)
+            cv.itemconfig(sub_lbl,text="클라우드로",fill=SUB)
         elif _preparing:   # 업로드 준비중 — 분석·트림·인코딩(파란 점멸, 진행률 없음)
             _rec["since"]=None
             if _rec["psince"] is None: _rec["psince"]=_now
             _rec["blink"]=not _rec["blink"]
             cv.itemconfig(did,fill=(BLUE if _rec["blink"] else "#22344f")); cv.itemconfig(halo,fill="#162640")
             _pp=REC_STATE.get("prep_pct") or 0
-            cv.itemconfig(status_lbl,text=("Processing %d%%"%_pp) if _pp>0 else "Processing\u2026",fill=BLUE)
-            cv.itemconfig(sub_lbl,text="compressing",fill=SUB)
+            cv.itemconfig(status_lbl,text=("처리 %d%%"%_pp) if _pp>0 else "처리 중\u2026",fill=BLUE)
+            cv.itemconfig(sub_lbl,text="압축하는 중",fill=SUB)
         elif REC_STATE.get("skipped_at") and (_now-REC_STATE.get("skipped_at",0) < 6):   # 저장 안 함 알림(6초)
             _rec["since"]=None; _rec["blink"]=False; _rec["psince"]=None
-            _why=REC_STATE.get("skipped_why") or "not saved"
+            _why=REC_STATE.get("skipped_why") or "저장하지 않음"
             cv.itemconfig(did,fill="#C8A86A"); cv.itemconfig(halo,fill="#3a2f18")
-            cv.itemconfig(status_lbl,text="Not saved",fill="#DEC79C"); cv.itemconfig(sub_lbl,text=_why[:44],fill=SUB)
+            cv.itemconfig(status_lbl,text="저장 안 함",fill="#DEC79C"); cv.itemconfig(sub_lbl,text=_why[:44],fill=SUB)
         elif _up and (_now-_up < 5):   # 업로드 완료 토스트(5초)
             _rec["since"]=None; _rec["blink"]=False; _rec["psince"]=None
-            cv.itemconfig(did,fill=TEAL); cv.itemconfig(halo,fill="#163029"); cv.itemconfig(status_lbl,text="Uploaded \u2713",fill=TEAL); cv.itemconfig(sub_lbl,text="added to your archive",fill=SUB)
+            cv.itemconfig(did,fill=TEAL); cv.itemconfig(halo,fill="#163029"); cv.itemconfig(status_lbl,text="업로드 완료 \u2713",fill=TEAL); cv.itemconfig(sub_lbl,text="보관함에 추가됨",fill=SUB)
         else:
             _rec["since"]=None; _rec["blink"]=False; _rec["psince"]=None
             cv.itemconfig(did,fill=GOLD); cv.itemconfig(halo,fill="#3a2f18")
             if REC_STATE.get("ready"):
-                cv.itemconfig(status_lbl,text="Ready",fill=INK); cv.itemconfig(sub_lbl,text="auto-records",fill=SUB)
+                cv.itemconfig(status_lbl,text="대기 중",fill=INK); cv.itemconfig(sub_lbl,text="게임 시작 시 자동 녹화",fill=SUB)
             else:
-                cv.itemconfig(status_lbl,text="Preparing\u2026",fill=INK); cv.itemconfig(sub_lbl,text="setting up tools",fill=SUB)
+                cv.itemconfig(status_lbl,text="준비하는 중\u2026",fill=INK); cv.itemconfig(sub_lbl,text="도구 준비 중",fill=SUB)
         try:
             _st=cv.itemcget(status_lbl,"text")          # 글자가 바뀔 때만 재배치 → 매 프레임 1px 흔들림(왔다갔다) 방지
             if _st!=_rec.get("txt"):
@@ -3528,7 +3540,7 @@ def run_gui(cfg, url):
         except Exception: pass
 
     try: root.mainloop()
-    except Exception as ex: log(f"GUI closed: {ex}")
+    except Exception as ex: log(f"GUI 종료: {ex}")
 
 
 def _print_status():
@@ -3595,11 +3607,11 @@ def main():
     print("=" * 56); print(f"  myPENTA — League of Legends auto-recorder — mode: {mode}"); print("=" * 56)
     _cst = cloud_state()
     if _cst == "cloud":
-        log(f"☁ Cloud ON — saving & sharing via Supabase({_sb_base()}).")
+        log(f"☁ 클라우드 켜짐 — Supabase({_sb_base()}) 로 저장·공유합니다.")
     elif _cst == "readonly":
-        log("⚠ Cloud read-only — supabase.service_key in config.json is empty. Fill it and restart to enable uploads.")
+        log("⚠ 클라우드 읽기 전용 — config.json 의 supabase.service_key 가 비어 있습니다. 채우고 다시 실행하면 업로드가 켜집니다.")
     else:
-        log("● Local mode — saved on this PC only. (Fill supabase in config.json to enable cloud)")
+        log("● 로컬 모드 — 이 PC에만 저장됩니다. (config.json 의 supabase 를 채우면 클라우드 사용)")
     if mode in ("all", "recorder"):
         if not use_gui:               # GUI면 창부터 띄우고 백그라운드에서 받음(첫 실행이 멈춘 듯 안 보이게)
             FFMPEG = ensure_ffmpeg()
@@ -3609,9 +3621,9 @@ def main():
         if not FFMPEG: FFMPEG = ensure_ffmpeg()
     url = (cfg.get("gallery_url") or "https://mypenta.netlify.app/").rstrip("/")
     try: start_login_bridge(url)
-    except Exception as _e: log("Login bridge failed to start: %s" % _e)
+    except Exception as _e: log("로그인 브리지 시작 실패: %s" % _e)
     if mode == "all":
-        log(f"Archive → {url}")
+        log(f"Archive 열기 → {url}")
         # 시작 시 브라우저로 아카이브를 자동으로 열지 않음(번잡함). 아카이브는 GUI 버튼/트레이 메뉴로만 연다.
         # 보기 좋은 상태창(GUI). 윈도우 + tkinter 가능하면 GUI로, 아니면 콘솔로.
         if sys.platform == "win32" and (cfg.get("ui", "window") != "console"):
@@ -3619,7 +3631,7 @@ def main():
                 import tkinter  # noqa: F401  (가용성 확인)
                 run_gui(cfg, url); return
             except Exception as e:
-                log(f"GUI unavailable ({e}) → continuing in console mode")
+                log(f"GUI 사용 불가 ({e}) → 콘솔 모드로 계속합니다")
     if mode in ("all", "recorder"):
         if not FFMPEG: FFMPEG = ensure_ffmpeg()
         print("-" * 56); recorder_loop(cfg)
