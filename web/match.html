@@ -813,6 +813,15 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
 @media(hover:none){.clipshare{opacity:0;pointer-events:none}#stagehost.peek .clipshare{opacity:.9;pointer-events:auto}}
 #stagehost.idle:fullscreen .clipshare{opacity:0;pointer-events:none}
 #stagehost.idle:-webkit-full-screen .clipshare{opacity:0;pointer-events:none}
+video::-webkit-media-controls-fullscreen-button{display:none}
+.solofs{position:absolute;top:10px;right:10px;z-index:7;display:inline-flex;align-items:center;justify-content:center;width:36px;height:34px;background:rgba(8,10,14,.82);border:1px solid var(--line2);border-radius:8px;color:var(--ink);cursor:pointer;opacity:0;transition:opacity .18s,color .14s,border-color .14s;backdrop-filter:blur(4px)}
+.solofs svg{width:17px;height:17px;display:block}
+.solofs:hover{color:var(--gold-ink);border-color:var(--gold-line)}
+#stagehost:hover .solofs{opacity:1}
+#stagehost.solo .clipshare{right:56px}
+@media(hover:none){.solofs{opacity:.92;pointer-events:auto}}
+#stagehost.idle:fullscreen .solofs{opacity:0;pointer-events:none}
+#stagehost.idle:-webkit-full-screen .solofs{opacity:0;pointer-events:none}
 .toastmsg{position:fixed;left:50%;bottom:30px;transform:translateX(-50%) translateY(8px);z-index:99;background:#131922;border:1px solid var(--gold-line);color:var(--ink);padding:10px 17px;border-radius:9px;font-size:12.5px;opacity:0;transition:opacity .22s,transform .22s;pointer-events:none;max-width:86vw;text-align:center}
 .toastmsg.on{opacity:1;transform:translateX(-50%) translateY(0)}
 /* 전체화면(멀티뷰) 컨트롤 바 자동 숨김 — 일반/단일뷰엔 미적용 */
@@ -1751,10 +1760,7 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
     seek.addEventListener('change', function(){ var d=master.duration||0; if(isFinite(d)&&d>0){ seekAllTo(d*seek.value/1000, 1400); } seeking=false; });
     playBtn.addEventListener('click', function(){ if(master.paused){ var p=master.play&&master.play(); if(p&&p.catch)p.catch(function(){}); } else master.pause(); });
     muteBtn.addEventListener('click', function(){ master.muted=!master.muted; });
-    fsBtn.addEventListener('click', function(){
-      var st=document.getElementById('stagehost'); if(!st) return;
-      try{ if(!document.fullscreenElement){ (st.requestFullscreen||st.webkitRequestFullscreen||function(){}).call(st); } else { (document.exitFullscreen||document.webkitExitFullscreen||function(){}).call(document); } }catch(_){}
-    });
+    fsBtn.addEventListener('click', function(){ fsToggle(document.getElementById('stagehost')); });
     var fb=document.getElementById('mvfb'), ff=document.getElementById('mvff'), rateBtn=document.getElementById('mvrate');
     if(fb) fb.addEventListener('click', function(){ frameStep(-1); });
     if(ff) ff.addEventListener('click', function(){ frameStep(1); });
@@ -1799,6 +1805,22 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
   }
   function stageVideos(){ var h=document.getElementById('stagehost'); return h?Array.prototype.slice.call(h.querySelectorAll('video')):[]; }
   function activeVideo(){ return split ? (stageVideos()[0]||null) : (POOL?(POOL.querySelector('.pvid.on:not(.leaving)')||POOL.querySelector('.pvid.on')):null); }
+  // 전체화면: 요소(Fullscreen API) + 가로 방향 잠금 → 안드로이드 몰입형(하단 시스템 바까지 숨김). 네이티브 영상 전체화면보다 확실함.
+  function fsToggle(el){
+    el = el || document.getElementById('stagehost'); if(!el) return;
+    try{
+      if(!(document.fullscreenElement||document.webkitFullscreenElement)){
+        var p=(el.requestFullscreen||el.webkitRequestFullscreen||function(){}).call(el);
+        var lock=function(){ try{ if(screen.orientation&&screen.orientation.lock) screen.orientation.lock('landscape').catch(function(){}); }catch(_){} };
+        if(p&&p.then) p.then(lock).catch(function(){}); else lock();
+      } else {
+        (document.exitFullscreen||document.webkitExitFullscreen||function(){}).call(document);
+      }
+    }catch(_){}
+  }
+  function _fsUnlock(){ if(!(document.fullscreenElement||document.webkitFullscreenElement)){ try{ if(screen.orientation&&screen.orientation.unlock) screen.orientation.unlock(); }catch(_){} } }
+  document.addEventListener('fullscreenchange', _fsUnlock);
+  document.addEventListener('webkitfullscreenchange', _fsUnlock);
   // 시점별 수동 싱크 보정(초) — 이 브라우저에만 저장(localStorage), 멀티뷰 싱크 버튼으로 조정.
   function g0Adj(id){ try{ var v=parseFloat(localStorage.getItem('penta_sync_'+id)); return isFinite(v)?v:0; }catch(_){ return 0; } }
   function setG0Adj(id,v){ try{ if(v){ localStorage.setItem('penta_sync_'+id,String(v)); } else { localStorage.removeItem('penta_sync_'+id); } }catch(_){ } }
@@ -1931,6 +1953,8 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
   document.addEventListener('click', function(e){
     var b=e.target && e.target.closest ? e.target.closest('#clipshare') : null;
     if(b) shareClip();
+    var fsb=e.target && e.target.closest ? e.target.closest('#solofs') : null;
+    if(fsb) fsToggle(document.getElementById('stagehost'));
   });
   document.addEventListener('keydown', function(e){
     var tg=e.target||{}; var tn=(tg.tagName||'').toLowerCase();
@@ -1996,6 +2020,10 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
     });
     host.innerHTML = multi ? ((splitMode==='focus'?stageFocus():stageSplit()) + mvBar()) : stageSingle();
     host.insertAdjacentHTML('beforeend', '<button class="clipshare" id="clipshare" aria-label="클립 공유" title="현재 장면부터 재생되는 링크 복사"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg><span>클립 공유</span></button>');
+    host.classList.toggle('solo', !multi);                    // 단일 시점 = 전용 전체화면 버튼(요소 전체화면 → 몰입형)
+    if(!multi){
+      host.insertAdjacentHTML('beforeend', '<button class="solofs" id="solofs" aria-label="전체화면" title="전체화면"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>');
+    }
     // 새 자리표시(단일 data-pv / 멀티 data-idx)에 보존본 이식: fresh의 식별 속성을 보존본에 복사 → 그대로 재사용(콜드마운트 없음)
     host.querySelectorAll('video[data-pv], video[data-idx]').forEach(function(fresh){
       var _ix=fresh.getAttribute('data-idx'); if(_ix===null) _ix=fresh.getAttribute('data-pv');
