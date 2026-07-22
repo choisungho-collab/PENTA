@@ -103,25 +103,63 @@ exports.handler = async (event) => {
     if (!ident || !secret || String(secret).length < 16 || !ups.length) return reply(400, { error: 'bad request' });
     if (!(await verifyDevice(ident, secret))) return reply(403, { error: 'device not verified' });
     const myName = ident.split('#')[0];
-    let done = 0, skipped = 0;
+    // 스탯 병합 화이트리스트: 정밀값 교체 허용(근사→정확) vs 빈 곳만 채움
+    const OVERWRITE = ['gold', 'cs', 'vision'];
+    const FILL = ['dmg', 'dmg_taken', 'dmg_obj', 'dmg_turret', 'heal', 'cc_sec', 'gold_spent',
+                  'wards', 'wards_killed', 'turrets', 'inhibs', 'spree', 'level',
+                  'pentas', 'quadras', 'triples', 'doubles'];
+    const nrm = (x) => String(x || '').trim().toLowerCase();
+    let done = 0, skipped = 0, enriched = 0;
     for (const u of ups) {
       const rid = String(u.row_id || '');
       const winTeam = (u.win_team === 100 || u.win_team === 200) ? u.win_team : null;
       const won = (typeof u.won === 'boolean') ? u.won : null;
-      if (!rid || winTeam == null) { skipped++; continue; }
+      const inPlayers = Array.isArray(u.players) ? u.players.slice(0, 10) : null;
+      if (!rid || (winTeam == null && !inPlayers)) { skipped++; continue; }
       const rRes = await fetch(SB_URL + '/rest/v1/matches?select=id,saver,won,winner,analysis&id=eq.' + encodeURIComponent(rid), { headers: sbHeaders() });
       const rows = await rRes.json().catch(() => []);
       const r = rows && rows[0];
       if (!r) { skipped++; continue; }
-      if (String(r.saver || '').trim().toLowerCase() !== myName) { skipped++; continue; }          // 본인 행만
+      if (nrm(r.saver) !== myName) { skipped++; continue; }                                    // 본인 행만
       const a = r.analysis || {};
-      if (r.won != null || r.winner != null || a.win_team != null) { skipped++; continue; }        // 미확인만
-      a.win_team = winTeam;
-      for (const pl of (a.players || [])) {
-        if (pl && pl.win == null && (pl.team === 100 || pl.team === 200)) pl.win = (pl.team === winTeam);
+      let changed = false;
+      // ① 승패: 미확인일 때만 (덮어쓰기 불가)
+      if (winTeam != null && r.won == null && r.winner == null && a.win_team == null) {
+        a.win_team = winTeam;
+        for (const pl of (a.players || [])) {
+          if (pl && pl.win == null && (pl.team === 100 || pl.team === 200)) pl.win = (pl.team === winTeam);
+        }
+        changed = true;
       }
-      const patch = { winner: winTeam, analysis: a };
-      if (won != null) patch.won = won;
+      // ② 풀 스코어보드: Live 분석 행만 (Riot 분석 데이터는 불가침)
+      if (inPlayers && a.source === 'live' && Array.isArray(a.players) && a.players.length) {
+        const byName = {};
+        for (const ip of inPlayers) { const k = nrm(ip && ip.name); if (k) byName[k] = ip; }
+        let touched = 0;
+        for (const pl of a.players) {
+          const ip = byName[nrm(pl && pl.name)];
+          if (!ip || (ip.team !== pl.team)) continue;                                           // 이름+팀 일치만
+          for (const f of OVERWRITE) { const v = ip[f]; if (typeof v === 'number' && isFinite(v)) { pl[f] = v; } }
+          for (const f of FILL) { const v = ip[f]; if (typeof v === 'number' && isFinite(v) && !pl[f]) { pl[f] = v; } }
+          if (Array.isArray(ip.items) && ip.items.length && !(Array.isArray(pl.items) && pl.items.some(Boolean))) pl.items = ip.items.slice(0, 7).map(Number);
+          if (Array.isArray(ip.spells) && ip.spells.length && !(Array.isArray(pl.spells) && pl.spells.length)) pl.spells = ip.spells.slice(0, 2).map(Number);
+          touched++;
+        }
+        if (touched) {
+          const dm = (a.duration || 0) / 60;                                                    // 정확 CS 반영 → 분당 CS 재계산
+          if (dm > 0) for (const pl of a.players) { if (pl && pl.cs) pl.cs_per_min = Math.round(pl.cs / dm * 10) / 10; }
+          changed = true; enriched++;
+        }
+        if (u.bans && !((a.bans || {})[100] || (a.bans || {})[200] || (a.bans || {})['100'] || (a.bans || {})['200'])) {
+          const b100 = Array.isArray(u.bans[100] || u.bans['100']) ? (u.bans[100] || u.bans['100']).slice(0, 5).map(Number) : [];
+          const b200 = Array.isArray(u.bans[200] || u.bans['200']) ? (u.bans[200] || u.bans['200']).slice(0, 5).map(Number) : [];
+          if (b100.length || b200.length) { a.bans = { 100: b100, 200: b200 }; changed = true; }
+        }
+      }
+      if (!changed) { skipped++; continue; }
+      const patch = { analysis: a };
+      if (a.win_team != null && r.winner == null) patch.winner = a.win_team;
+      if (won != null && r.won == null && a.win_team != null) patch.won = won;
       await fetch(SB_URL + '/rest/v1/matches?id=eq.' + encodeURIComponent(rid), {
         method: 'PATCH',
         headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
@@ -129,7 +167,7 @@ exports.handler = async (event) => {
       });
       done++;
     }
-    return reply(200, { ok: true, done, skipped });
+    return reply(200, { ok: true, done, skipped, enriched });
   }
 
   if (action === 'backfill-win') {

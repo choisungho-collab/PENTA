@@ -2650,7 +2650,8 @@ def lcu_match_history(count=40):
                 st = p0.get("stats") or {}
                 win = st.get("win"); team = p0.get("teamId")
                 if cre and dur and (win is not None) and team in (100, 200):
-                    out.append({"end": cre + dur, "dur": dur, "win": bool(win), "team": team, "queue": g.get("queueId")})
+                    out.append({"end": cre + dur, "dur": dur, "win": bool(win), "team": team,
+                                "queue": g.get("queueId"), "gid": g.get("gameId")})
             except Exception:
                 continue
         return out or None
@@ -2658,10 +2659,67 @@ def lcu_match_history(count=40):
         return None
 
 
+_LCU_G_FIELDS = {   # LCU 게임 상세(participants[].stats, Match-V4 계열 camelCase) → 우리 분석 필드
+    "totalDamageDealtToChampions": "dmg", "goldEarned": "gold", "visionScore": "vision",
+    "totalDamageTaken": "dmg_taken", "damageDealtToObjectives": "dmg_obj",
+    "damageDealtToTurrets": "dmg_turret", "totalHeal": "heal", "timeCCingOthers": "cc_sec",
+    "goldSpent": "gold_spent", "wardsPlaced": "wards", "wardsKilled": "wards_killed",
+    "turretKills": "turrets", "inhibitorKills": "inhibs", "largestKillingSpree": "spree",
+    "champLevel": "level", "pentaKills": "pentas", "quadraKills": "quadras",
+    "tripleKills": "triples", "doubleKills": "doubles",
+}
+
+def lcu_game_detail(game_id):
+    """게임 하나의 '풀 상세'(10인 전원 스탯·아이템·스펠·밴) — 클라이언트 로컬, Riot 키 불필요.
+    반환: {"win_team", "bans": {100:[..],200:[..]}, "players": [{name,team,dmg,gold,...,items,spells}]} 또는 None."""
+    port, token = _lcu_creds()
+    if not (port and token) or not game_id: return None
+    try:
+        import requests, base64
+        try:
+            requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
+        except Exception: pass
+        auth = base64.b64encode(("riot:" + token).encode()).decode()
+        r = requests.get("https://127.0.0.1:%s/lol-match-history/v1/games/%s" % (port, game_id),
+                         headers={"Authorization": "Basic " + auth}, verify=False, timeout=8)
+        if r.status_code != 200: return None
+        j = r.json() or {}
+        names = {}   # participantId → 표시 이름
+        for pi in (j.get("participantIdentities") or []):
+            pl = pi.get("player") or {}
+            names[pi.get("participantId")] = (pl.get("gameName") or pl.get("summonerName") or "").strip()
+        win_team = None
+        bans = {}
+        for t in (j.get("teams") or []):
+            tid = t.get("teamId")
+            if str(t.get("win")).lower() in ("win", "true") and tid in (100, 200): win_team = tid
+            if tid in (100, 200):
+                bans[tid] = [b.get("championId") for b in (t.get("bans") or []) if (b.get("championId") or 0) > 0]
+        players = []
+        for p in (j.get("participants") or []):
+            st = p.get("stats") or {}
+            d = {"name": names.get(p.get("participantId")) or "", "team": p.get("teamId")}
+            for k, f in _LCU_G_FIELDS.items():
+                v = st.get(k)
+                if v is not None:
+                    try: d[f] = int(v)
+                    except Exception: pass
+            d["cs"] = int(st.get("totalMinionsKilled") or 0) + int(st.get("neutralMinionsKilled") or 0)
+            d["items"] = [int(st.get("item%d" % i) or 0) for i in range(7)]
+            sp = [p.get("spell1Id"), p.get("spell2Id")]
+            d["spells"] = [int(x) for x in sp if x]
+            if not d["name"] or d["team"] not in (100, 200): continue
+            players.append(d)
+        if not players: return None
+        return {"win_team": win_team, "bans": bans, "players": players}
+    except Exception:
+        return None
+
+
 def backfill_unknown_wins():
-    """기존 '미확인' 경기 승패 소급 확정 — 클라이언트 로컬 매치 히스토리로, Riot 키 없이.
-    시간(종료시각±15분)·길이(±150초)로 내 미확인 행과 전적을 매칭 → 서버가 기기 검증 후
-    '본인 행 + 미확인 행만' 갱신한다(덮어쓰기 불가). 실패해도 다음 실행 때 다시 시도."""
+    """과거 경기 소급 — 클라이언트 로컬 매치 히스토리로, Riot 키 없이.
+    (1) 미확인 승패 확정  (2) Live 분석 행의 빈 스탯(10인 딜량·골드·시야·와드·아이템·스펠·밴)을 풀 상세로 채움.
+    시간(종료±15분)·길이(±150초)로 매칭 → 서버가 기기 검증 후 '본인 행'만 갱신(확정값 덮어쓰기 불가)."""
     rid = device_get("riot_id") or ""
     if not rid: return
     hist = lcu_match_history(40)
@@ -2669,17 +2727,23 @@ def backfill_unknown_wins():
     name = rid.split("#")[0]
     try:
         import requests
-        q = _sb_base() + "/rest/v1/matches?select=id,uploaded,length_sec,won,winner,analysis&saver=eq."             + urllib.parse.quote(name) + "&order=uploaded.desc&limit=40"
+        q = _sb_base() + "/rest/v1/matches?select=id,uploaded,length_sec,won,winner,analysis&saver=eq." \
+            + urllib.parse.quote(name) + "&order=uploaded.desc&limit=40"
         rows = requests.get(q, headers=_sb_h(body_json=False), timeout=15).json()
     except Exception:
         return
     if not isinstance(rows, list): return
     ups = []
+    _detail_cache = {}
+    _detail_budget = 15   # 시작 시 상세 조회는 최대 15게임(부하 제한)
     for r0 in rows:
         try:
             a = r0.get("analysis") or {}
-            if (r0.get("won") is not None) or (r0.get("winner") is not None) or (a.get("win_team") is not None):
-                continue   # 이미 확정
+            _ps = a.get("players") or []
+            need_win = (r0.get("won") is None) and (r0.get("winner") is None) and (a.get("win_team") is None)
+            need_stats = (a.get("source") == "live") and bool(_ps) and any(not p.get("dmg") for p in _ps)
+            if not (need_win or need_stats):
+                continue
             ts = time.mktime(datetime.datetime.fromisoformat(str(r0.get("uploaded") or "")).timetuple())
             ls = float(r0.get("length_sec") or 0)
             best = None
@@ -2689,8 +2753,21 @@ def backfill_unknown_wins():
                     if best is None or d < best[0]: best = (d, h)
             if not best: continue
             h = best[1]
-            wt = h["team"] if h["win"] else (200 if h["team"] == 100 else 100)
-            ups.append({"row_id": r0.get("id"), "win_team": wt, "won": bool(h["win"])})
+            u = {"row_id": r0.get("id")}
+            if need_win:
+                u["win_team"] = h["team"] if h["win"] else (200 if h["team"] == 100 else 100)
+                u["won"] = bool(h["win"])
+            if need_stats and h.get("gid") is not None:
+                if h["gid"] not in _detail_cache and _detail_budget > 0:
+                    _detail_cache[h["gid"]] = lcu_game_detail(h["gid"]); _detail_budget -= 1
+                det = _detail_cache.get(h["gid"])
+                if det:
+                    u["players"] = det["players"]
+                    if det.get("bans") and not (a.get("bans") or {}): u["bans"] = det["bans"]
+                    if need_win and u.get("win_team") is None and det.get("win_team") in (100, 200):
+                        u["win_team"] = det["win_team"]
+            if ("win_team" in u) or ("players" in u):
+                ups.append(u)
         except Exception:
             continue
     if not ups: return
@@ -2699,10 +2776,11 @@ def backfill_unknown_wins():
         r = requests.post(_gallery_origin() + "/api/storage",
                           json={"action": "backfill-win-local", "ident": riot_key(rid),
                                 "secret": device_secret(), "updates": ups[:30]},
-                          timeout=25)
+                          timeout=40)
         j = r.json() if r.status_code == 200 else {}
         if j.get("done"):
-            log("과거 미확인 경기 %d건의 승패를 소급 확정했습니다 (클라이언트 전적 기록 활용, Riot 키 불필요)." % j["done"])
+            log("과거 경기 %d건을 소급 갱신했습니다 — 승패%s (클라이언트 전적 기록 활용, Riot 키 불필요)."
+                % (j["done"], "·풀 스코어보드" if j.get("enriched") else ""))
     except Exception:
         pass
 
