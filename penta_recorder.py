@@ -1041,7 +1041,7 @@ def load_or_make_config():
             "fps": FPS,
             "poll_seconds": 4,
             "min_game_sec": 300,
-            "keep_games": 20,    # 원본 자동 정리: 최근 N판만 보관 (0 = 무제한)
+            "keep_games": 5,     # 원본 자동 정리: 최근 N판만 로컬 보관 (0 = 무제한). 업로드본은 클라우드에 별도 보관되므로 로컬은 최근 것만.
             "keep_gb": 30,       # 원본 총 용량 상한(GB). 초과분은 오래된 판부터 정리 (0 = 무제한)
             "audio_device": "",  # 녹음할 출력장치 이름(부분일치). 빈 값 = 기본 출력장치. 특정 장치를 고르면 그 장치 소리만 녹음.
             "preview_cq": 26,        # 갤러리 업로드본 화질(NVENC, 0~51, 낮을수록 고화질·용량↑). 26=리뷰용 충분·용량↓
@@ -1479,7 +1479,7 @@ def cleanup_recordings(manual=False):
     if _busy_now():
         if manual: log("정리 생략: 녹화/업로드 진행 중입니다. 잠시 후 다시 시도하세요.")
         return
-    keep_n = int(CFG.get("keep_games", 20) or 0)
+    keep_n = int(CFG.get("keep_games", 5) or 0)
     keep_gb = float(CFG.get("keep_gb", 30) or 0)
     if keep_n <= 0 and keep_gb <= 0:
         if manual: log("정리 생략: 자동 정리 꺼짐 (keep_games=0, keep_gb=0).")
@@ -2528,6 +2528,185 @@ def lcu_in_champ_select():
         return False
 
 
+_EOG_FIELDS = {   # 전적 화면(EOG) stats 키 → 우리 분석 필드 (전부 Riot 키 없이 로컬에서)
+    "TOTAL_DAMAGE_DEALT_TO_CHAMPIONS": "dmg", "GOLD_EARNED": "gold", "VISION_SCORE": "vision",
+    "TOTAL_DAMAGE_TAKEN": "dmg_taken", "TOTAL_DAMAGE_DEALT_TO_OBJECTIVES": "dmg_obj",
+    "TOTAL_DAMAGE_DEALT_TO_TURRETS": "dmg_turret", "TOTAL_HEAL": "heal",
+    "TIME_CCING_OTHERS": "cc_sec", "TOTAL_TIME_SPENT_DEAD": "dead_sec",
+    "GOLD_SPENT": "gold_spent", "WARD_PLACED": "wards", "WARD_KILLED": "wards_killed",
+    "TURRETS_KILLED": "turrets", "BARRACKS_KILLED": "inhibs",
+    "LARGEST_KILLING_SPREE": "spree", "LARGEST_MULTI_KILL": "multi_best",
+    "MINIONS_KILLED": "_mk", "NEUTRAL_MINIONS_KILLED": "_nmk",
+}
+
+def lcu_eog_stats():
+    """게임 종료 후 롤 클라이언트 '전적 화면'(EOG)에서 승패 + 풀 스탯을 읽는다 — Riot 키 불필요.
+    게임 인스턴스를 즉시 꺼도(패배 직후 등) 클라이언트만 살아 있으면 잡힌다.
+    반환: {"win_team": 100|200, "by": {이름: {dmg,gold,vision,cs,...}}} 또는 None."""
+    port, token = _lcu_creds()
+    if not (port and token): return None
+    try:
+        import requests, base64
+        try:
+            requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
+        except Exception: pass
+        auth = base64.b64encode(("riot:" + token).encode()).decode()
+        r = requests.get("https://127.0.0.1:%s/lol-end-of-game/v1/eog-stats-block" % port,
+                         headers={"Authorization": "Basic " + auth}, verify=False, timeout=2)
+        if r.status_code != 200: return None   # 전적 화면이 아직/이미 없음
+        j = r.json() or {}
+        win_team = None; by = {}
+        for t in (j.get("teams") or []):
+            tid = t.get("teamId")
+            if t.get("isWinningTeam") and tid in (100, 200): win_team = tid
+            for pl in (t.get("players") or []):
+                nm = (pl.get("riotIdGameName") or pl.get("summonerName") or "").strip()
+                st = pl.get("stats") or {}
+                if not nm: continue
+                d = {}
+                for k, f in _EOG_FIELDS.items():
+                    v = st.get(k)
+                    if v is not None:
+                        try: d[f] = int(v)
+                        except Exception: pass
+                if ("_mk" in d) or ("_nmk" in d):   # 정확 CS (Live 의 creepScore 는 10 단위)
+                    d["cs"] = (d.pop("_mk", 0) or 0) + (d.pop("_nmk", 0) or 0)
+                by[nm] = d
+        if win_team is None: return None
+        return {"win_team": win_team, "by": by}
+    except Exception:
+        return None
+
+
+def lcu_ranked():
+    """클라이언트에서 내 랭크(솔로/자유)를 읽는다 — Riot 키 불필요. {"solo":{tier,div,lp,wins,losses},...} 또는 None."""
+    port, token = _lcu_creds()
+    if not (port and token): return None
+    try:
+        import requests, base64
+        try:
+            requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
+        except Exception: pass
+        auth = base64.b64encode(("riot:" + token).encode()).decode()
+        r = requests.get("https://127.0.0.1:%s/lol-ranked/v1/current-ranked-stats" % port,
+                         headers={"Authorization": "Basic " + auth}, verify=False, timeout=2)
+        if r.status_code != 200: return None
+        out = {}
+        for q in ((r.json() or {}).get("queues") or []):
+            key = {"RANKED_SOLO_5x5": "solo", "RANKED_FLEX_SR": "flex"}.get(q.get("queueType"))
+            if not key or not q.get("tier"): continue
+            out[key] = {"tier": q.get("tier"), "div": q.get("division"), "lp": q.get("leaguePoints"),
+                        "wins": q.get("wins"), "losses": q.get("losses")}
+        return out or None
+    except Exception:
+        return None
+
+
+def lcu_cs_bans():
+    """챔피언 선택 세션의 '완료된 밴' 목록 — {"ally":[챔피언ID..], "their":[..]} 또는 None. Riot 키 불필요."""
+    port, token = _lcu_creds()
+    if not (port and token): return None
+    try:
+        import requests, base64
+        try:
+            requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
+        except Exception: pass
+        auth = base64.b64encode(("riot:" + token).encode()).decode()
+        r = requests.get("https://127.0.0.1:%s/lol-champ-select/v1/session" % port,
+                         headers={"Authorization": "Basic " + auth}, verify=False, timeout=2)
+        if r.status_code != 200: return None
+        ally, their = [], []
+        for grp in ((r.json() or {}).get("actions") or []):
+            for a in (grp or []):
+                if a.get("type") == "ban" and a.get("completed") and (a.get("championId") or 0) > 0:
+                    (ally if a.get("isAllyAction") else their).append(a.get("championId"))
+        if not (ally or their): return None
+        return {"ally": ally, "their": their}
+    except Exception:
+        return None
+
+
+def lcu_match_history(count=40):
+    """롤 클라이언트 '로컬 매치 히스토리'(내 최근 전적, 승패 포함) — Riot 키 불필요.
+    반환: [{"end": 종료epoch초, "dur": 게임초, "win": bool, "team": 100|200, "queue": 큐ID}] 최신순, 또는 None."""
+    port, token = _lcu_creds()
+    if not (port and token): return None
+    try:
+        import requests, base64
+        try:
+            requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
+        except Exception: pass
+        auth = base64.b64encode(("riot:" + token).encode()).decode()
+        r = requests.get("https://127.0.0.1:%s/lol-match-history/v1/products/lol/current-summoner/matches?begIndex=0&endIndex=%d" % (port, int(count)),
+                         headers={"Authorization": "Basic " + auth}, verify=False, timeout=8)
+        if r.status_code != 200: return None
+        gs = (((r.json() or {}).get("games") or {}).get("games")) or []
+        out = []
+        for g in gs:
+            try:
+                cre = float(g.get("gameCreation") or 0) / 1000.0
+                dur = float(g.get("gameDuration") or 0)
+                p0 = (g.get("participants") or [{}])[0]
+                st = p0.get("stats") or {}
+                win = st.get("win"); team = p0.get("teamId")
+                if cre and dur and (win is not None) and team in (100, 200):
+                    out.append({"end": cre + dur, "dur": dur, "win": bool(win), "team": team, "queue": g.get("queueId")})
+            except Exception:
+                continue
+        return out or None
+    except Exception:
+        return None
+
+
+def backfill_unknown_wins():
+    """기존 '미확인' 경기 승패 소급 확정 — 클라이언트 로컬 매치 히스토리로, Riot 키 없이.
+    시간(종료시각±15분)·길이(±150초)로 내 미확인 행과 전적을 매칭 → 서버가 기기 검증 후
+    '본인 행 + 미확인 행만' 갱신한다(덮어쓰기 불가). 실패해도 다음 실행 때 다시 시도."""
+    rid = device_get("riot_id") or ""
+    if not rid: return
+    hist = lcu_match_history(40)
+    if not hist: return   # 롤 클라이언트가 꺼져 있음 등 — 다음 실행 때
+    name = rid.split("#")[0]
+    try:
+        import requests
+        q = _sb_base() + "/rest/v1/matches?select=id,uploaded,length_sec,won,winner,analysis&saver=eq."             + urllib.parse.quote(name) + "&order=uploaded.desc&limit=40"
+        rows = requests.get(q, headers=_sb_h(body_json=False), timeout=15).json()
+    except Exception:
+        return
+    if not isinstance(rows, list): return
+    ups = []
+    for r0 in rows:
+        try:
+            a = r0.get("analysis") or {}
+            if (r0.get("won") is not None) or (r0.get("winner") is not None) or (a.get("win_team") is not None):
+                continue   # 이미 확정
+            ts = time.mktime(datetime.datetime.fromisoformat(str(r0.get("uploaded") or "")).timetuple())
+            ls = float(r0.get("length_sec") or 0)
+            best = None
+            for h in hist:   # 종료시각이 가장 가까운 전적을 채택 (길이도 맞아야 함)
+                if abs(h["end"] - ts) <= 900 and (ls <= 0 or abs(h["dur"] - ls) <= 150):
+                    d = abs(h["end"] - ts)
+                    if best is None or d < best[0]: best = (d, h)
+            if not best: continue
+            h = best[1]
+            wt = h["team"] if h["win"] else (200 if h["team"] == 100 else 100)
+            ups.append({"row_id": r0.get("id"), "win_team": wt, "won": bool(h["win"])})
+        except Exception:
+            continue
+    if not ups: return
+    try:
+        import requests
+        r = requests.post(_gallery_origin() + "/api/storage",
+                          json={"action": "backfill-win-local", "ident": riot_key(rid),
+                                "secret": device_secret(), "updates": ups[:30]},
+                          timeout=25)
+        j = r.json() if r.status_code == 200 else {}
+        if j.get("done"):
+            log("과거 미확인 경기 %d건의 승패를 소급 확정했습니다 (클라이언트 전적 기록 활용, Riot 키 불필요)." % j["done"])
+    except Exception:
+        pass
+
+
 def _sec_mmss(s):
     s = int(s or 0)
     return f"{s//60}:{s%60:02d}"
@@ -2577,10 +2756,16 @@ def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr", 
     REC_STATE["preparing"] = True   # 업로드 준비중: 분석·트림·썸네일·인코딩 (업로드 직전까지)
     match, puuid, analysis, mid = None, None, {}, ""
     if proxy_url:
-        try:
-            match, puuid = penta_lol.resolve_match(proxy_url, riot_id, start_ts, end_ts, platform)
-        except Exception as e:
-            log(f"  매치 조회 실패 ({e}) — 분석 없이 영상만 업로드합니다.")
+        for _try in range(4):   # Riot 매치는 게임 종료 후 API 반영까지 최대 1~2분 걸림 → 재시도(업로드는 백그라운드라 다음 게임 감지 안 막음)
+            try:
+                match, puuid = penta_lol.resolve_match(proxy_url, riot_id, start_ts, end_ts, platform)
+            except Exception as e:
+                log(f"  매치 조회 실패 ({e})"); break
+            if match: break
+            if not puuid:   # 계정 조회조차 실패 = RIOT_API_KEY 만료/무효 가능성 큼 (개발용 키는 24시간마다 만료)
+                log("  Riot 계정 조회 실패 — Netlify 환경변수 RIOT_API_KEY 가 만료·무효일 수 있습니다(개발용 키는 24시간마다 만료).")
+                break
+            if _try < 3: time.sleep(20)   # 매치가 아직 API 에 안 올라옴 → 잠시 후 재시도
         if match:
             mid = (match.get("metadata") or {}).get("matchId") or str((match.get("info") or {}).get("gameId") or "")
             try:
@@ -2588,8 +2773,10 @@ def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr", 
                 analysis = penta_lol.analyze_match(match, timeline) or {}
             except Exception as e:
                 log(f"  분석 실패 ({e}) — 분석 없이 영상만 업로드합니다."); analysis = {}
+        elif puuid:
+            log("  Riot 매치가 아직 API 에 안 올라옴(최대 2분 지연) — 이번엔 자체 분석으로 올립니다.")
         else:
-            log("  Riot 매치 연결 안 됨 (API 키/타이밍) — 분석 없이 영상만 업로드합니다.")
+            log("  Riot 분석 생략(계정/키 문제) — 자체 분석으로 진행합니다.")
     else:
         log("  proxy_url 미설정 — Riot 분석 생략.")
 
@@ -2603,6 +2790,62 @@ def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr", 
                 log(f"  Live Client 자체 분석 완료 ({len(_la['players'])}명, Riot 키 불필요).")
         except Exception as e:
             log(f"  Live 자체 분석 실패 ({e}).")
+
+    # 롤 클라이언트 '전적 화면'(EOG)에서 승패 + 풀 스탯을 수확 — Riot 키 불필요.
+    # 승패가 미확인일 때(최대 ~45초 대기)는 물론, 자체분석이라 딜량이 비어 있을 때도(최대 ~18초) 시야·정확CS·받은피해 등까지 채운다.
+    _needs_win = bool(analysis.get("players")) and analysis.get("win_team") is None
+    _needs_stats = bool(analysis.get("players")) and any(not _pp.get("dmg") for _pp in (analysis.get("players") or []))
+    if _needs_win or _needs_stats:
+        _eog = None
+        for _ in range(15 if _needs_win else 6):
+            _eog = lcu_eog_stats()
+            if _eog: break
+            time.sleep(3)
+        if _eog:
+            if analysis.get("win_team") is None and _eog.get("win_team") in (100, 200):
+                analysis["win_team"] = _eog["win_team"]
+            _wt = analysis.get("win_team")
+            for _p in (analysis.get("players") or []):
+                if _p.get("win") is None and _wt in (100, 200) and _p.get("team") in (100, 200):
+                    _p["win"] = (_p["team"] == _wt)
+                _st = (_eog.get("by") or {}).get((_p.get("name") or "").strip())
+                if not _st: continue
+                for _k in ("dmg", "gold", "vision", "cs"):
+                    if _st.get(_k): _p[_k] = _st[_k]           # 정확값으로 교체 (Live 는 CS 10단위·골드 근사)
+                for _k in ("dmg_taken", "dmg_obj", "dmg_turret", "heal", "cc_sec", "dead_sec",
+                           "gold_spent", "wards", "wards_killed", "turrets", "inhibs", "spree"):
+                    if _st.get(_k) is not None: _p[_k] = _st[_k]
+                _mb = _st.get("multi_best") or 0               # 최다 멀티킬 → 배지(P/Q/T)
+                if _mb >= 5: _p["pentas"] = max(1, _p.get("pentas") or 0)
+                elif _mb == 4: _p["quadras"] = max(1, _p.get("quadras") or 0)
+                elif _mb == 3: _p["triples"] = max(1, _p.get("triples") or 0)
+            try:   # 정확 CS 반영 후 분당 CS 재계산
+                _dm = (analysis.get("duration") or 0) / 60.0
+                if _dm > 0:
+                    for _p in (analysis.get("players") or []):
+                        if _p.get("cs"): _p["cs_per_min"] = round(_p["cs"] / _dm, 1)
+            except Exception: pass
+            log("  클라이언트 전적 화면(EOG) 반영%s — 딜량·골드·시야·CS 정밀값 수확" %
+                ("" if _wt not in (100, 200) else (" · 승패 %s팀" % ("블루" if _wt == 100 else "레드"))))
+        elif _needs_win:
+            log("  승패 미확인: 클라이언트 전적 화면을 읽지 못했습니다(클라이언트 종료/화면 이탈).")
+
+    # 챔피언 선택(LCU)에서 캡처한 밴 → 분석에 병합 (Riot 분석에 이미 있으면 건드리지 않음)
+    try:
+        _cb = (live_data or {}).get("cs_bans")
+        if _cb and not (analysis.get("bans") or {}):
+            _mn3 = (riot_id or "").split("#")[0]
+            _myt = next((_pp.get("team") for _pp in (analysis.get("players") or []) if _pp.get("name") == _mn3), None)
+            if _myt in (100, 200):
+                _tt = 200 if _myt == 100 else 100
+                analysis["bans"] = {_myt: list(_cb.get("ally") or []), _tt: list(_cb.get("their") or [])}
+                log("  밴 목록 병합(챔피언 선택 캡처): 아군 %d · 상대 %d" % (len(_cb.get("ally") or []), len(_cb.get("their") or [])))
+    except Exception: pass
+    # 내 랭크(솔로/자유) — 클라이언트에서 읽어 분석에 부착(카드·프로필 표시용, 스키마 변경 없음)
+    try:
+        _rk = lcu_ranked()
+        if _rk: analysis["uploader_rank"] = _rk
+    except Exception: pass
 
     # --- 게임 길이: 분석값이 있으면 그걸, 없으면 영상 실제 길이로 ---
     analysis = analysis or {}   # 분석 실패(None)여도 dict 보장 → g0(멀티뷰 정렬 앵커)는 항상 저장된다
@@ -2682,6 +2925,7 @@ def ingest_lol(video_path, riot_id, start_ts, end_ts, proxy_url, platform="kr", 
         except Exception: pass
         _row = {
             "id": row_id, "match_id": gid, "uploader": saver,
+            "owner_puuid": puuid or None,   # 실제 Riot PUUID(있을 때) — 승패 백필 등 후속 조회에 사용
             "uploaded": datetime.datetime.now().isoformat(timespec="seconds"),
             "video": None, "thumb": None, "replay": None,   # URL은 업로드 성공 후 채움(실패 시 재시도 큐에 그대로 저장)
             "video_size": up_size or 0,
@@ -2741,6 +2985,7 @@ def recorder_loop(cfg):
     poll = float(cfg.get("poll_seconds", 4)); rec = Recorder(int(cfg.get("fps", FPS)))
     active = False; riot_id = None; start_ts = None; last_hb = 0.0; saw_game = False; cs_grace = 0.0; started_cs = False; ended_at = 0.0
     live_snaps = []; live_evts = []; last_snap_t = -999.0   # 게임 중 Live Client 스냅샷 수집용
+    cs_bans = None   # 챔피언 선택에서 캡처한 밴 목록(다음 게임 분석에 병합)
     try: ensure_audio()
     except Exception: pass
     if not proxy:
@@ -2751,6 +2996,8 @@ def recorder_loop(cfg):
         except Exception: pass
         try: process_retry_queue()
         except Exception as e: log("재시도 대기열 오류: %s" % e)
+        try: backfill_unknown_wins()   # 과거 '미확인' 승패 소급(롤 클라이언트 로컬 전적 기록)
+        except Exception: pass
         try: cleanup_recordings()
         except Exception: pass
     threading.Thread(target=_startup_maintenance, daemon=True).start()
@@ -2760,6 +3007,11 @@ def recorder_loop(cfg):
             run = sc_running(proc)   # 게임 인스턴스(League of Legends.exe) = 인게임
             try: in_cs = lcu_in_champ_select()   # LCU: 챔피언 선택 중? (실패하면 False → 게임 감지로 폴백)
             except Exception: in_cs = False
+            if in_cs:
+                try:   # 챔피언 선택 중 밴 목록 캡처(완료된 밴이 늘어날 때마다 갱신) — Riot 키 없이 밴 표시 가능
+                    _cb2 = lcu_cs_bans()
+                    if _cb2: cs_bans = _cb2
+                except Exception: pass
 
             # ── 녹화 시작: 게임(로딩 화면)부터. 밴픽(챔피언 선택)은 녹화하지 않음 ──
             if run and not active:
@@ -2826,8 +3078,8 @@ def recorder_loop(cfg):
                 _vt0 = rec._vt0; vid = rec.stop(); active = False; rec.verified = False; saw_game = False; cs_grace = 0.0; ended_at = 0.0
                 end_ts = time.time()
                 if vid and os.path.isfile(vid):
-                    threading.Thread(target=ingest_lol, args=(vid, riot_id, start_ts, end_ts, proxy, platform), kwargs={"live_data": {"snaps": list(live_snaps), "events": list(live_evts)}, "started_cs": started_cs, "vt0": _vt0}, daemon=True).start()
-                riot_id = None; start_ts = None; started_cs = False; log("대기.")
+                    threading.Thread(target=ingest_lol, args=(vid, riot_id, start_ts, end_ts, proxy, platform), kwargs={"live_data": {"snaps": list(live_snaps), "events": list(live_evts), "cs_bans": cs_bans}, "started_cs": started_cs, "vt0": _vt0}, daemon=True).start()
+                riot_id = None; start_ts = None; started_cs = False; cs_bans = None; log("대기.")
 
             elif active and not run and in_cs:
                 cs_grace = 0.0   # 아직 챔피언 선택 → 계속 녹화
@@ -2857,7 +3109,22 @@ def recorder_loop(cfg):
                 REC_STATE.update(rec=False, text="Champion select (recording starts at game)")
             else:
                 REC_STATE.update(rec=False, text="Idle \u2014 auto-records when a game starts")
-            time.sleep(poll)
+            if active and not ended_at:
+                # 게임 중엔 1초 단위로 이벤트만 추가 폴링(로컬 API라 부담 없음) —
+                # 넥서스 폭발 직후 바로 꺼도 GameEnd(승패)를 놓치지 않게 감지 창을 4초→1초로 줄인다.
+                _slice_end = time.time() + poll
+                while time.time() < _slice_end:
+                    time.sleep(1)
+                    try:
+                        _ev2 = penta_lol.live_events()
+                        if _ev2:
+                            if len(_ev2) >= len(live_evts): live_evts = _ev2
+                            if any((e.get("EventName") == "GameEnd") for e in _ev2):
+                                ended_at = time.time(); log("승리/패배 화면 감지 - 녹화를 마무리합니다."); break
+                    except Exception:
+                        pass
+            else:
+                time.sleep(poll)
         except KeyboardInterrupt:
             log("종료합니다."); rec.stop(); break
         except Exception:
@@ -3155,7 +3422,7 @@ def run_gui(cfg, url):
         om.pack(side="left",fill="x",expand=True)
     opt_row("Quality",SCALE_OPTS,"scale")
     opt_row("Encoder",ENC_OPTS,"encoder")
-    KEEP_OPTS=[("Last 20 games","20"),("Last 10 games","10"),("Last 50 games","50"),("Keep all (no cleanup)","0")]
+    KEEP_OPTS=[("Last 5 games","5"),("Last 10 games","10"),("Last 20 games","20"),("Last 50 games","50"),("Keep all (no cleanup)","0")]
     opt_row("Keep",KEEP_OPTS,"keep_games")
     # 오디오 소스: 기본은 '기본 출력장치' 루프백(스피커로 나오는 전부). 특정 장치를 고르면 그 장치 소리만 녹음.
     # 활용: 윈도우 '앱별 사운드 출력'에서 Discord 등을 다른 장치로 보내면 게임 소리만 남는다.

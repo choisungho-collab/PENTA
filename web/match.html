@@ -439,7 +439,7 @@ footer{border-top:1px solid var(--line);margin-top:70px}
 .lckL{padding:18px 26px 20px;border-right:1px solid var(--line)}
 @media(max-width:860px){.lckL{border-right:0;border-bottom:1px solid var(--line)}}
 .lckone{padding:20px 26px 22px;max-width:560px;margin:0 auto}
-.lckR{display:flex;flex-direction:column;min-width:0}
+.lckR{display:flex;flex-direction:column;justify-content:center;min-width:0}
 .lckpanel{padding:18px 26px 16px;min-width:0}
 .lckpanel+.lckpanel{border-top:1px solid var(--line)}
 .lcktt{display:flex;align-items:center;justify-content:center;gap:13px;font-family:var(--fm);font-size:10px;font-weight:500;letter-spacing:.2em;color:var(--dim);margin-bottom:16px;text-transform:uppercase}
@@ -806,22 +806,14 @@ body{text-rendering:optimizeLegibility;-moz-osx-font-smoothing:grayscale}
 @keyframes finalBurst{0%{opacity:0}10%{opacity:1}100%{opacity:0}}
 @keyframes finalShock{0%{opacity:0;transform:scale(.25)}14%{opacity:.95}100%{opacity:0;transform:scale(11)}}
 @media(prefers-reduced-motion:reduce){.matchintro{display:none}}
-.clipshare{position:absolute;top:10px;right:10px;z-index:7;display:inline-flex;align-items:center;gap:7px;padding:7px 12px;background:rgba(8,10,14,.74);border:1px solid var(--line2);border-radius:8px;color:var(--ink2);font-size:11.5px;font-family:var(--fm);cursor:pointer;opacity:0;transition:opacity .18s,color .14s,border-color .14s;backdrop-filter:blur(4px)}
-.clipshare svg{width:13px;height:13px;display:block}
-#stagehost:hover .clipshare{opacity:1}
-.clipshare:hover{color:var(--ink);border-color:var(--gold-line)}
-@media(hover:none){.clipshare{opacity:0;pointer-events:none}#stagehost.peek .clipshare{opacity:.9;pointer-events:auto}}
-#stagehost.idle:fullscreen .clipshare{opacity:0;pointer-events:none}
-#stagehost.idle:-webkit-full-screen .clipshare{opacity:0;pointer-events:none}
-video::-webkit-media-controls-fullscreen-button{display:none}
-.solofs{position:absolute;top:10px;right:10px;z-index:7;display:inline-flex;align-items:center;justify-content:center;width:36px;height:34px;background:rgba(8,10,14,.82);border:1px solid var(--line2);border-radius:8px;color:var(--ink);cursor:pointer;opacity:0;transition:opacity .18s,color .14s,border-color .14s;backdrop-filter:blur(4px)}
-.solofs svg{width:17px;height:17px;display:block}
-.solofs:hover{color:var(--gold-ink);border-color:var(--gold-line)}
-#stagehost:hover .solofs{opacity:1}
-#stagehost.solo .clipshare{right:56px}
-@media(hover:none){.solofs{opacity:.92;pointer-events:auto}}
-#stagehost.idle:fullscreen .solofs{opacity:0;pointer-events:none}
-#stagehost.idle:-webkit-full-screen .solofs{opacity:0;pointer-events:none}
+.vfloat{position:absolute;right:10px;bottom:56px;z-index:7;display:flex;gap:8px;opacity:0;transition:opacity .18s;pointer-events:none}
+#stagehost:hover .vfloat{opacity:1;pointer-events:auto}
+.vfloat .vbtn{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 12px;background:rgba(8,10,14,.78);border:1px solid var(--line2);border-radius:8px;color:var(--ink2);font-size:11.5px;font-family:var(--fm);cursor:pointer;backdrop-filter:blur(4px);transition:color .14s,border-color .14s}
+.vfloat .vbtn svg{width:14px;height:14px;display:block}
+.vfloat .vbtn:hover{color:var(--ink);border-color:var(--gold-line)}
+@media(hover:none){.vfloat{bottom:70px;opacity:0;pointer-events:none}#stagehost.peek .vfloat{opacity:.95;pointer-events:auto}}
+#stagehost.idle:fullscreen .vfloat{opacity:0;pointer-events:none}
+#stagehost.idle:-webkit-full-screen .vfloat{opacity:0;pointer-events:none}
 .toastmsg{position:fixed;left:50%;bottom:30px;transform:translateX(-50%) translateY(8px);z-index:99;background:#131922;border:1px solid var(--gold-line);color:var(--ink);padding:10px 17px;border-radius:9px;font-size:12.5px;opacity:0;transition:opacity .22s,transform .22s;pointer-events:none;max-width:86vw;text-align:center}
 .toastmsg.on{opacity:1;transform:translateX(-50%) translateY(0)}
 /* 전체화면(멀티뷰) 컨트롤 바 자동 숨김 — 일반/단일뷰엔 미적용 */
@@ -1133,7 +1125,8 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
       if(sh>=30) out.good.push(['딜 캐리','팀 딜의 '+sh+'%를 책임졌습니다. 받은 골드값을 딜로 확실히 돌려줬어요.']);
       else if(sh<20) out.bad.push(['낮은 딜 비중','캐리 역할인데 팀 딜의 '+sh+'%뿐입니다. 죽거나 안전만 보다 한타에서 빠졌을 가능성 — 죽지 않는 선에서 더 오래, 더 앞에서 딜을 넣어야 합니다.']);
     }
-    if(me.dpg!=null&&me.dpg>=2.2&&!isCarry) out.good.push(['효율적인 딜','딜/골드 '+me.dpg+'. 적은 골드로 큰 값을 냈습니다.']);
+    var _dpg=(me.dpg!=null)?me.dpg:((me.dmg&&me.gold)?Math.round(me.dmg/me.gold*100)/100:null);
+    if(_dpg!=null&&_dpg>=2.2&&!isCarry) out.good.push(['효율적인 딜','딜/골드 '+_dpg+'. 적은 골드로 큰 값을 냈습니다.']);
     return out;
   }
   function macroInsights(me,players,won){
@@ -1184,9 +1177,39 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
     }
     return out;
   }
+  // ===== 로컬 정밀 스탯 (게임 종료 화면 EOG 수확: 죽어있던 시간·와드 제거·CC·탱킹·포탑딜) =====
+  function localStatsInsights(me,players,durSec){
+    var out={good:[],bad:[]}; var role=me.position||'';
+    // 회색 화면(죽어있던 시간) — 데스 수보다 '잃은 시간'이 진짜 비용
+    if(me.dead_sec!=null && durSec>0){
+      var dp=me.dead_sec/durSec;
+      if(dp>=0.13 && (me.deaths||0)>=4)
+        out.bad.push(['회색 화면 과다','죽어서 보낸 시간이 '+Math.round(me.dead_sec/60)+'분 — 게임의 '+Math.round(dp*100)+'%입니다. 후반 데스일수록 부활이 길어 한 번의 죽음이 오브젝트 하나와 맞먹어요. 죽음의 횟수만큼 시점(타이밍)도 관리하세요.']);
+    }
+    // 와드 제거 — 시야 점수와 별개로 '지우기' 습관
+    if(me.wards_killed!=null && durSec>=1200){
+      if(me.wards_killed===0)
+        out.bad.push(['와드 제거 0개','경기 내내 상대 와드를 하나도 지우지 않았습니다. 상대 시야를 부수는 것이 내 시야를 까는 것만큼 중요해요 — 렌즈로 길목을 쓸고, 오브젝트 전 상대 와드부터 지우세요.']);
+      else if(me.wards_killed>=6 && (role==='UTILITY'||role==='JUNGLE'))
+        out.good.push(['시야 지우기','상대 와드를 '+me.wards_killed+'개 제거했습니다. 상대 눈을 가리는 플레이 — 오브젝트 싸움의 절반은 여기서 이깁니다.']);
+    }
+    // CC 기여 — 탱커/이니시에이터 계열의 숨은 가치
+    if(me.cc_sec!=null && me.cc_sec>=40 && (role==='TOP'||role==='JUNGLE'||role==='UTILITY'))
+      out.good.push(['묶어둔 시간','상대를 총 '+me.cc_sec+'초 동안 CC로 묶었습니다. 킬 스코어에 안 보이는 팀 기여예요 — 이 CC가 딜러의 딜 시간을 만들어 줍니다.']);
+    // 탱킹 비중 — 팀이 받은 피해를 대신 받아준 정도
+    if(me.dmg_taken!=null && (role==='TOP'||role==='UTILITY'||role==='JUNGLE')){
+      var tt=0; players.forEach(function(p){ if(p.team===me.team) tt+=(p.dmg_taken||0); });
+      if(tt>0){ var ts=me.dmg_taken/tt; if(ts>=0.28) out.good.push(['앞라인 담당','팀이 받은 피해의 '+Math.round(ts*100)+'%를 대신 받았습니다. 든든한 앞라인이 캐리의 생존 공간을 만들었어요.']); }
+    }
+    // 포탑 철거 — 스플릿/시즈 기여
+    if(me.dmg_turret!=null && me.dmg_turret>=5000)
+      out.good.push(['철거 기여','포탑에 '+P.compact(me.dmg_turret)+' 피해를 넣었습니다. 글로벌 골드를 만드는 플레이 — 킬 못지않게 게임을 굴리는 방법입니다.']);
+    return out;
+  }
+
   function pickFocus(bad){
     if(!bad.length) return null;
-    var order=['죽음이 오브젝트로','팀 내 최다 데스','교환 없이 죽음','선취점 헌납','라인전 단계 사망 과다','초반 동선 사망','연속으로 끊김','적 진영에서 잘림','후반 캐리 사망','데스로 새어나간 골드','초반에 벌어진 격차','라인전 크게 밀림','낮은 딜 비중','리드를 굳히지 못함','오브젝트를 내줌','시야 관리 부족','파밍 효율 저조','CS 수급 부족','낮은 킬관여'];
+    var order=['죽음이 오브젝트로','팀 내 최다 데스','교환 없이 죽음','선취점 헌납','라인전 단계 사망 과다','초반 동선 사망','연속으로 끊김','적 진영에서 잘림','후반 캐리 사망','회색 화면 과다','데스로 새어나간 골드','초반에 벌어진 격차','라인전 크게 밀림','낮은 딜 비중','리드를 굳히지 못함','오브젝트를 내줌','와드 제거 0개','시야 관리 부족','파밍 효율 저조','CS 수급 부족','낮은 킬관여'];
     for(var i=0;i<order.length;i++) for(var j=0;j<bad.length;j++) if(bad[j][0]===order[i]) return bad[j];
     return bad[0];
   }
@@ -1247,7 +1270,7 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
     var visFloor=isSup?0.9:(isJg?0.8:0.5), visGood=isSup?1.8:(isJg?1.3:1.0);
     var kpB=pos==='TOP'?0.35:((isSup||isJg)?0.55:(pos==='MIDDLE'?0.50:0.48));
 
-    var DI=deathInsights(me,pid,players,durSec), FI=fifteenInsights(me), DMI=damageInsights(me,players), MA=macroInsights(me,players,won), IMI=impactInsights(me,pid,players,durSec);
+    var DI=deathInsights(me,pid,players,durSec), FI=fifteenInsights(me), DMI=damageInsights(me,players), MA=macroInsights(me,players,won), IMI=impactInsights(me,pid,players,durSec), LSI=localStatsInsights(me,players,durSec);
 
     // key metrics (lead with 15-min gold diff)
     var key=[];
@@ -1263,6 +1286,8 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
     if(isLane && lane.mycs10!=null) sg+=sub('10분 CS',lane.mycs10,lane.mycs10>=75?'up':(lane.mycs10<50?'down':''));
     if(me.kp!=null && keyNames.indexOf('킬관여')<0) sg+=sub('킬관여',Math.round(me.kp*100)+'%',me.kp>=kpB+0.15?'up':(me.kp<kpB-0.15?'down':''));
     sg+=sub('시야/분',vspm!=null?vspm:'–',vspm!=null?(vspm>=visGood?'up':(vspm<visFloor?'down':'')):'');
+    if(me.wards!=null) sg+=sub('와드 설치·제거',(me.wards||0)+' · '+(me.wards_killed!=null?me.wards_killed:'–'),(me.wards_killed===0&&durSec>=1200)?'down':'');
+    if(me.dead_sec!=null&&durSec>0) sg+=sub('죽어있던 시간',Math.round(me.dead_sec/60)+'분',(me.dead_sec/durSec)>=0.13?'down':((me.dead_sec/durSec)<=0.05?'up':''));
     if(me.gold!=null && keyNames.indexOf('팀 딜 비중')<0 && me.gold>0) sg+=sub('골드',P.compact(me.gold),'');
 
     // good / bad
@@ -1283,11 +1308,11 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
       if(vspm>=visGood) good.push(['시야 장악','분당 시야 '+vspm+'점. 맵 정보를 잘 만들었습니다.']);
       else if(vspm<visFloor) bad.push(['시야 관리 부족','분당 시야 '+vspm+'점. '+rx('vision','제어 와드를 꾸준히 사 적 동선을 미리 비추세요.')]);
     }
-    good=good.concat(IMI.good,FI.good,DI.good,DMI.good,MA.good);
-    bad=bad.concat(FI.bad,DI.bad,IMI.bad,DMI.bad,MA.bad);
+    good=good.concat(IMI.good,FI.good,DI.good,DMI.good,MA.good,LSI.good);
+    bad=bad.concat(FI.bad,DI.bad,IMI.bad,DMI.bad,MA.bad,LSI.bad);
     function dedupe(a){ var s={},o=[]; a.forEach(function(x){ if(!s[x[0]]){s[x[0]]=1;o.push(x);} }); return o; }
     good=dedupe(good); bad=dedupe(bad);
-    var PRI=['죽음이 오브젝트로','팀 내 최다 데스','교환 없이 죽음','선취점 헌납','라인전 단계 사망 과다','초반 동선 사망','연속으로 끊김','적 진영에서 잘림','후반 캐리 사망','데스로 새어나간 골드','초반에 벌어진 격차','라인전 크게 밀림','낮은 딜 비중','리드를 굳히지 못함','오브젝트를 내줌','시야 관리 부족','파밍 효율 저조','CS 수급 부족','낮은 킬관여'];
+    var PRI=['죽음이 오브젝트로','팀 내 최다 데스','교환 없이 죽음','선취점 헌납','라인전 단계 사망 과다','초반 동선 사망','연속으로 끊김','적 진영에서 잘림','후반 캐리 사망','회색 화면 과다','데스로 새어나간 골드','초반에 벌어진 격차','라인전 크게 밀림','낮은 딜 비중','리드를 굳히지 못함','오브젝트를 내줌','와드 제거 0개','시야 관리 부족','파밍 효율 저조','CS 수급 부족','낮은 킬관여'];
     bad.sort(function(a,b){ var ia=PRI.indexOf(a[0]); var ib=PRI.indexOf(b[0]); if(ia<0)ia=99; if(ib<0)ib=99; return ia-ib; });
     var focus=pickFocus(bad);
     good=good.slice(0,4); bad=bad.slice(0,5);
@@ -1340,7 +1365,7 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
       }
     }
     return '<div class="coachhead"><span class="t">복기 분석</span><span class="s">'+(P.posKo(pos)||'내 플레이')+' 기준</span><span class="ln"></span></div>'
-      +(ANALYSIS.source==='live'?'<div class="srcnote">Live 분석 — KDA·CS·시야·오브젝트는 정확하지만, 딜량·골드 추이는 기록되지 않습니다.</div>':'')
+      +(ANALYSIS.source==='live'?('<div class="srcnote">'+(((ANALYSIS.players||[]).some(function(p){return (p.dmg||0)>0;}))?'Live 분석 + 게임 종료 화면(EOG) 스탯 — 딜량·골드·시야·CS 총량은 정확하며, 분 단위 골드 추이만 추정입니다.':'Live 분석 — KDA·CS·시야·오브젝트는 정확하지만, 딜량·골드 추이는 기록되지 않습니다.')+'</div>'):'')
       +gradeHTML+focusHTML
       +(DI.flow||'')
       +deathMapHTML(pid, me.team)
@@ -1462,8 +1487,6 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
     function visionN(team){ return (ANALYSIS.players||[]).filter(function(p){return p.team===team;}).reduce(function(s,p){return s+Math.round(p.vision||0);},0); }
     var hasVis=(ANALYSIS.players||[]).some(function(p){return (p.vision||0)>0;});
     return ''
-      + row('KDA', kda(b.k,b.d,b.a), kda(r.k,r.d,r.a), b.k, r.k)
-      + row('GOLD', P.compact(b.gold), P.compact(r.gold), b.gold, r.gold)
       + row('TOWERS', num(objN(100,'tower')), num(objN(200,'tower')), objN(100,'tower'), objN(200,'tower'))
       + row('VOID GRUBS', oico(objN(100,'horde'),'grub.svg'), oico(objN(200,'horde'),'grub.svg'), objN(100,'horde'), objN(200,'horde'))
       + row('HERALDS', oico(objN(100,'riftHerald'),'herald'), oico(objN(200,'riftHerald'),'herald'), objN(100,'riftHerald'), objN(200,'riftHerald'))
@@ -1475,16 +1498,13 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
   }
 
   function lckDash(){
-    var dmg = damageHas()
-      ? ('<div class="lckpanel"><div class="lcktt">TOTAL DAMAGE DEALT</div>'+damageBars()+'</div>')
-      : (csHas() ? ('<div class="lckpanel"><div class="lcktt">CS</div>'+csBars()+'</div>') : '');
+    // 딜량/CS 바 패널은 스코어보드 행(딜량 바·CS·분당)과 중복이라 제거 — 우측은 골드 그래프 전용
     var _acc = ANALYSIS.series && !ANALYSIS.series_est;   // Riot API 정확 골드면 그대로, 아니면(추정/없음) 킬·오브젝트로 재계산
     var _gds = _acc ? ANALYSIS.series : (goldDiffSeries() || ANALYSIS.series || null);
     var gold = (_gds && _gds.length>1) ? ('<div class="lckpanel"><div class="lcktt">GOLD DIFFERENCE'+(_acc?'':' · 추정')+'</div>'+goldDiffChart(_gds)+'</div>') : '';
-    var right = dmg+gold;
-    var body = right
-      ? ('<div class="lckgrid"><div class="lckL"><div class="lcktt">GAME STATS</div>'+gameStats()+'</div><div class="lckR">'+right+'</div></div>')
-      : ('<div class="lckone"><div class="lcktt">GAME STATS</div>'+gameStats()+'</div>');
+    var body = gold
+      ? ('<div class="lckgrid"><div class="lckL"><div class="lcktt">OBJECTIVES</div>'+gameStats()+'</div><div class="lckR">'+gold+'</div></div>')
+      : ('<div class="lckone"><div class="lcktt">OBJECTIVES</div>'+gameStats()+'</div>');
     return '<div class="lck">'+lckHeader()+body+'</div>';
   }
 
@@ -1723,6 +1743,7 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
       + '<button class="mvbtn mvfb" id="mvfb" aria-label="한 프레임 뒤로" title="한 프레임 뒤로 (,)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h2.4v14H6zM18.5 5v14L9.5 12z"/></svg></button>'
       + '<button class="mvbtn mvff" id="mvff" aria-label="한 프레임 앞으로" title="한 프레임 앞으로 (.)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.6 5H18v14h-2.4zM5.5 5v14l9-7z"/></svg></button>'
       + '<button class="mvbtn mvrate" id="mvrate" aria-label="재생 속도" title="재생 속도">1×</button>'
+      + '<button class="mvbtn" id="clipshare" aria-label="클립 공유" title="현재 장면부터 재생되는 링크 복사"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg></button>'
       + '<button class="mvbtn mvsync" id="mvsync" aria-label="싱크 조정" title="시점 싱크 조정"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 2.5"/></svg></button>'
       + '<button class="mvbtn mvmute" id="mvmute" aria-label="음소거"></button>'
       + '<button class="mvbtn mvfs" id="mvfs" aria-label="전체화면"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>'
@@ -2019,10 +2040,13 @@ html:has(#stagehost:fullscreen),body:has(#stagehost:fullscreen){background:#000}
       }
     });
     host.innerHTML = multi ? ((splitMode==='focus'?stageFocus():stageSplit()) + mvBar()) : stageSingle();
-    host.insertAdjacentHTML('beforeend', '<button class="clipshare" id="clipshare" aria-label="클립 공유" title="현재 장면부터 재생되는 링크 복사"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg><span>클립 공유</span></button>');
-    host.classList.toggle('solo', !multi);                    // 단일 시점 = 전용 전체화면 버튼(요소 전체화면 → 몰입형)
+    // 유튜브식: 컨트롤은 영상 '하단'(재생바 위 우측) 오버레이 — 호버/탭 시 표시, 자동 숨김.
+    // 하단은 롤 HUD 중 가림 부담이 가장 적고, 상단 스코어(우상단)는 절대 안 가린다. 전체화면 안에서도 같은 버튼으로 종료.
     if(!multi){
-      host.insertAdjacentHTML('beforeend', '<button class="solofs" id="solofs" aria-label="전체화면" title="전체화면"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>');
+      host.insertAdjacentHTML('beforeend', '<div class="vfloat">'
+        + '<button class="vbtn" id="clipshare" title="현재 장면부터 재생되는 링크 복사"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg><span>클립 공유</span></button>'
+        + '<button class="vbtn" id="solofs" title="전체화면 (몰입형)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>'
+        + '</div>');
     }
     // 새 자리표시(단일 data-pv / 멀티 data-idx)에 보존본 이식: fresh의 식별 속성을 보존본에 복사 → 그대로 재사용(콜드마운트 없음)
     host.querySelectorAll('video[data-pv], video[data-idx]').forEach(function(fresh){

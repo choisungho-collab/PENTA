@@ -94,6 +94,44 @@ exports.handler = async (event) => {
 
   // ── 매치 삭제: 로그인 토큰으로 소유 확인 후 파일(Storage API)+행 제거 ──
   //    storage.objects 직접 DELETE 가 정책상 막혀 SQL RPC 는 401 → 서버(service_role)가 Storage API 로 지운다.
+  if (action === 'backfill-win-local') {
+    // 과거 '미확인' 승패 소급 — 레코더가 롤 클라이언트 '로컬 매치 히스토리'에서 읽은 승패를 반영한다(Riot 키 불필요).
+    // 보안: 등록된 기기(verify_device)만 + 본인(saver=신원 이름) 행만 + 현재 미확인(won/winner/win_team 전부 null)만. 덮어쓰기 불가.
+    const ident = String(body.ident || '').trim().toLowerCase();
+    const secret = String(body.secret || '');
+    const ups = Array.isArray(body.updates) ? body.updates.slice(0, 30) : [];
+    if (!ident || !secret || String(secret).length < 16 || !ups.length) return reply(400, { error: 'bad request' });
+    if (!(await verifyDevice(ident, secret))) return reply(403, { error: 'device not verified' });
+    const myName = ident.split('#')[0];
+    let done = 0, skipped = 0;
+    for (const u of ups) {
+      const rid = String(u.row_id || '');
+      const winTeam = (u.win_team === 100 || u.win_team === 200) ? u.win_team : null;
+      const won = (typeof u.won === 'boolean') ? u.won : null;
+      if (!rid || winTeam == null) { skipped++; continue; }
+      const rRes = await fetch(SB_URL + '/rest/v1/matches?select=id,saver,won,winner,analysis&id=eq.' + encodeURIComponent(rid), { headers: sbHeaders() });
+      const rows = await rRes.json().catch(() => []);
+      const r = rows && rows[0];
+      if (!r) { skipped++; continue; }
+      if (String(r.saver || '').trim().toLowerCase() !== myName) { skipped++; continue; }          // 본인 행만
+      const a = r.analysis || {};
+      if (r.won != null || r.winner != null || a.win_team != null) { skipped++; continue; }        // 미확인만
+      a.win_team = winTeam;
+      for (const pl of (a.players || [])) {
+        if (pl && pl.win == null && (pl.team === 100 || pl.team === 200)) pl.win = (pl.team === winTeam);
+      }
+      const patch = { winner: winTeam, analysis: a };
+      if (won != null) patch.won = won;
+      await fetch(SB_URL + '/rest/v1/matches?id=eq.' + encodeURIComponent(rid), {
+        method: 'PATCH',
+        headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
+        body: JSON.stringify(patch)
+      });
+      done++;
+    }
+    return reply(200, { ok: true, done, skipped });
+  }
+
   if (action === 'backfill-win') {
     // 승패 '미확인' 백필: 결과 화면 전에 클라이언트가 꺼져 GameEnd 를 못 받은 경기를,
     // 서버가 직접 Riot Match API 에서 결과를 받아 DB 에 채운다(클라이언트 값은 신뢰하지 않음 → 조작 불가).

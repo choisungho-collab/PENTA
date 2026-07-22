@@ -364,6 +364,28 @@ def _item_gold(items):
     return g
 
 
+_SPELL_IDS = {   # Live Client 는 소환사 주문을 '표시 이름'으로만 주므로 이름→ID 매핑 (한국어/영어 클라이언트 모두)
+    "점멸": 4, "Flash": 4, "점화": 14, "Ignite": 14, "순간이동": 12, "Teleport": 12,
+    "회복": 7, "Heal": 7, "방어막": 21, "Barrier": 21, "탈진": 3, "Exhaust": 3,
+    "정화": 1, "Cleanse": 1, "유체화": 6, "Ghost": 6, "강타": 11, "Smite": 11,
+    "표식": 32, "Mark": 32, "눈덩이": 32, "Snowball": 32, "총명": 13, "Clarity": 13,
+}
+
+def _spell_ids(p):
+    """playerlist 의 summonerSpells 표시 이름 → 주문 ID 목록 (웹 spellIcon 이 ID 를 기대)."""
+    sp = p.get("summonerSpells") or {}
+    out = []
+    for k in ("summonerSpellOne", "summonerSpellTwo"):
+        nm = ((sp.get(k) or {}).get("displayName") or "").strip()
+        sid = _SPELL_IDS.get(nm)
+        if sid is None and nm:                      # 표기 변형 대비 부분 일치 안전망
+            for key, v in _SPELL_IDS.items():
+                if key in nm:
+                    sid = v; break
+        if sid: out.append(sid)
+    return out
+
+
 def analyze_live(snaps, events, my_name):
     """게임 중 모은 Live Client 스냅샷 → 웹 갤러리 분석 구조(부분).
     채움: players(KDA/CS/레벨/와드/포지션/킬관여), 라인 CS격차(10분), 킬/오브젝트 이벤트, 승패.
@@ -405,6 +427,26 @@ def analyze_live(snaps, events, my_name):
                 win_team = my_team if res == "Win" else (200 if my_team == 100 else 100)
             break
 
+    # 폴백: GameEnd를 못 받았으면(패배 직후 즉시 종료 등) 마지막에 파괴된 '핵심 구조물'로 승자를 추정한다.
+    # 게임은 넥서스 파괴로 끝나므로, 종반에 억제기·넥서스 타워(C 타워)가 한쪽 것만 깨졌다면 그 반대편이 승자.
+    # 구조물 이름의 _T1_=블루(100) 소속, _T2_=레드(200) 소속. 양쪽 다 깨졌으면(베이스레이스) 모호 → 추정하지 않음.
+    if win_team is None:
+        core = []
+        for e in events:
+            en = e.get("EventName")
+            nm = e.get("TurretKilled") if en == "TurretKilled" else (e.get("InhibKilled") if en == "InhibKilled" else None)
+            if not nm: continue
+            side = 100 if "_T1_" in nm else (200 if "_T2_" in nm else None)
+            if side is None: continue
+            if en == "InhibKilled" or "_C_" in nm:              # 억제기 또는 넥서스 타워만(외곽 타워는 신호 약함)
+                core.append((float(e.get("EventTime") or 0), side))
+        core.sort()
+        tail = core[-4:]                                        # 마지막 핵심 구조물 최대 4개
+        if tail:
+            sides = {s for _t, s in tail}
+            if len(sides) == 1:                                 # 전부 한쪽 소속 → 그쪽이 뚫린 것
+                win_team = 200 if sides.pop() == 100 else 100
+
     # 큐: ARAM이면 칼바람(450), 그 외는 None → 웹에서 '소환사의 협곡'
     mode = (last.get("mode") or "").upper()
     queue = 450 if mode == "ARAM" else None
@@ -429,6 +471,7 @@ def analyze_live(snaps, events, my_name):
         if nm == my_name and last.get("my_gold"):
             gold += int(last.get("my_gold") or 0)  # 내 보유(미사용) 골드까지 더해 총획득에 근접
         win = (win_team == tm) if win_team else None
+        _r = p.get("runes") or {}                  # 키스톤·룬 트리(Live 가 ID 로 제공)
         players.append({
             "name": nm, "tag": p.get("riotIdTagLine"),
             "champion": p.get("championName"), "champ_id": None,
@@ -437,7 +480,11 @@ def analyze_live(snaps, events, my_name):
             "cs": cs, "gold": gold, "level": p.get("level"),
             "dmg": None, "vision": s.get("wardScore"),
             "items": [(it.get("itemID") if isinstance(it, dict) else it) for it in (p.get("items") or [])][:7],
-            "spells": [], "position": p.get("position") or "",
+            "spells": _spell_ids(p), "position": p.get("position") or "",
+            "skin": p.get("skinID"),
+            "rune_key": (_r.get("keystone") or {}).get("id"),
+            "rune_pri": (_r.get("primaryRuneTree") or {}).get("id"),
+            "rune_sub": (_r.get("secondaryRuneTree") or {}).get("id"),
             "win": win, "puuid": None,
             "pentas": 0, "quadras": 0, "triples": 0, "doubles": 0, "multi": 0,
             "cs_per_min": round(cs / dur_min, 1) if dur_min else 0,
